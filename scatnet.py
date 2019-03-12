@@ -2,8 +2,26 @@
 import os
 import numpy as np
 
+'''
+FIXME: consider name change for filter_options, filter_type
+'''
+
 def T_to_J(T, filt_opt):
-    filt_opt = filt_opt.copy() # if you don't do this, the input argument filt_opt will get updated and have all these B and phi_bw_multiplier keys!
+    '''
+    calculates maximal wavelet scale J
+    
+    inputs:
+    -------
+    - T: int type, length of signal in units of samples
+    - filt_opt: dict type object with parameters specifying a filter
+
+    outputs:
+    --------
+    - J: list type with elements int type. maximal wavelet scale
+
+    FIXME: consider name change of Q, B, J, filt_opt
+    '''
+    filt_opt = filt_opt.copy() # prevents filt_opt change upon function call
     filt_opt = fill_struct(filt_opt, Q=1)
     filt_opt = fill_struct(filt_opt, B=filt_opt['Q'])
     Q = filt_opt['Q']
@@ -20,24 +38,52 @@ def T_to_J(T, filt_opt):
         # NOTE: indices should be type int
     elif Q > 0 and B > 0:
         J = 1 + int(np.round(np.log2(T / (4 * B / bw_mult)) * Q))
+    else:
+        raise ValueError("Invalid type of Q or B: must be list or numeric")
     
     return J
 
-def default_filter_opt(filter_type, averaging_size):
+def default_filter_opt(filter_type, avg_len):
+    '''
+    returns dict type object containing default parameters for filters
+    inputs:
+    -------
+    - filter_type: "audio", "dyadic". NOTE: potentially "image" to be added later
+    - avg_len: int type number representing width of scaling function to apply in units of samples
+
+    outputs:
+    --------
+    - s: dict type object containing default parameters for filters
+
+    FIXME: change variable name s, consider allowing "image" as filter_type input
+    '''
     s = {}
     if filter_type == 'audio':
         s['Q'] = [8, 1]
-        s['J'] = T_to_J(averaging_size, s)
+        s['J'] = T_to_J(avg_len, s)
     elif filter_type == 'dyadic':
         s['Q'] = 1
-        s['J'] = T_to_J(averaging_size, s)
+        s['J'] = T_to_J(avg_len, s)
     else:
         raise ValueError("Invalid filter_type: should be either audio or dyadic")
     return s
 
-def fill_struct(s, **kwargs): 
-# in the matlab implementation, this function is called only with a single key-value pair, 
-# such as fill_struct(s, 'precision', 'double')
+def fill_struct(s, **kwargs):
+    '''
+    for a given dictionary and a number of key-value pairs, fills in the key-values of the
+    dictionary if the key does not exist or if the value of the key is empty
+
+    inputs:
+    -------
+    - s: dict type that may or may not contain the keys given by user
+
+    outputs:
+    --------
+    - s: type dict object that is updated with the given key-value pairs. For keys that
+    originally did not exist, the key-value pair is updated. For keys that originally existed
+    are updated only if the values were None
+    
+    FIXME: consider name change of s. Consider replacing function with more readable function''' 
     for key, value in kwargs.items():
         if key in s:
             if s[key] is None:
@@ -50,66 +96,100 @@ def morlet_freq_1d(filt_opt):
     '''
     inputs:
     ------- 
-    - filt_opt: type dict
+    - filt_opt: type dict with the following keys:
+    xi_psi, sigma_psi, sigma_phi, J, Q, P: all numeric
+    phi_dirac: type bool
+    As all values in filt_opt dict are scalars, filt_opt argument does not change upon function call
 
     outputs:
     -------- 
-    - xi_psi: sized (J+P, ). logarithmically spaced J elements, linearly spaced P elements
-    - bw_psi: sized (J+P+1, ). logarithmically spaced J elements, linearly spaced P+1 elements
+    - xi_psi: list sized (J+P, ). logarithmically spaced J elements, linearly spaced P elements
+    - bw_psi: list sized (J+P+1, ). logarithmically spaced J elements, linearly spaced P+1 elements
     both type nparray during calculations, convertable to list at final output
     - bw_phi: float
     
     increasing index corresponds to filters with decreasing center frequency
     filters with high freq are logarithmically spaced, low freq interval is covered linearly
+    NOTE: xi_psi can in theory have negative center frequencies
     
     FIXME: consider defining local variables for the key-value pairs in filt_opt during calculations
-    FIXME: consider converting outputs to list type
+    FIXME: consider not converting outputs to list type
     '''
     sigma0 = 2 / np.sqrt(3)
     
-    # Calculate logarithmically spaced, band-pass filters.
+    # calculate logarithmically spaced band-pass filters.
     xi_psi = filt_opt['xi_psi'] * 2**(np.arange(0,-filt_opt['J'],-1) / filt_opt['Q'])
     sigma_psi = filt_opt['sigma_psi'] * 2**(np.arange(filt_opt['J']) / filt_opt['Q'])
-
-    # Calculate linearly spaced band-pass filters so that they evenly
+    # calculate linearly spaced band-pass filters so that they evenly
     # cover the remaining part of the spectrum
-    step = pi * 2**(-filt_opt['J'] / filt_opt['Q']) * (1 - 1/4 * sigma0 / filt_opt['sigma_phi'] \
+    step = np.pi * 2**(-filt_opt['J'] / filt_opt['Q']) * (1 - 1/4 * sigma0 / filt_opt['sigma_phi'] \
         * 2**( 1 / filt_opt['Q'] ) ) / filt_opt['P']
     # xi_psi = np.array(xi_psi)
     # xi_psi[filt_opt['J']:filt_opt['J']+filt_opt['P']] = filt_opt['xi_psi'] * 2**((-filt_opt['J']+1) / filt_opt['Q']) - step * np.arange(1, filt_opt['P'] + 1)
-    xi_psi_linspace = filt_opt['xi_psi'] * 2**((-filt_opt['J']+1) / filt_opt['Q']) \
+    xi_psi_lin = filt_opt['xi_psi'] * 2**((-filt_opt['J']+1) / filt_opt['Q']) \
     - step * np.arange(1, filt_opt['P'] + 1)
-    xi_psi = np.concatenate([xi_psi, xi_psi_linspace], axis=0) 
+    xi_psi = np.concatenate([xi_psi, xi_psi_lin], axis=0) 
     # sigma_psi = np.array(sigma_psi)
     # sigma_psi[filt_opt['J']:filt_opt['J']+1+filt_opt['P']] = filt_opt['sigma_psi'] * 2**((filt_opt['J'] - 1) / filt_opt['Q'])
-    sigma_psi_linspace = np.tile(filt_opt['sigma_psi'] * 2**((filt_opt['J'] - 1) / filt_opt['Q']), 
-        (1, 1+filt_opt['P']))
-    sigma_psi = np.concatenate([sigma_psi, sigma_psi_linspace], axis=0)
-    
-    # Calculate band-pass filter
+    sigma_psi_lin = np.full((1+filt_opt['P'],), fill_value=filt_opt['sigma_psi'] \
+        * 2**((filt_opt['J'] - 1) / filt_opt['Q']))
+    sigma_psi = np.concatenate([sigma_psi, sigma_psi_lin], axis=0)
+    # calculate band-pass filter
     sigma_phi = filt_opt['sigma_phi'] * 2**((filt_opt['J']-1) / filt_opt['Q'])
-
-    # Convert (spatial) sigmas to (frequential) bandwidths
-    bw_psi = pi / 2 * sigma0 / sigma_psi
+    # convert (spatial) sigmas to (frequential) bandwidths
+    bw_psi = np.pi / 2 * sigma0 / sigma_psi
     if not filt_opt['phi_dirac']:
-        bw_phi = pi / 2 * sigma0 / sigma_phi
+        bw_phi = np.pi / 2 * sigma0 / sigma_phi
     else:
-        bw_phi = 2 * pi
-
-    return (xi_psi, bw_psi, bw_phi)
+        bw_phi = 2 * np.pi
+    return list(xi_psi), list(bw_psi), bw_phi
 
 def optimize_filter(filter_f, lowpass, options):
     options = fill_struct(options, truncate_threshold=1e-3);
     options = fill_struct(options, filter_format=fourier_multires);
 
-    if options.filter_format == 'fourier'):
+    if options.filter_format == 'fourier':
         filt = filter_f
-    elif (options.filter_format == 'fourier_multires'):
+    elif options.filter_format == 'fourier_multires':
         filt = periodize_filter(filter_f)
-    elif options.filter_format == 'fourier_truncated'):
+    elif options.filter_format == 'fourier_truncated':
         filt = truncate_filter(filter_f,options.truncate_threshold,lowpass)
     else:
         raise ValueError('Unknown filter format {}'.format(options.filter_format))
     return filt
 
+def filter_freq(filter_options):
+    if (filter_options['filter_type'] == 'spline_1d') or (filter_options['filter_type'] == 'selesnick_1d'):
+        psi_xi, psi_bw, phi_bw = dyadic_freq_1d(filter_options)
+    elif (filter_options['filter_type'] == 'morlet_1d') or (filter_options['filter_type'] == 'gabor_1d'):
+        psi_xi, psi_bw, phi_bw = morlet_freq_1d(filter_options)
+    else:
+        raise ValueError('Unknown filter type {}'.format(filter_options['filter_type']))
+    return psi_xi, psi_bw, phi_bw
+
+def map_meta(from_meta, from_ind, to_meta, to_ind, exclude=None):
+    # NOTE: MATLAB version can run with less input arguments
+    # exclude is a list of fields you are not interested in
+    if exclude is None:
+        exclude = []
+    # NOTE: from_meta's fields should be arrays or 2d lists with fixed sizes
+    # different 0th indices correspond to different columns in the MATLAB version
+    
+    for key, value in from_meta.items():
+        if key in exclude: 
+            continue
+        
+        if key in to_meta.keys():
+            to_value = np.array(to_meta[key])
+        else:
+            to_value = np.zeros((max(to_ind)+1, value.shape[1]))
+            # FIXME: consider using np.empty() instead of np.zeros()
+        
+        to_value[to_ind, :] = np.tile(value[from_ind, :], [length(to_ind) / length(from_ind), 1])
+        to_meta[key] = to_value
+
+    return to_meta
+
+def dyadic_freq_1d(filter_options):
+    pass
 
