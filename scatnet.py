@@ -114,6 +114,7 @@ def morlet_freq_1d(filt_opt):
     
     FIXME: consider defining local variables for the key-value pairs in filt_opt during calculations
     FIXME: consider not converting outputs to list type
+    REVIEW: manually compare results with MATLAB version
     '''
     sigma0 = 2 / np.sqrt(3)
     
@@ -153,7 +154,7 @@ def optimize_filter(filter_f, lowpass, options):
     elif options.filter_format == 'fourier_multires':
         filt = periodize_filter(filter_f)
     elif options.filter_format == 'fourier_truncated':
-        filt = truncate_filter(filter_f,options.truncate_threshold,lowpass)
+        filt = truncate_filter(filter_f, options.truncate_threshold, lowpass)
     else:
         raise ValueError('Unknown filter format {}'.format(options.filter_format))
     return filt
@@ -168,24 +169,60 @@ def filter_freq(filter_options):
     return psi_xi, psi_bw, phi_bw
 
 def map_meta(from_meta, from_ind, to_meta, to_ind, exclude=None):
-    # NOTE: MATLAB version can run with less input arguments
-    # exclude is a list of fields you are not interested in
+    '''
+    for all key-value pairs in from_meta, the columns are copied into the to_meta's key-value pairs
+    including key value pairs not existing in to_meta while excluding the list of key value pairs in
+    the argument "exclude". If the number of indices differ, the columns of from_ind are tiled
+    to match the number of columns of to_ind
+    
+    inputs:
+    -------
+    - from_meta: dict type object
+    - from_ind: list type containing indices
+    - to_meta: dict type object
+    - to_ind: list type containing indices
+    - exclude: list type object containing keys that should not be considered when copying columns 
+    For a single index, a scalar is allowed which will be cast to a length 1 list in the function
+
+    NOTE: assumed that from_meta's values are valid 2d lists or rank 2 np arrays
+    NOTE: MATLAB version can run with less input arguments
+    FIXME: if to_ind has 4 indices and from_ind has 2 indices, the columns are copied by a factor
+    of 2 to match the 4 columns. confirm this is the desired functionality.
+
+    FIXME: for shared keys, if to_ind goes out of bound, should to_meta's shared key be
+    extended to incorporate that? or should it raise an error? Current version does not extend
+    '''
+    if isinstance(from_ind, int):
+        from_ind = [from_ind]
+
+    if isinstance(to_ind, int):
+        to_ind = [to_ind]
+
+    if not to_ind or not from_ind:
+        # since to_ind and from_ind are lists for int inputs, 
+        # no need to worry about an input of 0 for to_ind treated as an empty list
+        # if to_ind or from_ind are empty, do nothing to to_meta
+        return to_meta
+
     if exclude is None:
         exclude = []
+
     # NOTE: from_meta's fields should be arrays or 2d lists with fixed sizes
     # different 0th indices correspond to different columns in the MATLAB version
-    
-    for key, value in from_meta.items():
+    for key, value in from_meta.items(): 
+    # NOTE: loops through from_meta's keys. Thus, for to_meta's pure keys (keys that only exist
+    # in to_meta but not from_meta), the values are identical
         if key in exclude: 
             continue
         
         if key in to_meta.keys():
-            to_value = np.array(to_meta[key])
+            to_value = np.zeros((max(max(to_ind) + 1, len(to_meta[key])), value.shape[1]))
+            to_value[:len(to_meta[key]), :] = np.array(to_meta[key])
+            # the version below raises error later if to_ind goes out of to_meta[key]'s index
+            # to_value = np.array(to_meta[key]) 
         else:
             to_value = np.zeros((max(to_ind)+1, value.shape[1]))
-            # FIXME: consider using np.empty() instead of np.zeros()
-        
-        to_value[to_ind, :] = np.tile(value[from_ind, :], [length(to_ind) / length(from_ind), 1])
+        to_value[to_ind, :] = np.tile(value[from_ind, :], [int(len(to_ind) / len(from_ind)), 1])
         to_meta[key] = to_value
 
     return to_meta
