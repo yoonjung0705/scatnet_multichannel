@@ -227,86 +227,78 @@ def map_meta(from_meta, from_ind, to_meta, to_ind, exclude=None):
 
     return to_meta
 
-def conv_sub_1d(xf, filt, ds):
-    xf = np.array(xf)
-    sig_length = len(xf)
-    if len(xf.shape) == 1:
-        xf = xf[np.newaxis, :] # FIXME: for 1 signal, a singleton dim added. consider refactoring
-    n_data = xf.shape[0]
+def conv_sub_1d(data, filt, ds):
+    '''FIXME:try broadcasting instead of np.tile() followed by elementwise multiplication'''
+    data = np.array(data)
+    if len(data.shape) == 1:
+        data = data[np.newaxis, :] # FIXME: for 1 signal, a singleton dim added. consider refactoring
+    n_data = data.shape[0]
+    data_len = data.shape[1]
 
-    # FIXME:NOTE: filt assumed to be either dict, list, or np.array. xf assumed to be either np.array or list
+    # FIXME:NOTE: filt assumed to be either dict, list, or np.array. data assumed to be either np.array or list
     # FIXME: filt assumed to be rank 1
     if isinstance(filt, dict):
         # optimized filt, output of OPTIMIZE_FILTER
         if filt['type'] == 'fourier_multires':
-            # NOTE: filt['coefft'] is assumed to be a LIST of filters where each filter is rank 1
+            # NOTE: filt['coef'] is assumed to be a LIST of filters where each filter is rank 1
             # periodized multiresolution filt, output of PERIODIZE_FILTER
-            # make filt_coefft into rank 2 array sized (1, filt_len)
-            filt_coefft = filt['coefft'][int(np.round(np.log2(filt['N'] / sig_length)))]
-            filt_coefft = np.array(filt_coefft)[np.newaxis, :] 
-            yf = xf * np.tile(filt_coefft, (n_data, 1)) 
-            print("\nfilter is dict and its type is fourier_multires")
-            print("filt_j:{}".format(filt_j))
-            print("yf:{}".format(yf))
+            # make coef into rank 2 array sized (1, filt_len)
+            coef = filt['coef'][int(np.round(np.log2(filt['N'] / data_len)))]
+            coef = np.array(coef)[np.newaxis, :] 
+            yf = data * np.tile(coef, (n_data, 1)) 
         # for now, only consider the case for 'fourier_multires'
         elif filt['type'] == 'fourier_truncated':
-            # in this case, filt['coefft'] is assumed to be an array 
+            # in this case, filt['coef'] is assumed to be an array 
             # truncated filt, output of TRUNCATE_FILTER
             start = filt['start']
-            coefft = filt['coefft']
-            nCoeffts = len(coefft)
-            coefft = np.array(coefft)
-            if nCoeffts > sig_length:
+            coef = filt['coef']
+            n_coef = len(coef)
+            coef = np.array(coef)
+            if n_coef > data_len:
                 # filt is larger than signal, lowpass filt & periodize the former
                 # create lowpass filt
                 start0 = start % filt['N']
-                nCoeffts = nCoeffts
-                if (start0 + nCoeffts) <= filt['N']:
-                    rng = np.arange(start0, nCoeffts - 1)
+                n_coef = n_coef
+                if (start0 + n_coef) <= filt['N']:
+                    rng = np.arange(start0, n_coef - 1)
                 else:
-                    rng = np.concatenate([np.arange(start0, filt['N']), np.arange(nCoeffts + start0 - filt['N'])], axis=0)
+                    rng = np.concatenate([np.arange(start0, filt['N']), np.arange(n_coef + start0 - filt['N'])], axis=0)
 
-                lowpass = np.zeros(nCoeffts)
-                lowpass[rng < sig_length / 2] = 1
-                lowpass[rng == sig_length / 2] = 1/2
-                lowpass[rng == filt['N'] - sig_length / 2] = 1/2
-                lowpass[rng > filt['N'] - sig_length / 2] = 1
+                lowpass = np.zeros(n_coef)
+                lowpass[rng < data_len / 2] = 1
+                lowpass[rng == data_len / 2] = 1/2
+                lowpass[rng == filt['N'] - data_len / 2] = 1/2
+                lowpass[rng > filt['N'] - data_len / 2] = 1
                 # filter and periodize
-                coefft = np.reshape(coefft * lowpass, [sig_length, int(nCoeffts / sig_length)]).sum(axis=1)
-                coefft = coefft[np.newaxis, :]
+                coef = np.reshape(coef * lowpass, [data_len, int(n_coef / data_len)]).sum(axis=1)
+                coef = coef[np.newaxis, :]
 
-            j = int(np.round(np.log2(nCoeffts / sig_length)))
-            start = start % sig_length
-            if start + nCoeffts <= sig_length:
+            j = int(np.round(np.log2(n_coef / data_len)))
+            start = start % data_len
+            if start + n_coef <= data_len:
                 # filter support contained in one period, no wrap-around
-                yf = xf[:, start:nCoeffts+start-1] * np.tile(coefft, (n_data, 1))
+                yf = data[:, start:n_coef+start-1] * np.tile(coef, (n_data, 1))
             else:
                 # filter support wraps around, extract both parts
-                yf = np.concatenate([xf[:, start:], xf[:, :nCoeffts + start - size(xf,1)]], axis=1) * np.tile(coefft, (n_data, 1))
+                yf = np.concatenate([data[:, start:], data[:, :n_coef + start - size(data,1)]], axis=1) * np.tile(coef, (n_data, 1))
 
-            print("\nfilter is dict and its type is fourier_truncated")
-            print("filt_j:{}".format(filt_j))
-            print("yf:{}".format(yf))
     else:
         # type is either list or nparray
         filt = np.array(filt)
-        # simple Fourier transform. filt_j below has length equal to sig_length.
-        # filt_j is a fraction taken from filt to match length with sig_length.
-        # if sig_length is [10,11,12,13,14,15] and filt being range(100), 
+        # simple Fourier transform. filt_j below has length equal to data_len.
+        # filt_j is a fraction taken from filt to match length with data_len.
+        # if data_len is [10,11,12,13,14,15] and filt being range(100), 
         # filt_j would be [0, 1, 2, (3 + 98)/2, 99, 100].
         # REVIEW: figure out why the shifting is done before multiplying. 
         # Perhaps related to fftshift?
-        filt_j = np.concatenate([filt[:int(sig_length/2)],
-            [filt[int(sig_length / 2)] / 2 + filt[int(-sig_length / 2)] / 2],
-            filt[int(-sig_length / 2 + 1):]], axis=0) # filt_j's length is identical to sig_length
+        filt_j = np.concatenate([filt[:int(data_len/2)],
+            [filt[int(data_len / 2)] / 2 + filt[int(-data_len / 2)] / 2],
+            filt[int(-data_len / 2 + 1):]], axis=0) # filt_j's length is identical to data_len
         filt_j = filt_j[np.newaxis, :]
-        yf = xf * np.tile(filt_j, (n_data, 1)) # FIXME: for 1 signal, a singleton dim added, resulting in yf being rank 2 array. consider refactoring
-        print("\nfilter is array")
-        print("filt_j:{}".format(filt_j))
-        print("yf:{}".format(yf))
+        yf = data * np.tile(filt_j, (n_data, 1)) # FIXME: for 1 signal, a singleton dim added, resulting in yf being rank 2 array. consider refactoring
     
     # calculate the downsampling factor with respect to yf
-    dsj = int(ds + np.round(np.log2(yf.shape[1] / sig_length)))
+    dsj = int(ds + np.round(np.log2(yf.shape[1] / data_len)))
     print("dsj:{}".format(dsj))
     if dsj > 0:
         # actually downsample, so periodize in Fourier
@@ -329,6 +321,63 @@ def conv_sub_1d(xf, filt, ds):
     y_ds = np.fft.ifft(yf_ds) / 2**(ds/2) # ifft default axis=-1
 
     return y_ds
+
+def pad_signal(data, pad_len, mode='symm', center=False):
+    '''
+    NOTE: assuming that data is given as either rank 1 or 2 array
+    rank 1: (data_len,), rank 2: (n_data, data_len)
+    '''
+    data = np.array(data)
+    if len(data.shape) == 1:
+        data = data[np.newaxis, :] # data is now rank 2 with shape (n_data, data_len)
+    data_len = data.shape[1] # size of a single data.
+    has_imag = np.linalg.norm(np.imag(data)) > 0
+
+    if mode == 'symm':
+        idx0 = np.concatenate([np.arange(data_len), np.arange(data_len, 0, -1) - 1], axis=0)
+        conjugate0 = np.concatenate([np.zeros(data_len), np.ones(data_len)], axis=0)
+    elif mode == 'per' or mode == 'zero':
+        idx0 = np.arange(data_len)
+        conjugate0 = np.zeros(data_len)
+    else:
+        raise ValueError('Invalid boundary conditions!')
+
+    if mode != 'zero':
+        idx = np.zeros(pad_len)
+        conjugate = np.zeros(pad_len)
+        idx[:data_len] = np.arange(data_len)
+        conjugate[:data_len] = np.zeros(data_len)
+        src = np.arange(data_len, data_len + np.floor((pad_len-data_len) / 2), dtype=int) % len(idx0)
+        dst = np.arange(data_len, data_len + np.floor((pad_len - data_len) / 2), dtype=int)
+        idx[dst] = idx0[src]
+        conjugate[dst] = conjugate0[src]
+        src = (len(idx0) - np.arange(1, np.ceil((pad_len - data_len) / 2) + 1, dtype=int)) % len(idx0)
+        dst = np.arange(pad_len - 1, data_len + np.floor((pad_len - data_len) / 2 ) - 1, -1, dtype=int)
+        idx[dst] = idx0[src]
+        conjugate[dst] = conjugate0[src]
+        # conjugate is shaped (pad_len,)
+    else:
+        idx = np.arange(data_len)
+        conjugate = np.zeros(data_len)
+        # conjugate is shaped (data_len,)
+
+    idx = idx.astype(int)
+    conjugate = conjugate.astype(int)
+    # idx, idx0, conjugate, conjugate0, src, dst are all rank 1 arrays
+    data = data[:, idx] # data shape: (n_data, data_len or pad_len)
+    conjugate = conjugate[np.newaxis, :] # conjugate shape: (1, data_len or pad_len)
+    if has_imag:
+        data = data - 2j * np.imag(data) * conjugate
+    # data is shaped (n_data, data_len or pad_len)
+
+    if mode == 'zero':
+        data = np.concatenate([data, np.zeros((data.shape[0], pad_len - data_len))], axis=1)
+
+    if center: # if center is nonzero (negative values are allowed, too)
+        margin = int(np.floor((pad_len - data_len) / 2))
+        data = np.roll(data, margin, axis=1)
+
+    return data
 
 
 

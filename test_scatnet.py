@@ -369,6 +369,12 @@ class ScatnetTestCase(unittest.TestCase):
 			meta[key] = np.random.random(shape)
 		return meta	
 
+	def test_conv_sub_1d(self):
+		'''FIXME:compare output values from that of MATLAB'''
+		pass
+
+
+
 
 if __name__ == '__main__':
 	unittest.main()
