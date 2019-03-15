@@ -146,8 +146,8 @@ def morlet_freq_1d(filt_opt):
     return list(xi_psi), list(bw_psi), bw_phi
 
 def optimize_filter(filter_f, lowpass, options):
-    options = fill_struct(options, truncate_threshold=1e-3);
-    options = fill_struct(options, filter_format=fourier_multires);
+    options = fill_struct(options, truncate_threshold=1e-3)
+    options = fill_struct(options, filter_format=fourier_multires)
 
     if options.filter_format == 'fourier':
         filt = filter_f
@@ -228,7 +228,10 @@ def map_meta(from_meta, from_ind, to_meta, to_ind, exclude=None):
     return to_meta
 
 def conv_sub_1d(data, filt, ds):
-    '''FIXME:try broadcasting instead of np.tile() followed by elementwise multiplication'''
+    '''FIXME:try broadcasting instead of np.tile() followed by elementwise multiplication
+    NOTE:seems like reading the MATLAB version, filt signal is always 1d array (either given as list or dict value)
+    when filt is given as a dict, it will have multiple 1d filters. This function finds the filter whose size matches
+    with that of the given data, and uses that filter for convolution, which is done by multiplying in fourier space in this case'''
     data = np.array(data)
     if len(data.shape) == 1:
         data = data[np.newaxis, :] # FIXME: for 1 signal, a singleton dim added. consider refactoring
@@ -294,8 +297,8 @@ def conv_sub_1d(data, filt, ds):
         filt_j = np.concatenate([filt[:int(data_len/2)],
             [filt[int(data_len / 2)] / 2 + filt[int(-data_len / 2)] / 2],
             filt[int(-data_len / 2 + 1):]], axis=0) # filt_j's length is identical to data_len
-        filt_j = filt_j[np.newaxis, :]
-        yf = data * np.tile(filt_j, (n_data, 1)) # FIXME: for 1 signal, a singleton dim added, resulting in yf being rank 2 array. consider refactoring
+        filt_j = filt_j[np.newaxis, :] # shape: (1, data_len)
+        yf = data * filt_j # will use broadcasting. FIXME: for 1 signal, a singleton dim added, resulting in yf being rank 2 array. consider refactoring
     
     # calculate the downsampling factor with respect to yf
     dsj = int(ds + np.round(np.log2(yf.shape[1] / data_len)))
@@ -326,6 +329,10 @@ def pad_signal(data, pad_len, mode='symm', center=False):
     '''
     NOTE: assuming that data is given as either rank 1 or 2 array
     rank 1: (data_len,), rank 2: (n_data, data_len)
+
+    NOTE: in the matlab version, having pad_len being a len 2 list means padding in both 2 directions.
+    this means that this feature is for 2d signals, not for usage in multiple wavelets (Q can be a len 2 list ([8, 1])
+    even in 1d signals case) and so I was worried if I have to write pad_signal() allowing pad_len to be len 2
     '''
     data = np.array(data)
     if len(data.shape) == 1:
@@ -362,7 +369,6 @@ def pad_signal(data, pad_len, mode='symm', center=False):
         # conjugate is shaped (data_len,)
 
     idx = idx.astype(int)
-    conjugate = conjugate.astype(int)
     # idx, idx0, conjugate, conjugate0, src, dst are all rank 1 arrays
     data = data[:, idx] # data shape: (n_data, data_len or pad_len)
     conjugate = conjugate[np.newaxis, :] # conjugate shape: (1, data_len or pad_len)
@@ -379,9 +385,368 @@ def pad_signal(data, pad_len, mode='symm', center=False):
 
     return data
 
+def periodize_filter(filter_f):
+    '''NOTE: filter_f is a rank 1 array. In the MATLAB version, a rank 2 array is allowed.
+    this might correspond to 2 different filters for 1d signals when Q is a len 2 list. 
+    However, if N is the shape of filter_f, the function does not only N(1)/2**j0 but also N(2)/2**j0
+    which means that the meaning of N(2) is the length of the filter in that direction, NOT simply the number of filters
+    Therefore we can use this function for filter_f being a rank 1 array'''
+    filter_f = np.array(filter_f)
+    N = len(filter_f)
+    coefft = []
+
+    j0 = 0
+    n_filter = sum((N / 2.**(np.arange(1, np.log2(N)+1))) % 1 == 0)
+    # n_filter is the number of times N can be divided with 2
+    for _ in range(n_filter):
+        if np.any(np.abs(np.floor(N/2.**(j0+1))-N/2.**(j0+1))>1e-6):
+            # if any of filter_f's dimension length is not exactly a multiple of 2**(j0+1), break
+            break
+
+        filter_fj = filter_f.copy()
+
+        mask =  np.array([1.]*int(N/2.**(j0+1)) + [1./2.] + [0.]*int((1-2.**(-j0-1))*N-1))
+        mask += np.array([0.]*int((1-2.**(-j0-1))*N) + [1./2.] + [1.]*int(N/2.**(j0+1)-1))
+
+        filter_fj = filter_fj * mask
+        filter_fj = np.reshape(filter_fj, [int(N/2**j0), 2**j0], order='F').sum(axis=1)
+        coefft.append(filter_fj)
+        j0 += 1
+
+    return coefft
+
+def unpad_signal(data, res, unpad_len, center=False):
+    data = np.array(data)
+    if len(data.shape) == 1:
+        data = data[np.newaxis, :] # data is now rank 2 with shape (n_data, data_len)
+
+    offset = 0
+    
+    if center:
+        offset = (len(data) * 2**res - unpad_len) / 2
+    
+    offset_ds = np.floor(offset / 2**res)
+    unpad_len_ds = 1 + np.floor((unpad_len-1) / 2**res)
+    
+    data = data[:, offset_ds:offset_ds + unpad_len_ds]
+
+    return data
+
+def wavelet_1d(data, filters, options=None):
+    if options is None:
+        options = {}
+
+    options = fill_struct(options, 'oversampling', 1)
+    options = fill_struct(options, 'psi_mask', list(range(filters['psi']['filter']))) # FIXME: originally was true(1, numel(filters.psi.filter))
+    options = fill_struct(options, 'data_resolution',0)
+
+    data = np.array(data)
+    if len(data.shape) == 1:
+        data = data[np.newaxis, :] # data is now rank 2 with shape (n_data, data_len)
+    data_len = data.shape[1]
+    temp, psi_bw, phi_bw = filter_freq(filters['meta'])
+
+    j0 = options.data_resolution
+
+    N_padded = filters['meta']['size_filter'] / 2**j0
+
+    data = pad_signal(data, N_padded, filters['meta']['boundary'])
+
+    xf = np.fft.fft(data, axis=1)
+    
+    ds = np.round(np.log2(2 * np.pi / phi_bw)) - j0 - options['oversampling']
+    ds = max(ds, 0)
+    
+     
+    x_phi = np.real(conv_sub_1d(xf, filters['phi']['filter'], ds))
+    x_phi = unpad_signal(x_phi, ds, data_len)
+    meta_phi['j'] = -1
+    meta_phi['bandwidth'] = phi_bw
+    meta_phi['resolution'] = j0 + ds
+
+    # x_psi = []
+    x_psi = [None] * filters['psi']['filter'] # FIXME: replacing zeros(n,0) with this. This line might break
+    meta_psi['j'] = -1 * np.ones(len(filters['psi']['filter']))
+    meta_psi['bandwidth'] = -1 * np.ones(len(filters['psi']['filter']))
+    meta_psi['resolution'] = -1 * np.ones(len(filters['psi']['filter']))
+    for p1 in options['psi_mask']: # FIXME: options['psi_mask'] is here defined as the indices that are valid
+        ds = np.round(np.log2(2 * np.pi / psi_bw[p1] / 2)) - j0 - max(1, options['oversampling'])
+        ds = max(ds, 0)
+
+        x_psi_tmp = conv_sub_1d(xf, filters['psi']['filter'][p1], ds)
+        x_psi[p1] = unpad_signal(x_psi_tmp, ds, data_len)
+        meta_psi['j'][:, p1] = p1 - 1
+        meta_psi['bandwidth'][:, p1] = psi_bw[p1]
+        meta_psi['resolution'][:,p1] = j0 + ds
+
+    if len(x_psi) != len(filters['psi']['filter']):
+        raise ValueError("x_psi has different size from what it is expected. In MATLAB version it was initialized to cell array sized (1, filters['psi']['filter']). However, after appending all the elements to the empty list in python, the result is a list with length different from what is expected.")
+
+    return x_phi, x_psi, meta_phi, meta_psi
+
+def modulus_layer(W):
+    U['signal'] = [np.abs(sig) for sig in W['signal']]
+    U['meta'] = W['meta']
+    return U
+
+def scat(x, Wop): # NOTE:Wop should be a list of functions
+    # Initialize signal and meta
+    U[0]['signal'][0] = x
+    U[0]['meta']['j'] = np.zeros(0,1);
+    U[0]['meta']['q'] = np.zeros(0,1);
+    U[0]['meta']['resolution'] = 0
+
+    # Apply scattering, order per order
+    for m in range(len(Wop)):
+        if m < len(Wop) - 1:
+            [S[m], V] = Wop[m](U[m])
+            U[m] = modulus_layer(V)
+        else:
+            S[m] = Wop[m](U[m])
+
+    return S, U
+
+def wavelet_factory_1d(N, filt_opt=None, scat_opt=None):
+    if filter_opt is None:
+        filters = filter_bank(N)
+    else:
+        filters = filter_bank(N, filt_opt)
+    
+    if scat_opt is None:
+        scat_opt = {} 
+    scat_opt = fill_struct(scat_opt, 'M', 2) # M is the scattering order
+    
+    Wop = [None] * scat_opt['M']
+    for m in range(scat_opt['M'] + 1):
+        filt_ind = min(len(filters) - 1, m);
+        Wop[m] = lambda x: wavelet_layer_1d(x, filters[filt_ind], scat_opt)
+
+    return Wop, filters
 
 
 
+
+def wavelet_layer_1d(U, filters, scat_opt=None, wavelet=None):
+    if scat_opt is None:
+        scat_opt = {}
+
+    if wavelet is None:
+        wavelet = wavelet_1d
+    
+    scat_opt = fill_struct(scat_opt, 'path_margin', 0)
+    
+    psi_xi, psi_bw, phi_bw = filter_freq(filters['meta'])
+    
+    if 'bandwidth' not in U['meta'].keys():
+        U['meta']['bandwidth'] = 2 * np.pi
+    if 'resolution' not in U['meta'].keys():
+        U['meta']['resolution'] = 0
+    
+    U_phi['signal'] = {}
+    U_phi['meta']['bandwidth'] = []
+    U_phi['meta']['resolution'] = []
+    U_phi['meta']['j'] = [None] * len(U['meta']['j']) # FIXME: replacing zeros(n,0) with this. This line might break
+    
+    U_psi.signal = {}
+    U_psi['meta']['bandwidth'] = [];
+    U_psi['meta']['resolution'] = [];
+    U_psi['meta']['j'] = [None] * (len(U['meta']['j']) + 1) # FIXME: replacing zeros(n,0) with this. This line might break
+    
+    r = 0
+    for p1 in range(len(U['signal'])):
+        current_bw = U['meta']['bandwidth'][p1]*2**scat_opt['path_margin']
+        psi_mask = current_bw > psi_xi
+        
+        scat_opt['x_resolution'] = U['meta']['resolution'][p1]
+        scat_opt['psi_mask'] = psi_mask
+        x_phi, x_psi, meta_phi, meta_psi = wavelet(U['signal'][p1], filters, scat_opt)
+        
+        U_phi['signal'][0, p1] = x_phi # FIXME: matlab version does U_phi.signal{1,p1}. This line might break
+        U_phi['meta'] = map_meta(U['meta'], p1, U_phi['meta'], p1)
+        U_phi['meta']['bandwidth'][0, p1] = meta_phi['bandwidth']
+        U_phi['meta']['resolution'][0, p1] = meta_phi['resolution']
+        
+        ind = list(range(r, r + sum(psi_mask)))
+        U_psi['signal'][0, ind] = x_psi[0, psi_mask]
+        U_psi['meta'] = map_meta(U['meta'], p1, U_psi['meta'], ind, {'j'}) # FIXME: {'j'}? check how it'll work
+        U_psi['meta']['bandwidth'][0, ind] = meta_psi['bandwidth'][0, psi_mask]
+        U_psi['meta']['resolution'][0, ind] = meta_psi['resolution'][0, psi_mask]
+        U_psi['meta']['j'][:, ind] = np.concatenate([np.dot(U['meta']['j'][:,p1], np.ones(1, len(ind))), meta_psi['j'][0,psi_mask]], axis=0) # FIXME: this line might break
+            
+        r += len(ind)
+    return U_phi, U_psi
+
+def filter_bank(data_len, options=None):
+    parameter_fields = ['filter_type','Q','B','xi_psi','sigma_psi', 'phi_bw_multiplier','sigma_phi','J','P','spline_order', 'filter_format']
+        
+    if options is None:
+        options = {}
+
+    options = fill_struct(options, 'filter_type', 'morlet_1d')
+    options = fill_struct(options, 'Q', [])
+    options = fill_struct(options, 'B', [])
+    options = fill_struct(options, 'xi_psi', [])
+    options = fill_struct(options, 'sigma_psi', [])
+    options = fill_struct(options, 'phi_bw_multiplier', [])
+    options = fill_struct(options, 'sigma_phi', [])
+    options = fill_struct(options, 'J', [])
+    options = fill_struct(options, 'P', [])
+    options = fill_struct(options, 'spline_order', [])
+    options = fill_struct(options, 'precision', 'double')
+    options = fill_struct(options, 'filter_format', 'fourier_truncated')
+    
+    if not isinstance(options.filter_type, list)
+        options.filter_type = [options.filter_type]
+    
+    if not isinstance(options.filter_format, list)
+        options.filter_format = [options.filter_format]
+        
+    bank_count = max([len(options[x]) for x in parameter_fields]) # number of required filter banks
+        
+    for k in range(bank_count):
+        # extract the kth element from each parameter field
+        options_k = options.copy()
+        for l in range(len(parameter_fields)):
+            if parameter_fields[l] not in options_k.keys():
+                continue
+            elif options_k[parameter_fields[l]] is None:
+                continue
+            value = options_k[parameter_fields[l]]
+            # FIXME: this part below might break
+            # in matlab, for example, it has Q = [8 1] (numeric) or cell arrays.
+            # the isnumeric() part takes care of Q = [8 1] stuff, and 
+            # iscell() part takes care of cell arrays.
+            # in our case, they are both lists, and so we simply group the two cases into one.
+            # FIXME: Q, B stuff should be lists but not np.array??
+            if isinstance(value, (list, np.array)): # FIXME: allow np.array? 
+                value_k = value[min(k, len(value))]
+            else:
+                print("options_k value type:{}".format(type(value)))
+                value_k = None
+            options_k[parameter_fields[l]] = value_k
+        
+        # calculate the kth filter bank
+        if options_k['filter_type'] == 'morlet_1d' or options_k['filter_type'] == 'gabor_1d':
+            filters[k] = morlet_filter_bank_1d(data_len, options_k)
+        elif options_k['filter_type'] == 'spline_1d':
+            filters[k] = spline_filter_bank_1d(data_len, options_k)
+        elif options_k['filter_type'] == 'selesnick_1d':
+            filters[k] = selesnick_filter_bank_1d(data_len, options_k)
+        else:
+            raise ValueError('Unknown wavelet type:{}'.format(options_k['filter_type']))
+
+    return filters
+
+def morlet_filter_bank_1d(data_len, options=None):
+    if options is None:
+        options = {}
+    
+    parameter_fields = ['filter_type','Q','B','J','P','xi_psi', 'sigma_psi', 'sigma_phi', 'boundary', 'phi_dirac']
+    
+    # If we are given a two-dimensional size, take first dimension
+    data_len = data_len[-1]
+    
+    sigma0 = 2 / np.sqrt(3)
+    
+    # Fill in default parameters
+    options = fill_struct(options, 'filter_type','morlet_1d')
+    options = fill_struct(options, 'Q', 1)
+    options = fill_struct(options, 'B', options['Q'])
+    options = fill_struct(options, 'xi_psi', 1 / 2 * (2**(-1 / options['Q']) + 1) * np.pi)
+    options = fill_struct(options, 'sigma_psi', 1 / 2 * sigma0 / (1 - 2**(-1 / options['B'])))
+    options = fill_struct(options, 'phi_bw_multiplier', 1 + (options['Q'] == 1))
+    options = fill_struct(options, 'sigma_phi', options['sigma_psi'] / options['phi_bw_multiplier'])
+    options = fill_struct(options, 'J', T_to_J(data_len, options))
+    options = fill_struct(options, 'P', np.round((2**(-1 / options['Q']) - 1 / 4 * sigma0 / options['sigma_phi']) / (1 - 2**(-1 / options['Q']))))
+    options = fill_struct(options, 'precision', 'double')
+    options = fill_struct(options, 'filter_format', 'fourier_truncated')
+    options = fill_struct(options, 'boundary', 'symm')
+    options = fill_struct(options, 'phi_dirac', 0)
+    
+    if options['filter_type'] != 'morlet_1d' and options['filter_type'] != 'gabor_1d':
+        raise ValueError('Filter type must be morlet_1d or gabor_1d')
+    
+    do_gabor = options['filter_type'] == 'gabor_1d'
+    
+    filters = {}
+    
+    # Copy filter parameters into filter structure. This is needed by the
+    # scattering algorithm to calculate sampling, path space, etc.
+    filters.meta = {}
+    for l in range(len(parameter_fields)):
+        filters['meta'][parameter_fields{l}] = options[parameter_fields[l]] # FIXME: check if things get connected...
+    # FIXME: in the matlab version, you set the field and return the struct. Here, I simply update the dict.
+    # should this do the job?
+
+    # The normalization factor for the wavelets, calculated using the filters
+    # at the finest resolution (N)
+    psi_ampl = 1;
+    
+    if options['boundary'] == 'symm':
+        N = 2 * data_len
+    else:
+        N = data_len
+    
+    N = int(2**np.ceil(np.log2(N)))
+    
+    filters['meta']['size_filter'] = N
+    
+    filters['psi']['filter'] = [None] * (options['J'] + options['P']) # FIXME: might break. empty cell arrays have been replaced with [None] * N arrays. Is this the right way?
+    filters['phi'] = None # FIXME: Might break. Originally in MATLAB this is  = []
+    
+    psi_center, psi_bw, phi_bw = morlet_freq_1d(filters['meta'])
+    
+    psi_sigma = sigma0 * np.pi / 2. / psi_bw
+    phi_sigma = sigma0 * np.pi / 2. / phi_bw
+    
+    # Calculate normalization of filters so that sum of squares does not
+    # exceed 2. This guarantees that the scattering transform is
+    # contractive.
+    S = np.zeros(N)
+    
+    # As it occupies a larger portion of the spectrum, it is more
+    # important for the logarithmic portion of the filter bank to be
+    # properly normalized, so we only sum their contributions.
+    for j1 in range(options['J'])
+        temp = gabor(N, psi_center[j1], psi_sigma[j1])
+        if not do_gabor:
+            temp = morletify(temp,psi_sigma[j1])
+        S = S + np.abs(temp)**2;
+    
+    psi_ampl = np.sqrt(2 / max(S))
+    
+    # Apply the normalization factor to the filters.
+    for j1 in range(len(filters['psi']['filter'])):
+        temp = gabor(N, psi_center[j1], psi_sigma[j1])
+        if not do_gabor:
+            temp = morletify(temp,psi_sigma[j1])
+        filters['psi']['filter'][j1] = optimize_filter(psi_ampl * temp, 0, options)
+        filters['psi']['meta']['k'][j1, 0] = j1
+    # Calculate the associated low-pass filter
+    if not options['phi_dirac']:
+        filters['phi']['filter'] = gabor(N, 0, phi_sigma)
+    else:
+        filters['phi']['filter'] = np.ones(N,1)
+    
+    filters['phi']['filter'] = optimize_filter(filters['phi']['filter'], 1, options)
+    filters['phi']['meta']['k'][0, 0] = options['J'] + options['P']
+
+    return filters
+
+def gabor(N, xi, sigma):
+    extent = 1 # extent of periodization - the higher, the better
+    sigma = 1 / sigma
+    f = np.zeros(N)
+    
+    # calculate the 2*pi-periodization of the filter over 0 to 2*pi*(N-1)/N
+    for k in range(-extent, 2 + extent):
+        f = f + np.exp(-((np.arange(N) - k * N) / N * 2 * np.pi - xi)**2. / (2 * sigma**2))
+    return f
+
+def morletify(f, sigma):
+    f0 = f[1]
+    f = f - f0 * gabor(len(f), 0, sigma)
+    return f
 
 def dyadic_freq_1d(filter_options):
     pass
