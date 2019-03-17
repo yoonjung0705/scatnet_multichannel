@@ -4,6 +4,9 @@ import numpy as np
 
 '''
 FIXME: consider name change for filter_options, filter_type
+FIXME: for functions that allow signal to be rank 1 array for number of data being 1, only allow rank 2 inputs
+(even for 1 signal, it should be shaped (1, data_len)). This is important as we want to add the channel dimension as well,
+although calculating and combining different channels might be possible to be done at a higher level (such as in function scat(), etc)
 '''
 
 def T_to_J(T, filt_opt):
@@ -17,7 +20,7 @@ def T_to_J(T, filt_opt):
 
     outputs:
     --------
-    - J: list type with elements int type. maximal wavelet scale
+    - J: int type ot=r list type with elements int type. maximal wavelet scale
 
     FIXME: consider name change of Q, B, J, filt_opt
     '''
@@ -27,10 +30,11 @@ def T_to_J(T, filt_opt):
     Q = filt_opt['Q']
     B = filt_opt['B']
     if isinstance(Q, list):
-        bw_mult = list(1 + (np.array(Q)==1).astype('int'))
+        bw_mult = list(1 + (np.array(Q)==1).astype('int')) # for Q list's values that are equal to 1, bw_mult's element is 2. for values that are not, bm_mult's element is 1
     else:
         bw_mult = 1 + int(np.array(Q)==1)
     filt_opt = fill_struct(filt_opt, phi_bw_multiplier=bw_mult)
+    # get bw_mult from filt_opt. The reason not using bw_mult right away is because filt_opt might have alreayd had phi_bw_multiplier as a valid value
     bw_mult = filt_opt['phi_bw_multiplier']
     if isinstance(Q, list) and isinstance(B, list):
         J = list(1 + np.round(np.log2(T / (4 * np.array(B) \
@@ -45,17 +49,17 @@ def T_to_J(T, filt_opt):
 
 def default_filter_opt(filter_type, avg_len):
     '''
-    returns dict type object containing default parameters for filters
+    returns dict type object containing default parameters Q, J for filters
     inputs:
     -------
-    - filter_type: "audio", "dyadic". NOTE: potentially "image" to be added later
-    - avg_len: int type number representing width of scaling function to apply in units of samples
+    - filter_type: "audio", "dyadic"
+    - avg_len: int type number representing width of scaling function in units of samples
 
     outputs:
     --------
     - s: dict type object containing default parameters for filters
 
-    FIXME: change variable name s, consider allowing "image" as filter_type input
+    FIXME: change variable name s
     '''
     s = {}
     if filter_type == 'audio':
@@ -94,6 +98,7 @@ def fill_struct(s, **kwargs):
 
 def morlet_freq_1d(filt_opt):
     '''
+    given filter options, returns parameters xi, bw of filter banks
     inputs:
     ------- 
     - filt_opt: type dict with the following keys:
@@ -105,12 +110,12 @@ def morlet_freq_1d(filt_opt):
     -------- 
     - xi_psi: list sized (J+P, ). logarithmically spaced J elements, linearly spaced P elements
     - bw_psi: list sized (J+P+1, ). logarithmically spaced J elements, linearly spaced P+1 elements
-    both type nparray during calculations, convertable to list at final output
+    both type nparray during calculations, converted to list at final output
     - bw_phi: float
     
     increasing index corresponds to filters with decreasing center frequency
     filters with high freq are logarithmically spaced, low freq interval is covered linearly
-    NOTE: xi_psi can in theory have negative center frequencies
+    NOTE: xi_psi can in theory have negative center frequencies in this function
     
     FIXME: consider defining local variables for the key-value pairs in filt_opt during calculations
     FIXME: consider not converting outputs to list type
@@ -146,20 +151,49 @@ def morlet_freq_1d(filt_opt):
     return list(xi_psi), list(bw_psi), bw_phi
 
 def optimize_filter(filter_f, lowpass, options):
-    options = fill_struct(options, truncate_threshold=1e-3)
-    options = fill_struct(options, filter_format=fourier_multires)
+    '''
+    inputs:
+    -------
+    - filter_f: rank 1 list or nparray type. filter in the frequency domain (indicated by _f)
+    - lowpass: parameter required for fourier_truncated case. FIXME: add details later
+    - options: dict type containing value 'filter_format'. this indicates how filter_f will be modified
 
-    if options.filter_format == 'fourier':
-        filt = filter_f
-    elif options.filter_format == 'fourier_multires':
+    outputs:
+    --------
+    - filt: np.array type or list (if fourier_multires) type. If list type, the elements are nparrays at different resolutions
+
+    FIXME: I should add truncate_filter() as this function seems to be used for default settings
+    '''
+    options = fill_struct(options, truncate_threshold=1e-3)
+    options = fill_struct(options, filter_format='fourier_multires')
+
+    if options['filter_format'] == 'fourier':
+        filt = np.array(filter_f) # converting to nparray since multires case return type has to be np.array
+    elif options['filter_format'] == 'fourier_multires':
         filt = periodize_filter(filter_f)
-    elif options.filter_format == 'fourier_truncated':
-        filt = truncate_filter(filter_f, options.truncate_threshold, lowpass)
+    elif options['filter_format'] == 'fourier_truncated':
+        filt = truncate_filter(filter_f, options['truncate_threshold'], lowpass)
     else:
-        raise ValueError('Unknown filter format {}'.format(options.filter_format))
+        raise ValueError('Unknown filter format {}'.format(options['filter_format']))
     return filt
 
 def filter_freq(filter_options):
+    '''
+    returns psi and phi parameters given the filter_options, which includes parameters for generating the filter and the filter_type
+    FIXME: consider deprecating this function by only allowing filter type to be morlet_1d or gabor_1d...?
+    FIXME: what is the difference between filter_type being morlet_1d and gabor_1d?
+    
+    inputs:
+    -------
+    - filter_options: dict type object containing filter_type and other parameters for generating the filter parameters at different resolutions
+
+    outputs:
+    --------
+    - xi_psi: list sized (J+P, ). logarithmically spaced J elements, linearly spaced P elements
+    - bw_psi: list sized (J+P+1, ). logarithmically spaced J elements, linearly spaced P+1 elements
+    both type nparray during calculations, converted to list at final output
+    - bw_phi: float
+    '''
     if (filter_options['filter_type'] == 'spline_1d') or (filter_options['filter_type'] == 'selesnick_1d'):
         psi_xi, psi_bw, phi_bw = dyadic_freq_1d(filter_options)
     elif (filter_options['filter_type'] == 'morlet_1d') or (filter_options['filter_type'] == 'gabor_1d'):
@@ -168,8 +202,9 @@ def filter_freq(filter_options):
         raise ValueError('Unknown filter type {}'.format(filter_options['filter_type']))
     return psi_xi, psi_bw, phi_bw
 
-def map_meta(from_meta, from_ind, to_meta, to_ind, exclude=None):
+def map_meta(from_meta, from_ind, to_meta, to_ind, exclude=[]):
     '''
+    FIXME:this function will be deprecated (how to modify not planned yet).
     for all key-value pairs in from_meta, the columns are copied into the to_meta's key-value pairs
     including key value pairs not existing in to_meta while excluding the list of key value pairs in
     the argument "exclude". If the number of indices differ, the columns of from_ind are tiled
@@ -182,7 +217,11 @@ def map_meta(from_meta, from_ind, to_meta, to_ind, exclude=None):
     - to_meta: dict type object
     - to_ind: list type containing indices
     - exclude: list type object containing keys that should not be considered when copying columns 
-    For a single index, a scalar is allowed which will be cast to a length 1 list in the function
+    NOTE: for arguments from_ind and to_ind, if the input is a single index, a scalar is allowed which will be cast to a length 1 list in the function
+
+    outputs:
+    --------
+    - to_meta: dict type object which is a modification of the input argument to_meta
 
     NOTE: assumed that from_meta's values are valid 2d lists or rank 2 np arrays
     NOTE: MATLAB version can run with less input arguments
@@ -204,11 +243,8 @@ def map_meta(from_meta, from_ind, to_meta, to_ind, exclude=None):
         # if to_ind or from_ind are empty, do nothing to to_meta
         return to_meta
 
-    if exclude is None:
-        exclude = []
-
     # NOTE: from_meta's fields should be arrays or 2d lists with fixed sizes
-    # different 0th indices correspond to different columns in the MATLAB version
+    # different 0th dimension's indices correspond to different columns in the MATLAB version
     for key, value in from_meta.items(): 
     # NOTE: loops through from_meta's keys. Thus, for to_meta's pure keys (keys that only exist
     # in to_meta but not from_meta), the values are identical
@@ -228,28 +264,51 @@ def map_meta(from_meta, from_ind, to_meta, to_ind, exclude=None):
     return to_meta
 
 def conv_sub_1d(data, filt, ds):
-    '''FIXME:try broadcasting instead of np.tile() followed by elementwise multiplication
+    '''
+    performs 1d convolution followed by downsampling in real space, which corresponds to multiplication followed by 
+    periodization (when downsampling) or zeropadding (when upsampling). the returned signal is in real space.
+    
+    FIXME: only allow 'fourier_multires' option for simplicity if no significant speedup is shown. 
+    check if this function is used in other functions with filt being given as list 
+
+    inputs:
+    -------
+    - data: list or nparray dypte. data to be convolved in the frequency domain
+    - filt: dict or list or nparray type. analysis filt in the frequency domain.
+    if dict type, it has filt type and coef value. Based on the filt type (fourier_multires or fourier_truncated),
+    the way the convolution is done differs
+    - ds: downsampling factor exponent when represented in power of 2
+
+    outputs:
+    --------
+    - y_ds: convolved signal in real space followed by downsampling 
+
+    FIXME:try broadcasting instead of np.tile() followed by elementwise multiplication
     NOTE:seems like reading the MATLAB version, filt signal is always 1d array (either given as list or dict value)
     when filt is given as a dict, it will have multiple 1d filters. This function finds the filter whose size matches
-    with that of the given data, and uses that filter for convolution, which is done by multiplying in fourier space in this case'''
+    with that of the given data, and uses that filter for convolution, which is done by multiplying in fourier space in this case
+    '''
+
     data = np.array(data)
+    # for 1 signal, a singleton dim added
     if len(data.shape) == 1:
-        data = data[np.newaxis, :] # FIXME: for 1 signal, a singleton dim added. consider refactoring
+        data = data[np.newaxis, :] 
     n_data = data.shape[0]
     data_len = data.shape[1]
+    # data is now shaped (n_data, data_len)
 
     # FIXME:NOTE: filt assumed to be either dict, list, or np.array. data assumed to be either np.array or list
     # FIXME: filt assumed to be rank 1
     if isinstance(filt, dict):
-        # optimized filt, output of OPTIMIZE_FILTER
+        # optimized filt, output of optimize_filter()
         if filt['type'] == 'fourier_multires':
             # NOTE: filt['coef'] is assumed to be a LIST of filters where each filter is rank 1
             # periodized multiresolution filt, output of PERIODIZE_FILTER
             # make coef into rank 2 array sized (1, filt_len)
             coef = filt['coef'][int(np.round(np.log2(filt['N'] / data_len)))]
             coef = np.array(coef)[np.newaxis, :] 
-            yf = data * np.tile(coef, (n_data, 1)) 
-        # for now, only consider the case for 'fourier_multires'
+            # yf = data * np.tile(coef, (n_data, 1))
+            yf = data * coef # broadcasting. Not tested yet.
         elif filt['type'] == 'fourier_truncated':
             # in this case, filt['coef'] is assumed to be an array 
             # truncated filt, output of TRUNCATE_FILTER
@@ -261,7 +320,6 @@ def conv_sub_1d(data, filt, ds):
                 # filt is larger than signal, lowpass filt & periodize the former
                 # create lowpass filt
                 start0 = start % filt['N']
-                n_coef = n_coef
                 if (start0 + n_coef) <= filt['N']:
                     rng = np.arange(start0, n_coef - 1)
                 else:
@@ -294,15 +352,16 @@ def conv_sub_1d(data, filt, ds):
         # filt_j would be [0, 1, 2, (3 + 98)/2, 99, 100].
         # REVIEW: figure out why the shifting is done before multiplying. 
         # Perhaps related to fftshift?
+        # take only part of filter and shift it 
         filt_j = np.concatenate([filt[:int(data_len/2)],
             [filt[int(data_len / 2)] / 2 + filt[int(-data_len / 2)] / 2],
             filt[int(-data_len / 2 + 1):]], axis=0) # filt_j's length is identical to data_len
         filt_j = filt_j[np.newaxis, :] # shape: (1, data_len)
-        yf = data * filt_j # will use broadcasting. FIXME: for 1 signal, a singleton dim added, resulting in yf being rank 2 array. consider refactoring
+        yf = data * filt_j # will use broadcasting. 
+        # FIXME: for 1 signal, a singleton dim added, resulting in yf being rank 2 array. return as in this shape?
     
     # calculate the downsampling factor with respect to yf
     dsj = int(ds + np.round(np.log2(yf.shape[1] / data_len)))
-    print("dsj:{}".format(dsj))
     if dsj > 0:
         # actually downsample, so periodize in Fourier
         yf_ds = np.reshape(yf, [n_data, int(2**dsj), int(np.round(yf.shape[1]/2**dsj))]).sum(axis=1)
@@ -313,7 +372,7 @@ def conv_sub_1d(data, filt, ds):
         # also, we have to do one-sided padding since otherwise we might break 
         # continuity of Fourier transform
         yf_ds = np.concatenate(yf, np.zeros(yf.shape[0], (2**(-dsj)-1)*yf.shape[1]), axis=1) # FIXME: not sure
-    else:
+    else: # if dsj == 0
         yf_ds = yf
     
     if isinstance(filt, dict) and filt['type'] == 'fourier_truncated' and filt['recenter']:
@@ -321,7 +380,8 @@ def conv_sub_1d(data, filt, ds):
         # quency is actually at -filt.start+1
         yf_ds = np.roll(yf_ds, filt['start']-1, axis=1)
 
-    y_ds = np.fft.ifft(yf_ds) / 2**(ds/2) # ifft default axis=-1
+    y_ds = np.fft.ifft(yf_ds, axis=1) / 2**(ds/2) # ifft default axis=-1
+    # the 2**(ds/2) factor seems like normalization
 
     return y_ds
 
@@ -333,12 +393,24 @@ def pad_signal(data, pad_len, mode='symm', center=False):
     NOTE: in the matlab version, having pad_len being a len 2 list means padding in both 2 directions.
     this means that this feature is for 2d signals, not for usage in multiple wavelets (Q can be a len 2 list ([8, 1])
     even in 1d signals case) and so I was worried if I have to write pad_signal() allowing pad_len to be len 2
+
+    inputs:
+    -------
+    - data: rank 1 or 2 array or list with shape (data_len,) or (n_data, data_len)
+    - pad_len: int type, length after zadding
+    - mode: string type either symm, per, zero.
+    - center: bool type indicating whether to bring the padded signal to the center
+
+    outputs:
+    --------
+    - data: nparray type padded data shaped (n_data, pad_len)
+    FIXME: if n_data is 1 in input argument, remove that dimension? for consistency, I think I should just make it (n_data, pad_len) even when n_data is 1
     '''
     data = np.array(data)
     if len(data.shape) == 1:
         data = data[np.newaxis, :] # data is now rank 2 with shape (n_data, data_len)
-    data_len = data.shape[1] # size of a single data.
-    has_imag = np.linalg.norm(np.imag(data)) > 0
+    data_len = data.shape[1] # length of a single data.
+    has_imag = np.linalg.norm(np.imag(data)) > 0 # bool type that checks if any of the elements has imaginary component
 
     if mode == 'symm':
         idx0 = np.concatenate([np.arange(data_len), np.arange(data_len, 0, -1) - 1], axis=0)
@@ -386,23 +458,35 @@ def pad_signal(data, pad_len, mode='symm', center=False):
     return data
 
 def periodize_filter(filter_f):
-    '''NOTE: filter_f is a rank 1 array. In the MATLAB version, a rank 2 array is allowed.
+    '''
+    periodizes filter at multiple resolutions
+    inputs:
+    -------
+    - filter_f: rank 1 nparray or list. filter in the frequency domain (indicated by _f)
+
+    outputs:
+    --------
+    - coef: list whose elements are periodized filter at different resolutions. the output filters are in frequency domain
+
+    NOTE: if filter_f has length N, the output coef is a list of nparrays with length being
+    [N/2**0, N/2**1, N/2**2, ...] as far as N/2**n is an integer.
+    for a filter at a specific resolution, if the length is l, this filter is approximately
+    [the first l/2 values of filter_f, some value in the middle of filter_f, the last l/2 values of filter_f]
+    REVIEW: check how this function is being used. Why for each resolution, take the lowest and highest coefficients?
+
+    NOTE: filter_f is a rank 1 array. In the MATLAB version, a rank 2 array is allowed.
     this might correspond to 2 different filters for 1d signals when Q is a len 2 list. 
     However, if N is the shape of filter_f, the function does not only N(1)/2**j0 but also N(2)/2**j0
     which means that the meaning of N(2) is the length of the filter in that direction, NOT simply the number of filters
     Therefore we can use this function for filter_f being a rank 1 array'''
     filter_f = np.array(filter_f)
     N = len(filter_f)
-    coefft = []
+    coef = []
 
-    j0 = 0
+    # j0 = 0
     n_filter = sum((N / 2.**(np.arange(1, np.log2(N)+1))) % 1 == 0)
     # n_filter is the number of times N can be divided with 2
-    for _ in range(n_filter):
-        if np.any(np.abs(np.floor(N/2.**(j0+1))-N/2.**(j0+1))>1e-6):
-            # if any of filter_f's dimension length is not exactly a multiple of 2**(j0+1), break
-            break
-
+    for j0 in range(n_filter):
         filter_fj = filter_f.copy()
 
         mask =  np.array([1.]*int(N/2.**(j0+1)) + [1./2.] + [0.]*int((1-2.**(-j0-1))*N-1))
@@ -410,47 +494,66 @@ def periodize_filter(filter_f):
 
         filter_fj = filter_fj * mask
         filter_fj = np.reshape(filter_fj, [int(N/2**j0), 2**j0], order='F').sum(axis=1)
-        coefft.append(filter_fj)
-        j0 += 1
+        coef.append(filter_fj)
+        # j0 += 1
 
-    return coefft
+    return coef
 
-def unpad_signal(data, res, unpad_len, center=False):
+def unpad_signal(data, res, orig_len, center=False):
+    '''
+    remove padding from the result of pad_signal()
+    inputs:
+    -------
+    - data: list or np.array type data to be padded. either rank 1 (data_len,) or rank 2 (n_data, data_len)
+    - res: int type indicating the resolution of the signal (exponent when expressed as power of 2)
+    - orig_len: int type, length of the original, unpadded version. output is sized 
+    - center: bool type indicating whether to center the output
+
+    outputs:
+    --------
+    - data: nparray. either rank 1 (len,) or rank 2 (n_data, len) where len is
+    orig_len*2*(-res)
+    '''
     data = np.array(data)
     if len(data.shape) == 1:
         data = data[np.newaxis, :] # data is now rank 2 with shape (n_data, data_len)
 
     offset = 0
-    
     if center:
-        offset = (len(data) * 2**res - unpad_len) / 2
+        offset = int((len(data) * 2**res - orig_len) / 2) # FIXME: test cases where the argument of int() is not exactly an integer. Or, should it always be an integer?
     
-    offset_ds = np.floor(offset / 2**res)
-    unpad_len_ds = 1 + np.floor((unpad_len-1) / 2**res)
+    offset_ds = int(np.floor(offset / 2**res))
+    orig_len_ds = int(np.floor((orig_len-1) / 2**res)) # FIXME: what is it with the -1?
     
-    data = data[:, offset_ds:offset_ds + unpad_len_ds]
+    data = data[:, offset_ds:offset_ds + orig_len_ds]
 
     return data
 
-def wavelet_1d(data, filters, options=None):
-    if options is None:
-        options = {}
-
-    options = fill_struct(options, 'oversampling', 1)
-    options = fill_struct(options, 'psi_mask', list(range(filters['psi']['filter']))) # FIXME: originally was true(1, numel(filters.psi.filter))
-    options = fill_struct(options, 'data_resolution',0)
+def wavelet_1d(data, filters, options={}):
+    '''
+    1d wavelet transform
+    FIXME:REVIEW:review this function. Don't understand fully.
+    inputs:
+    -------
+    - data: list or nparray shaped (data_len,) or (n_data, data_len)
+    - filters: dict type object containing filter banks and their parameters
+    - options: dict type object containing optional parameters
+    '''
+    options = fill_struct(options, oversampling=1)
+    options = fill_struct(options, psi_mask=[True] * len(filters['psi']['filter'])) # FIXME: originally was true(1, numel(filters.psi.filter))
+    options = fill_struct(options, data_resolution=0)
 
     data = np.array(data)
     if len(data.shape) == 1:
         data = data[np.newaxis, :] # data is now rank 2 with shape (n_data, data_len)
     data_len = data.shape[1]
-    temp, psi_bw, phi_bw = filter_freq(filters['meta'])
+    _, psi_bw, phi_bw = filter_freq(filters['meta']) # filter_freq returns xi_psi, bw_psi, bw_phi
 
-    j0 = options.data_resolution
+    j0 = options['data_resolution']
 
-    N_padded = filters['meta']['size_filter'] / 2**j0
-
-    data = pad_signal(data, N_padded, filters['meta']['boundary'])
+    pad_len = filters['meta']['size_filter'] / 2**j0
+    # pad_signal()'s arguments are data, pad_len, mode='symm', center=False
+    data = pad_signal(data, pad_len, filters['meta']['boundary']) 
 
     xf = np.fft.fft(data, axis=1)
     
@@ -458,24 +561,27 @@ def wavelet_1d(data, filters, options=None):
     ds = max(ds, 0)
     
      
-    x_phi = np.real(conv_sub_1d(xf, filters['phi']['filter'], ds))
+    x_phi = np.real(conv_sub_1d(xf, filters['phi']['filter'], ds)) # arguments should be in frequency domain. Check where filters['phi']['filter'] is set as the frequency domain
     x_phi = unpad_signal(x_phi, ds, data_len)
-    meta_phi['j'] = -1
+    # so far we padded the data (say the length became n1 -> n2) then calculated the fft of that to use as an input for conv_sub_1d()
+    # the output has length n2 and so we run unpad_signal() to cut it down to length n1.
+    meta_phi['j'] = -1 # REVIEW: why is j -1? what is j?
     meta_phi['bandwidth'] = phi_bw
     meta_phi['resolution'] = j0 + ds
 
     # x_psi = []
     x_psi = [None] * filters['psi']['filter'] # FIXME: replacing zeros(n,0) with this. This line might break
-    meta_psi['j'] = -1 * np.ones(len(filters['psi']['filter']))
+    meta_psi['j'] = -1 * np.ones(len(filters['psi']['filter'])) # REVIEW: why -1? what are these?
     meta_psi['bandwidth'] = -1 * np.ones(len(filters['psi']['filter']))
     meta_psi['resolution'] = -1 * np.ones(len(filters['psi']['filter']))
-    for p1 in options['psi_mask']: # FIXME: options['psi_mask'] is here defined as the indices that are valid
+    for p1 in np.where(options['psi_mask'])[0]: # FIXME: options['psi_mask'] is a list of bool type elements
+    # p1: indices where options['phi_mask'] is True
         ds = np.round(np.log2(2 * np.pi / psi_bw[p1] / 2)) - j0 - max(1, options['oversampling'])
         ds = max(ds, 0)
 
         x_psi_tmp = conv_sub_1d(xf, filters['psi']['filter'][p1], ds)
         x_psi[p1] = unpad_signal(x_psi_tmp, ds, data_len)
-        meta_psi['j'][:, p1] = p1 - 1
+        meta_psi['j'][:, p1] = p1 # FIXME: might break: in matlab version this was = p1 - 1. I changed to = p1 instead.
         meta_psi['bandwidth'][:, p1] = psi_bw[p1]
         meta_psi['resolution'][:,p1] = j0 + ds
 
@@ -499,7 +605,7 @@ def scat(x, Wop): # NOTE:Wop should be a list of functions
     # Apply scattering, order per order
     for m in range(len(Wop)):
         if m < len(Wop) - 1:
-            [S[m], V] = Wop[m](U[m])
+            S[m], V = Wop[m](U[m])
             U[m] = modulus_layer(V)
         else:
             S[m] = Wop[m](U[m])
@@ -514,7 +620,7 @@ def wavelet_factory_1d(N, filt_opt=None, scat_opt=None):
     
     if scat_opt is None:
         scat_opt = {} 
-    scat_opt = fill_struct(scat_opt, 'M', 2) # M is the scattering order
+    scat_opt = fill_struct(scat_opt, M=2) # M is the scattering order
     
     Wop = [None] * scat_opt['M']
     for m in range(scat_opt['M'] + 1):
@@ -533,7 +639,7 @@ def wavelet_layer_1d(U, filters, scat_opt=None, wavelet=None):
     if wavelet is None:
         wavelet = wavelet_1d
     
-    scat_opt = fill_struct(scat_opt, 'path_margin', 0)
+    scat_opt = fill_struct(scat_opt, path_margin=0)
     
     psi_xi, psi_bw, phi_bw = filter_freq(filters['meta'])
     
@@ -582,23 +688,23 @@ def filter_bank(data_len, options=None):
     if options is None:
         options = {}
 
-    options = fill_struct(options, 'filter_type', 'morlet_1d')
-    options = fill_struct(options, 'Q', [])
-    options = fill_struct(options, 'B', [])
-    options = fill_struct(options, 'xi_psi', [])
-    options = fill_struct(options, 'sigma_psi', [])
-    options = fill_struct(options, 'phi_bw_multiplier', [])
-    options = fill_struct(options, 'sigma_phi', [])
-    options = fill_struct(options, 'J', [])
-    options = fill_struct(options, 'P', [])
-    options = fill_struct(options, 'spline_order', [])
-    options = fill_struct(options, 'precision', 'double')
-    options = fill_struct(options, 'filter_format', 'fourier_truncated')
+    options = fill_struct(options, filter_type='morlet_1d')
+    options = fill_struct(options, Q=[])
+    options = fill_struct(options, B=[])
+    options = fill_struct(options, xi_psi=[])
+    options = fill_struct(options, sigma_psi=[])
+    options = fill_struct(options, phi_bw_multiplier=[])
+    options = fill_struct(options, sigma_phi=[])
+    options = fill_struct(options, J=[])
+    options = fill_struct(options, P=[])
+    options = fill_struct(options, spline_order=[])
+    options = fill_struct(options, precision='double')
+    options = fill_struct(options, filter_format='fourier_truncated')
     
-    if not isinstance(options.filter_type, list)
+    if not isinstance(options.filter_type, list):
         options.filter_type = [options.filter_type]
     
-    if not isinstance(options.filter_format, list)
+    if not isinstance(options.filter_format, list):
         options.filter_format = [options.filter_format]
         
     bank_count = max([len(options[x]) for x in parameter_fields]) # number of required filter banks
@@ -649,19 +755,19 @@ def morlet_filter_bank_1d(data_len, options=None):
     sigma0 = 2 / np.sqrt(3)
     
     # Fill in default parameters
-    options = fill_struct(options, 'filter_type','morlet_1d')
-    options = fill_struct(options, 'Q', 1)
-    options = fill_struct(options, 'B', options['Q'])
-    options = fill_struct(options, 'xi_psi', 1 / 2 * (2**(-1 / options['Q']) + 1) * np.pi)
-    options = fill_struct(options, 'sigma_psi', 1 / 2 * sigma0 / (1 - 2**(-1 / options['B'])))
-    options = fill_struct(options, 'phi_bw_multiplier', 1 + (options['Q'] == 1))
-    options = fill_struct(options, 'sigma_phi', options['sigma_psi'] / options['phi_bw_multiplier'])
-    options = fill_struct(options, 'J', T_to_J(data_len, options))
-    options = fill_struct(options, 'P', np.round((2**(-1 / options['Q']) - 1 / 4 * sigma0 / options['sigma_phi']) / (1 - 2**(-1 / options['Q']))))
-    options = fill_struct(options, 'precision', 'double')
-    options = fill_struct(options, 'filter_format', 'fourier_truncated')
-    options = fill_struct(options, 'boundary', 'symm')
-    options = fill_struct(options, 'phi_dirac', 0)
+    options = fill_struct(options, filter_type='morlet_1d')
+    options = fill_struct(options, Q=1)
+    options = fill_struct(options, B=options['Q'])
+    options = fill_struct(options, xi_psi=1 / 2 * (2**(-1 / options['Q']) + 1) * np.pi)
+    options = fill_struct(options, sigma_psi=1 / 2 * sigma0 / (1 - 2**(-1 / options['B'])))
+    options = fill_struct(options, phi_bw_multiplier=1 + (options['Q'] == 1))
+    options = fill_struct(options, sigma_phi=options['sigma_psi'] / options['phi_bw_multiplier'])
+    options = fill_struct(options, J=T_to_J(data_len, options))
+    options = fill_struct(options, P=np.round((2**(-1 / options['Q']) - 1 / 4 * sigma0 / options['sigma_phi']) / (1 - 2**(-1 / options['Q']))))
+    options = fill_struct(options, precision='double')
+    options = fill_struct(options, filter_format='fourier_truncated')
+    options = fill_struct(options, boundary='symm')
+    options = fill_struct(options, phi_dirac=0)
     
     if options['filter_type'] != 'morlet_1d' and options['filter_type'] != 'gabor_1d':
         raise ValueError('Filter type must be morlet_1d or gabor_1d')
@@ -674,7 +780,7 @@ def morlet_filter_bank_1d(data_len, options=None):
     # scattering algorithm to calculate sampling, path space, etc.
     filters.meta = {}
     for l in range(len(parameter_fields)):
-        filters['meta'][parameter_fields{l}] = options[parameter_fields[l]] # FIXME: check if things get connected...
+        filters['meta'][parameter_fields[l]] = options[parameter_fields[l]] # FIXME: check if things get connected...
     # FIXME: in the matlab version, you set the field and return the struct. Here, I simply update the dict.
     # should this do the job?
 
@@ -707,7 +813,7 @@ def morlet_filter_bank_1d(data_len, options=None):
     # As it occupies a larger portion of the spectrum, it is more
     # important for the logarithmic portion of the filter bank to be
     # properly normalized, so we only sum their contributions.
-    for j1 in range(options['J'])
+    for j1 in range(options['J']):
         temp = gabor(N, psi_center[j1], psi_sigma[j1])
         if not do_gabor:
             temp = morletify(temp,psi_sigma[j1])
@@ -740,7 +846,7 @@ def gabor(N, xi, sigma):
     
     # calculate the 2*pi-periodization of the filter over 0 to 2*pi*(N-1)/N
     for k in range(-extent, 2 + extent):
-        f = f + np.exp(-((np.arange(N) - k * N) / N * 2 * np.pi - xi)**2. / (2 * sigma**2))
+        f += np.exp(-((np.arange(N) - k * N) / N * 2 * np.pi - xi)**2. / (2 * sigma**2))
     return f
 
 def morletify(f, sigma):

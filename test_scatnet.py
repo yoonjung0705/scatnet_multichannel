@@ -7,7 +7,7 @@ class ScatnetTestCase(unittest.TestCase):
 		'''
 		- test if J is list when audio and scalar when dyadic
 		- test if argument filt_opt remains instact upon function call
-		FIXME: check if Q,J,B are altogether list or scalar at the same time
+		FIXME: check if Q,J,B are altogether list or scalar at the same time?
 		'''
 		for T in [10, 100, 1000, 10000]:
 			s = sn.default_filter_opt('audio', 5)
@@ -43,7 +43,6 @@ class ScatnetTestCase(unittest.TestCase):
 			else:
 				self.assertTrue(s['J'] > 0)
 
-	# FIXME: add tests on periodize_filter(), optimize_filter()
 	def test_fill_struct(self):
 		'''
 		- test if key value pair added when key not present
@@ -72,6 +71,8 @@ class ScatnetTestCase(unittest.TestCase):
 
 		- test if xi_psi, bw_psi have length J+P, J+P+1, respectively
 		- test if filt_opt does not change upon function call
+		FIXME: tests on values should be added
+                FIXME: add test case where output lists have length 0(?) or 1
 		'''
 		filt_opt = {'xi_psi':0.5, 'sigma_psi':0.4, 'sigma_phi':0.5, 'J':11,
 			'Q':8, 'P':5, 'phi_dirac': True}
