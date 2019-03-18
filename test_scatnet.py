@@ -121,7 +121,7 @@ class ScatnetTestCase(unittest.TestCase):
 		from_meta = self.create_meta(('key1', (8,5)), ('key2', (10,5)))
 		to_meta = self.create_meta(('key1', (4,5)), ('key3', (4,5)))
 		to_meta_orig = to_meta.copy()
-		to_meta_out = sn.map_meta(from_meta, from_ind, to_meta, to_ind, exclude=None)
+		to_meta_out = sn.map_meta(from_meta, from_ind, to_meta, to_ind)
 		# check if to_meta's shared key's to_ind values are identical to 
 		# from_meta's shared key's from_ind values 
 		self.assertTrue(np.isclose(from_meta['key1'][from_ind], 
@@ -145,7 +145,7 @@ class ScatnetTestCase(unittest.TestCase):
 		from_meta = self.create_meta(('key1', (7,5)), ('key2', (12,5)))
 		to_meta = self.create_meta(('key1', (6,5)), ('key3', (8,5)))
 		to_meta_orig = to_meta.copy()
-		to_meta_out = sn.map_meta(from_meta, from_ind, to_meta, to_ind, exclude=None)
+		to_meta_out = sn.map_meta(from_meta, from_ind, to_meta, to_ind)
 		# check if to_meta's shared key's to_ind values are identical to 
 		# from_meta's shared key's from_ind values 
 		self.assertTrue(np.isclose(from_meta['key1'][from_ind], 
@@ -169,7 +169,7 @@ class ScatnetTestCase(unittest.TestCase):
 		from_meta = self.create_meta(('key1', (7,5)), ('key2', (12,5)))
 		to_meta = self.create_meta(('key1', (6,5)), ('key3', (8,5)))
 		to_meta_orig = to_meta.copy()
-		to_meta_out = sn.map_meta(from_meta, from_ind, to_meta, to_ind, exclude=None)
+		to_meta_out = sn.map_meta(from_meta, from_ind, to_meta, to_ind)
 		# check if to_meta's shared key's to_ind values are identical to 
 		# from_meta's shared key's from_ind values 
 		self.assertTrue(np.isclose(np.tile(from_meta['key1'][from_ind], 
@@ -196,7 +196,7 @@ class ScatnetTestCase(unittest.TestCase):
 		from_meta = self.create_meta(('key1', (7,5)), ('key2', (12,5)))
 		to_meta = {}
 		to_meta_orig = to_meta.copy()
-		to_meta_out = sn.map_meta(from_meta, from_ind, to_meta, to_ind, exclude=None)
+		to_meta_out = sn.map_meta(from_meta, from_ind, to_meta, to_ind)
 		# check if from_meta's pure key's values are copied into to_meta
 		self.assertTrue(np.isclose(from_meta['key1'][from_ind], 
 			to_meta_out['key1'][to_ind], rtol=1e-5, atol=1e-8).all())
@@ -209,7 +209,7 @@ class ScatnetTestCase(unittest.TestCase):
 		from_meta = self.create_meta(('key1', (7,5)), ('key2', (12,5)))
 		to_meta = self.create_meta(('key3', (6,5)), ('key4', (8,5)))
 		to_meta_orig = to_meta.copy()
-		to_meta_out = sn.map_meta(from_meta, from_ind, to_meta, to_ind, exclude=None)
+		to_meta_out = sn.map_meta(from_meta, from_ind, to_meta, to_ind)
 		# check if to_meta's pure key's values are identical to 
 		# to_meta_orig's pure key's values
 		self.assertTrue(np.isclose(to_meta_orig['key3'], 
@@ -228,7 +228,7 @@ class ScatnetTestCase(unittest.TestCase):
 		from_meta = {}
 		to_meta = self.create_meta(('key1', (4,5)), ('key2', (4,5)))
 		to_meta_orig = to_meta.copy()
-		to_meta_out = sn.map_meta(from_meta, from_ind, to_meta, to_ind, exclude=None)
+		to_meta_out = sn.map_meta(from_meta, from_ind, to_meta, to_ind)
 		# check if to_meta's pure key's values are identical to 
 		# to_meta_orig's pure key's values
 		self.assertTrue(np.isclose(to_meta_orig['key1'], 
@@ -244,7 +244,7 @@ class ScatnetTestCase(unittest.TestCase):
 		to_meta_orig = to_meta.copy()
 		# following should raise error
 		with self.assertRaises(ValueError):
-			to_meta_out = sn.map_meta(from_meta, from_ind, to_meta, to_ind, exclude=None)
+			to_meta_out = sn.map_meta(from_meta, from_ind, to_meta, to_ind)
 
 		# when index is out of bound for from_meta (should raise error)
 		from_ind = [20,1]
@@ -254,7 +254,7 @@ class ScatnetTestCase(unittest.TestCase):
 		to_meta_orig = to_meta.copy()
 		# following should raise error
 		with self.assertRaises(IndexError):
-			to_meta_out = sn.map_meta(from_meta, from_ind, to_meta, to_ind, exclude=None)
+			to_meta_out = sn.map_meta(from_meta, from_ind, to_meta, to_ind)
 
 		# when index is out of bound for to_meta
 		from_ind = [3,1]
@@ -262,7 +262,7 @@ class ScatnetTestCase(unittest.TestCase):
 		from_meta = self.create_meta(('key1', (7,5)), ('key2', (12,5)))
 		to_meta = self.create_meta(('key1', (3,5)), ('key3', (6,5)))
 		to_meta_orig = to_meta.copy()
-		to_meta_out = sn.map_meta(from_meta, from_ind, to_meta, to_ind, exclude=None)
+		to_meta_out = sn.map_meta(from_meta, from_ind, to_meta, to_ind)
 		# check if to_meta's shared key's to_ind values are identical to 
 		# from_meta's shared key's from_ind values 
 		self.assertTrue(np.isclose(from_meta['key1'][from_ind], 
@@ -286,7 +286,7 @@ class ScatnetTestCase(unittest.TestCase):
 		from_meta = self.create_meta(('key1', (7,5)), ('key2', (12,5)))
 		to_meta = self.create_meta(('key1', (3,5)), ('key3', (6,5)))
 		to_meta_orig = to_meta.copy()
-		to_meta_out = sn.map_meta(from_meta, from_ind, to_meta, to_ind, exclude=None)		
+		to_meta_out = sn.map_meta(from_meta, from_ind, to_meta, to_ind)		
 		# following should return to_meta without any change
 		for key in to_meta.keys():
 			self.assertTrue(np.isclose(to_meta_orig[key], to_meta_orig[key], 
@@ -298,7 +298,7 @@ class ScatnetTestCase(unittest.TestCase):
 		from_meta = self.create_meta(('key1', (7,5)), ('key2', (12,5)))
 		to_meta = self.create_meta(('key1', (3,5)), ('key3', (6,5)))
 		to_meta_orig = to_meta.copy()
-		to_meta_out = sn.map_meta(from_meta, from_ind, to_meta, to_ind, exclude=None)		
+		to_meta_out = sn.map_meta(from_meta, from_ind, to_meta, to_ind)		
 		# following should return to_meta without any change
 		for key in to_meta.keys():
 			self.assertTrue(np.isclose(to_meta_orig[key], to_meta_orig[key], 
@@ -338,7 +338,7 @@ class ScatnetTestCase(unittest.TestCase):
 		from_meta = self.create_meta(('key1', (7,5)), ('key2', (12,5)))
 		to_meta = self.create_meta(('key1', (6,5)), ('key3', (8,5)))
 		from_meta_orig = from_meta.copy()
-		to_meta_out = sn.map_meta(from_meta, from_ind, to_meta, to_ind, exclude=None)
+		to_meta_out = sn.map_meta(from_meta, from_ind, to_meta, to_ind)
 		for key in from_meta.keys():
 			self.assertTrue(np.isclose(from_meta_orig[key], 
 				from_meta[key], rtol=1e-5, atol=1e-8).all())
@@ -352,7 +352,7 @@ class ScatnetTestCase(unittest.TestCase):
 		to_meta_orig = to_meta.copy()
 
 		with self.assertRaises(ValueError):
-			to_meta_out = sn.map_meta(from_meta, from_ind, to_meta, to_ind, exclude=None)
+			to_meta_out = sn.map_meta(from_meta, from_ind, to_meta, to_ind)
 
 	def create_meta(self, *args):
 		'''
