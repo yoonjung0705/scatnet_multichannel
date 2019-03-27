@@ -381,10 +381,14 @@ def conv_sub_1d(data, filt, ds):
 
     inputs:
     -------
-    - data: list or nparray dypte. data to be convolved in the frequency domain
+    - data: list or nparray dypte with shape (n_data, data_len) or (data_len,). data to be convolved in the frequency domain
     - filt: dict or list or nparray type. analysis filt in the frequency domain.
-    if dict type, it has filt type and coef value. Based on the filt type (fourier_multires or fourier_truncated),
-    the way the convolution is done differs
+    if dict type, it has the following keys: 'type', 'coef', 'N'. 
+    if type is 'fourier_multires', filt['coef'] is assumed to be a rank 1 list of filters where each filter is rank 1
+    From the data length and filt['N'], the array with the same size with that of the data is found and convolved.
+    This dict type object filt is an output of periodize_filter().
+
+    if type is 'fourier_truncated', filt['coef'] is assumed to be an array. in this case filt also has 'start' as a key
     - ds: downsampling factor exponent when represented in power of 2
 
     outputs:
@@ -429,27 +433,34 @@ def conv_sub_1d(data, filt, ds):
                 # create lowpass filt
                 start0 = start % filt['N']
                 if (start0 + n_coef) <= filt['N']:
-                    rng = np.arange(start0, n_coef - 1)
+                    rng = np.arange(start0, n_coef - 1).astype(int)
                 else:
-                    rng = np.concatenate([np.arange(start0, filt['N']), np.arange(n_coef + start0 - filt['N'])], axis=0)
+                    rng = np.concatenate([np.arange(start0, filt['N']), np.arange(n_coef + start0 - filt['N'])], axis=0).astype(int)
 
                 lowpass = np.zeros(n_coef)
-                lowpass[rng < data_len / 2] = 1
-                lowpass[rng == data_len / 2] = 1/2
-                lowpass[rng == filt['N'] - data_len / 2] = 1/2
-                lowpass[rng > filt['N'] - data_len / 2] = 1
+                lowpass[rng < int(data_len / 2)] = 1
+                lowpass[rng == int(data_len / 2)] = 1/2
+                lowpass[rng == int(filt['N'] - data_len / 2)] = 1/2
+                lowpass[rng > int(filt['N'] - data_len / 2)] = 1
                 # filter and periodize
-                coef = np.reshape(coef * lowpass, [data_len, int(n_coef / data_len)]).sum(axis=1)
-                coef = coef[np.newaxis, :]
-
+                coef = np.reshape(coef * lowpass, [int(n_coef / data_len), data_len]).sum(axis=0)
+            # so far coef is rank 1
+            coef = coef[np.newaxis, :]
             j = int(np.round(np.log2(n_coef / data_len)))
+            print(j)
             start = start % data_len
+            print(start)
             if start + n_coef <= data_len:
                 # filter support contained in one period, no wrap-around
-                yf = data[:, start:n_coef+start-1] * np.tile(coef, (n_data, 1))
+                # FIXME: check if np.tile can be replaced with broadcasting
+                # yf = data[:, start:n_coef+start] * np.tile(coef, (n_data, 1))
+                yf = data[:, start:n_coef+start] * coef
             else:
                 # filter support wraps around, extract both parts
-                yf = np.concatenate([data[:, start:], data[:, :n_coef + start - size(data,1)]], axis=1) * np.tile(coef, (n_data, 1))
+                # FIXME: check if np.tile can be replaced with broadcasting
+                # yf = np.concatenate([data[:, start:], data[:, :n_coef + start - size(data,1)]], axis=1) * np.tile(coef, (n_data, 1))
+                yf = np.concatenate([data[:, start:], data[:, :n_coef + start - data_len]], axis=1) * coef
+            print(yf)
 
     else:
         # type is either list or nparray
@@ -486,10 +497,11 @@ def conv_sub_1d(data, filt, ds):
     else: # if dsj == 0
         yf_ds = yf
     
-    if isinstance(filt, dict) and filt['type'] == 'fourier_truncated' and filt['recenter']:
-        # result has been shifted in frequency so that the zero fre-
-        # quency is actually at -filt.start+1
-        yf_ds = np.roll(yf_ds, filt['start']-1, axis=1)
+    if isinstance(filt, dict):
+        if filt['type'] == 'fourier_truncated' and filt['recenter']:
+            # result has been shifted in frequency so that the zero fre-
+            # quency is actually at -filt.start+1
+            yf_ds = np.roll(yf_ds, filt['start'], axis=1)
 
     y_ds = np.fft.ifft(yf_ds, axis=1) / 2**(ds/2) # ifft default axis=-1
     # the 2**(ds/2) factor seems like normalization
@@ -510,7 +522,7 @@ def pad_signal(data, pad_len, mode='symm', center=False):
     inputs:
     -------
     - data: rank 1 or 2 array or list with shape (data_len,) or (n_data, data_len)
-    - pad_len: int type, length after zadding
+    - pad_len: int type, length after padding
     - mode: string type either symm, per, zero.
     - center: bool type indicating whether to bring the padded signal to the center
 
@@ -589,7 +601,10 @@ def periodize_filter(filter_f):
 
     outputs:
     --------
-    - coef: list whose elements are periodized filter at different resolutions. the output filters are in frequency domain
+    - filt: dict type object with the following fields: (FIXME: see if you can change this output to coef array instead of the entire dict)
+    N: int type, length of the given filter_f
+    type: string with value 'fourier_multires'
+    coef: list whose elements are periodized filter at different resolutions. the output filters are in frequency domain
     FIXME: later consider simplifying this so that all the meta data is not everywhere.
 
     NOTE: if filter_f has length N, the output coef is a list of nparrays with length being
@@ -648,10 +663,11 @@ def unpad_signal(data, res, orig_len, center=False):
     data = np.array(data)
     if len(data.shape) == 1:
         data = data[np.newaxis, :] # data is now rank 2 with shape (n_data, data_len)
+    data_len = data.shape[1] # length of a single data.
 
     offset = 0
     if center:
-        offset = int((len(data) * 2**res - orig_len) / 2) # FIXME: test cases where the argument of int() is not exactly an integer. Or, should it always be an integer?
+        offset = int((data_len * 2**res - orig_len) / 2) # FIXME: test cases where the argument of int() is not exactly an integer. Or, should it always be an integer?
     offset_ds = int(np.floor(offset / 2**res))
     orig_len_ds = 1 + int(np.floor((orig_len-1) / 2**res)) # although this is an index, the value is identical to that of the matlab version since it is used for accessing values through [...:orig_len_ds]
     # but in python indexing the last index does not get included and so for this value we do not subtract 1 to get 0 based index.
@@ -853,7 +869,6 @@ def wavelet_factory_1d(data_len, filter_opt=None, scat_opt={}):
 
         print("filters[0] psi filter coefft:{}".format(filters[0]['psi']['filter'][0]['coef'][0][:5])) # for m=0, this matches with matlab
         print("filters[0] psi filter coefft:{}".format(filters[1]['psi']['filter'][3]['coef'][6][:5])) # for m=0, this matches with matlab
-
 
 
 
@@ -1246,33 +1261,38 @@ def morletify(f, sigma):
 def dyadic_freq_1d(filter_options):
     pass
 
-'''
-def truncate_filter(filter_f, threshold, lowpass):
+def truncate_filter(filter_f, threshold):
+    filter_f = np.array(filter_f)
     N = len(filter_f)
     
-    filt['type'] = 'fourier_truncated'
-    filt['N'] = N
+    filt = {'type':'fourier_truncated', 'N':N}
 
     # Could have filt.recenter = lowpass, but since we don't know if we're
     # taking the modulus or not, we always need to recenter.
-    filt['recenter'] = 1
+    filt['recenter'] = True
+    idx_max = np.argmax(filter_f)
+    # expects filter_f to have len being a multiple of 2 
+    filter_f = np.roll(filter_f, int(N / 2) - (idx_max + 1))
+    # np.where()'s return type is tuple and therefore [0] is required
+    idx = np.where(np.abs(filter_f) > (np.abs(filter_f).max() * threshold))[0] 
     
-    [temp,ind_max] = max(filter_f)
-    filter_f = circshift(filter_f, N/2-ind_max)
-    ind1 = find(abs(filter_f)>(max(abs(filter_f))*threshold),1)
-    ind2 = find(abs(filter_f)>(max(abs(filter_f))*threshold),1,'last')
+    idx1 = idx[0]
+    idx2 = idx[-1]
+
+    length = idx2 - idx1 + 1
+    length = int(np.round(filt['N'] / 2**(np.floor(np.log2(filt['N'] / length)))))
+    # before np.round(), add small amount since in np.round(), halfway values are 
+    # rounded to the nearest even value, i.e., np.round(2.5) gives 2.0, NOT 3
+    # if the amount is too small (1e-17, for example), treated as adding nothing
+    idx1 = int(np.round(np.round((idx1 + idx2) / 2 + 1e-6) - length / 2 + 1e-6))
+    idx2 = idx1 + int(length) - 1
     
-    length = ind2-ind1+1
-    length = filt['N']/2^(floor(log2(filt['N']/length)))
-    
-    ind1 = np.round(np.round((ind1+ind2)/2)-length/2)
-    ind2 = ind1+len-1
-    
-    filter_f = filter_f(mod([ind1:ind2] - 1, filt['N'])+1)
+    filter_f = filter_f[np.arange(idx1, idx2 + 1) % filt['N']]
+
+    # filter_f = filter_f(([idx1:idx2]) % filt['N'] + 1)
     
     filt['coef'] = filter_f
-    filt['start'] = ind1-(N/2-ind_max)
+    filt['start'] = int(idx1 - (N / 2 - idx_max) + 1)
 
     return filt
 
-'''
