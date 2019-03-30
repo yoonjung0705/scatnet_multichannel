@@ -11,7 +11,7 @@ in matlab, the shape when read in python nparray is (1, data_len), NOT (data_len
 Therefore, when writing test functions extra care should be taken for functions that have arguments type
 lists or arrays
 
-FIXME: check if upon function call the arguments do not change
+FIXME: check if upon function call the arguments do not change (DONE so far)
 '''
 import os
 import unittest
@@ -20,6 +20,7 @@ import glob
 import re
 import scatnet as sn
 import h5py
+import copy
 
 
 TEST_DATA_FILEPATH = '/home/yoonjung/repos/python/scatnet_multichannel/matlab_test_data/'
@@ -29,20 +30,25 @@ class ScatnetTestCase(unittest.TestCase):
         '''
         - test if J is list when audio and scalar when dyadic
         - test if argument filt_opt remains instact upon function call
+        - test if input argument does not change upon function call
         FIXME: check if Q,J,B are altogether list or scalar at the same time?
         NOTE: J can be negative if T too small
         '''
         for T in [10, 100, 1000, 10000]:
             s = sn.default_filter_opt('audio', 5)
+            s_cp = copy.deepcopy(s)
             J = sn.T_to_J(T, s)
             self.assertIsInstance(J, list)
+            self.assertEqual(s, s_cp)
 
             s = sn.default_filter_opt('dyadic', 5)
+            s_cp = copy.deepcopy(s)
             J = sn.T_to_J(T, s)
             self.assertIsInstance(J, (int, float))
+            self.assertEqual(s, s_cp)
 
         s = sn.default_filter_opt('audio', 10)
-        s_cp = s.copy()
+        s_cp = copy.deepcopy(s)
         J = sn.T_to_J(T, s)
         self.assertEqual(s, s_cp)
 
@@ -109,8 +115,7 @@ class ScatnetTestCase(unittest.TestCase):
 
         - test if xi_psi, bw_psi have length J+P, J+P+1, respectively
         - test if filt_opt does not change upon function call
-        FIXME: tests on values should be added
-                FIXME: add test case where output lists have length 0(?) or 1
+        FIXME: add test case where output lists have length 0(?) or 1
         '''
         filt_opt = {'xi_psi':0.5, 'sigma_psi':0.4, 'sigma_phi':0.5, 'J':11,
             'Q':8, 'P':5, 'phi_dirac': True}
@@ -142,7 +147,7 @@ class ScatnetTestCase(unittest.TestCase):
 
             options = {}
             options = sn.fill_struct(options, Q=Q, J=J, P=P, xi_psi=xi_psi, sigma_psi=sigma_psi, sigma_phi=sigma_phi, phi_dirac=phi_dirac)
-            
+            options_orig = copy.deepcopy(options)
             xi_psi, bw_psi, bw_phi = sn.morlet_freq_1d(options)
 
             xi_psi = np.array(xi_psi)
@@ -158,9 +163,13 @@ class ScatnetTestCase(unittest.TestCase):
             self.assertTrue(np.isclose(xi_psi, xi_psi_ref, rtol=1e-5, atol=1e-8).all())
             self.assertTrue(np.isclose(bw_psi, bw_psi_ref, rtol=1e-5, atol=1e-8).all())
             self.assertTrue(np.isclose(bw_phi, bw_phi_ref, rtol=1e-5, atol=1e-8).all())
+            # check if input array does not change upon function call
+            self.assertEqual(options, options_orig)
 
     def test_pad_signal(self):
-        '''FIXME: add tests on python only (not comparing with matlab) to test sizes, other stuff'''
+        '''FIXME: add tests on python only (not comparing with matlab) to test sizes, other stuff
+        - test if input argument does not change upon function call
+        '''
         # calculate fields using python function using parameters retrieved from matlab test data file names
         matlab_fun = 'pad_signal'
         test_files = glob.glob(TEST_DATA_FILEPATH + matlab_fun + '*.mat')
@@ -176,12 +185,17 @@ class ScatnetTestCase(unittest.TestCase):
             ref_results_file = h5py.File(test_file)
             data_in_ref = np.array(ref_results_file['data_in'])
             data_out_ref = np.array(ref_results_file['data_out'])
+            data_in_ref_orig = np.copy(data_in_ref)
 
-            data_out = sn.pad_signal(data_in_ref.copy(), pad_len=pad_len, mode=mode, center=center)
+            data_out = sn.pad_signal(data_in_ref, pad_len=pad_len, mode=mode, center=center)
             self.assertTrue(np.isclose(data_out, data_out_ref, rtol=1e-5, atol=1e-8).all())
+            # check if input array does not change upon function call
+            self.assertTrue(np.isclose(data_in_ref, data_in_ref_orig, rtol=1e-5, atol=1e-8).all())    
 
     def test_unpad_signal(self):
-        '''FIXME: add tests on python only (not comparing with matlab) to test sizes, other stuff'''
+        '''FIXME: add tests on python only (not comparing with matlab) to test sizes, other stuff
+        - test if input argument does not change upon function call
+        '''
         # calculate fields using python function using parameters retrieved from matlab test data file names
         matlab_fun = 'unpad_signal'
         test_files = glob.glob(TEST_DATA_FILEPATH + matlab_fun + '*.mat')
@@ -197,12 +211,17 @@ class ScatnetTestCase(unittest.TestCase):
             ref_results_file = h5py.File(test_file)
             data_in_ref = np.array(ref_results_file['data_in'])
             data_out_ref = np.array(ref_results_file['data_out'])
+            data_in_ref_orig = np.copy(data_in_ref)
 
-            data_out = sn.unpad_signal(data_in_ref.copy(), res=res, orig_len=orig_len, center=center)
+            data_out = sn.unpad_signal(data_in_ref, res=res, orig_len=orig_len, center=center)
             self.assertTrue(np.isclose(data_out, data_out_ref, rtol=1e-5, atol=1e-8).all())
+            # check if input array does not change upon function call
+            self.assertTrue(np.isclose(data_in_ref, data_in_ref_orig, rtol=1e-5, atol=1e-8).all())               
 
     def test_periodize_filter(self):
-        '''FIXME: add tests on python only (not comparing with matlab) to test sizes, other stuff'''
+        '''FIXME: add tests on python only (not comparing with matlab) to test sizes, other stuff
+        - test if input argument does not change upon function call
+        '''
         # calculate fields using python function using parameters retrieved from matlab test data file names
         matlab_fun = 'periodize_filter'
         test_files = glob.glob(TEST_DATA_FILEPATH + matlab_fun + '*.mat')
@@ -212,16 +231,20 @@ class ScatnetTestCase(unittest.TestCase):
             # the values of ref_results_file have both shape (1, filter_len)
             filter_in_ref = np.array(ref_results_file['filter_f'])[0]
             coef_out_ref = np.array(ref_results_file['coef_concat'])[0]
+            filter_in_ref_orig = np.copy(filter_in_ref)
 
-            coef_out = np.concatenate(sn.periodize_filter(filter_in_ref.copy())['coef'], axis=0)
+            coef_out = np.concatenate(sn.periodize_filter(filter_in_ref)['coef'], axis=0)
             # coef_out has shape (filter_len,)
             self.assertTrue(np.isclose(coef_out, coef_out_ref, rtol=1e-5, atol=1e-8).all())
+            # check if input array does not change upon function call
+            self.assertTrue(np.isclose(filter_in_ref, filter_in_ref_orig, rtol=1e-5, atol=1e-8).all())            
 
     def test_conv_sub_1d_filt_array(self):
         '''FIXME: add tests on python only (not comparing with matlab) to test sizes, other stuff
         NOTE: when reading arrays with complex numbers from matlab, the format for each number becomes a tuple.
         to avoid this, I saved the real and imaginary part separately and compare the results for real and imaginary
         separately.
+        - test if input argument does not change upon function call
         '''
         # calculate fields using python function using parameters retrieved from matlab test data file names
         matlab_fun = 'conv_sub_1d'
@@ -248,18 +271,25 @@ class ScatnetTestCase(unittest.TestCase):
 
             data_in_ref = data_in_ref_real + data_in_ref_imag * 1j
             filt_in_ref = filt_in_ref_real + filt_in_ref_imag * 1j
-            data_out = sn.conv_sub_1d(data_in_ref.copy(), filt_in_ref.copy(), ds)
+            data_in_ref_orig = np.copy(data_in_ref)
+            filt_in_ref_orig = np.copy(filt_in_ref)
+            data_out = sn.conv_sub_1d(data_in_ref, filt_in_ref, ds)
             data_out_real = np.real(data_out)
             data_out_imag = np.imag(data_out)
 
             self.assertTrue(np.isclose(data_out_real, data_out_ref_real, rtol=1e-5, atol=1e-8).all())
             self.assertTrue(np.isclose(data_out_imag, data_out_ref_imag, rtol=1e-5, atol=1e-8).all())
-        
+            # check if input array does not change upon function call
+            self.assertTrue(np.isclose(filt_in_ref, filt_in_ref_orig, rtol=1e-5, atol=1e-8).all())
+            self.assertTrue(np.isclose(data_in_ref, data_in_ref_orig, rtol=1e-5, atol=1e-8).all())
+
+
     def test_conv_sub_1d_fourier_multires(self):
         '''FIXME: add tests on python only (not comparing with matlab) to test sizes, other stuff
         NOTE: when reading arrays with complex numbers from matlab, the format for each number becomes a tuple.
         to avoid this, I saved the real and imaginary part separately and compare the results for real and imaginary
         separately.
+        - test if input argument does not change upon function call
         '''
         # calculate fields using python function using parameters retrieved from matlab test data file names
         matlab_fun = 'conv_sub_1d'
@@ -279,7 +309,8 @@ class ScatnetTestCase(unittest.TestCase):
             data_in_ref_real = np.array(ref_results_file['data_in_real'])
             data_in_ref_imag = np.array(ref_results_file['data_in_imag'])
             data_in_ref = data_in_ref_real + data_in_ref_imag * 1j
-            
+            data_in_ref_orig = np.copy(data_in_ref)            
+           
             coef_in_ref_real = np.array(ref_results_file['coef_real'])
             coef_in_ref_imag = np.array(ref_results_file['coef_imag'])
             coef_in_ref = coef_in_ref_real + coef_in_ref_imag * 1j
@@ -295,6 +326,7 @@ class ScatnetTestCase(unittest.TestCase):
                 coef_in_ref = np.delete(coef_in_ref, np.s_[:n])
                 n = float(n) / 2
             filt['coef'] = coef
+            filt_orig = copy.deepcopy(filt)
 
             data_out_ref_real = np.array(ref_results_file['data_out_real'])
             data_out_ref_imag = np.array(ref_results_file['data_out_imag'])
@@ -305,24 +337,188 @@ class ScatnetTestCase(unittest.TestCase):
 
             self.assertTrue(np.isclose(data_out_real, data_out_ref_real, rtol=1e-5, atol=1e-8).all())
             self.assertTrue(np.isclose(data_out_imag, data_out_ref_imag, rtol=1e-5, atol=1e-8).all())
+            # check if input array does not change upon function call
+            self.assertTrue(np.isclose(data_in_ref_orig, data_in_ref, rtol=1e-5, atol=1e-8).all())
+            for key in ['N', 'type']:
+                self.assertEqual(filt[key], filt_orig[key])
+            for idx in range(len(filt_orig['coef'])):
+                self.assertTrue(np.isclose(filt['coef'][idx], filt_orig['coef'][idx], rtol=1e-5, atol=1e-8).all())
 
 
+    def test_conv_sub_1d_fourier_truncated(self):
+        '''FIXME: add tests on python only (not comparing with matlab) to test sizes, other stuff
+        NOTE: when reading arrays with complex numbers from matlab, the format for each number becomes a tuple.
+        to avoid this, I saved the real and imaginary part separately and compare the results for real and imaginary
+        separately.
+        - test if input argument does not change upon function call
+        '''
+        # calculate fields using python function using parameters retrieved from matlab test data file names
+        matlab_fun = 'conv_sub_1d'
+        test_files = glob.glob(TEST_DATA_FILEPATH + matlab_fun + '*.mat')
+        # filt argument given as nparray
+        regex = matlab_fun + '\{([0-9]+)\}' * 2 + '\{fourier_truncated\}'  + '\{([0-9]+)\}' * 3 + '\{(-?[0-9]+)\}' + '\{([0-9]+\.?[0-9]*)\}' + '.mat' 
+        for test_file in test_files:
+            match = re.search(regex, os.path.basename(test_file))
+            if match is None:
+                continue
 
-'''
-matlab: 
-data = rand(16,5);
-coef = rand(16,1);
-filt = truncate_filter(coef, 0.8, 1);
-conv_sub_1d(data, filt, 2); # size is (4,5)
+            data_len = int(match.group(1))
+            n_data = int(match.group(2))
+            filt_len = int(match.group(3))
+            ds = int(match.group(4))
+            N = int(match.group(5))
+            start = int(match.group(6))
+            thresh = float(match.group(7))
 
-python:
-data = np.random.random((5,16))
-coef = np.random.random((16,))
-filt = sn.truncate_filter(coef, 0.8)
-sn.conv_sub_1d(data, filt, 2) # shape is (5,4) 
+            ref_results_file = h5py.File(test_file)
+            data_in_ref_real = np.array(ref_results_file['data_in_real'])
+            data_in_ref_imag = np.array(ref_results_file['data_in_imag'])
+            data_in_ref = data_in_ref_real + data_in_ref_imag * 1j
+            data_in_ref_orig = np.copy(data_in_ref)            
+            # coef_real and coef_imag have shapes (1, filt_len)
+            coef_in_ref_real = np.array(ref_results_file['coef_real'])[0]
+            coef_in_ref_imag = np.array(ref_results_file['coef_imag'])[0]
+            coef_in_ref = coef_in_ref_real + coef_in_ref_imag * 1j
 
-in matlab, after generating filt, try switching N value and generate data for each case to compare with python.
-'''
+            # reconstruct filt['coef']
+            filt = {'N':N, 'type':'fourier_truncated', 'start':start - 1, 'coef':coef_in_ref, 'recenter':True}
+            filt_orig = copy.deepcopy(filt)
+            data_out_ref_real = np.array(ref_results_file['data_out_real'])
+            data_out_ref_imag = np.array(ref_results_file['data_out_imag'])
+
+            data_out = sn.conv_sub_1d(data_in_ref, filt, ds)
+            data_out_real = np.real(data_out)
+            data_out_imag = np.imag(data_out)
+
+            self.assertTrue(np.isclose(data_out_real, data_out_ref_real, rtol=1e-5, atol=1e-8).all())
+            self.assertTrue(np.isclose(data_out_imag, data_out_ref_imag, rtol=1e-5, atol=1e-8).all())
+            # check if input array does not change upon function call
+            self.assertTrue(np.isclose(data_in_ref_orig, data_in_ref, rtol=1e-5, atol=1e-8).all())
+            for key in ['N', 'type', 'start', 'recenter']:
+                self.assertEqual(filt[key], filt_orig[key])
+            self.assertTrue(np.isclose(filt['coef'], filt_orig['coef'], rtol=1e-5, atol=1e-8).all())
+
+
+    '''
+    matlab: 
+    data = rand(16,5);
+    coef = rand(16,1);
+    filt = truncate_filter(coef, 0.8, 1);
+    conv_sub_1d(data, filt, 2); # size is (4,5)
+
+    python:
+    data = np.random.random((5,16))
+    coef = np.random.random((16,))
+    filt = sn.truncate_filter(coef, 0.8)
+    sn.conv_sub_1d(data, filt, 2) # shape is (5,4) 
+
+
+    '''
+
+    def test_truncate_filter(self):
+        '''FIXME: add tests on python only (not comparing with matlab) to test sizes, other stuff
+        NOTE: when reading arrays with complex numbers from matlab, the format for each number becomes a tuple.
+        to avoid this, I saved the real and imaginary part separately and compare the results for real and imaginary
+        separately.
+        - test if input argument does not change upon function call
+        '''
+        # calculate fields using python function using parameters retrieved from matlab test data file names
+        matlab_fun = 'truncate_filter'
+        test_files = glob.glob(TEST_DATA_FILEPATH + matlab_fun + '*.mat')
+        # filt argument given as nparray
+        regex = matlab_fun + '\{([0-9]+)\}' + '\{([0-9]+\.?[0-9]*)\}' + '.mat' 
+        for test_file in test_files:
+            match = re.search(regex, os.path.basename(test_file))
+            if match is None:
+                continue
+
+            filt_len = int(match.group(1))
+            thresh = float(match.group(2))
+
+            ref_results_file = h5py.File(test_file)
+            start_ref = ref_results_file['start']
+            N_ref = ref_results_file['N']
+            recenter_ref = ref_results_file['recenter']
+            type_ref = ref_results_file['type']
+            # the following arrays have shapes (1, coef_len)
+            coef_in_ref_real = np.array(ref_results_file['coef_in_real'])[0]
+            coef_in_ref_imag = np.array(ref_results_file['coef_in_imag'])[0]
+            coef_out_ref_real = np.array(ref_results_file['coef_out_real'])[0]
+            coef_out_ref_imag = np.array(ref_results_file['coef_out_imag'])[0]
+
+            coef_in_ref = coef_in_ref_real + coef_in_ref_imag * 1j
+            coef_in_ref_orig = np.copy(coef_in_ref)
+
+            filt = sn.truncate_filter(coef_in_ref, thresh)
+
+            self.assertTrue(np.isclose(np.real(filt['coef']), coef_out_ref_real, rtol=1e-5, atol=1e-8).all())
+            self.assertTrue(np.isclose(np.imag(filt['coef']), coef_out_ref_imag, rtol=1e-5, atol=1e-8).all())
+            self.assertEqual(filt['start'] + 1, int(start_ref[0,0]))
+            self.assertEqual(filt['N'], N_ref[0,0])
+            self.assertTrue(filt['recenter'])
+            self.assertEqual(filt['type'], 'fourier_truncated')
+            # check if input array does not change upon function call
+            self.assertTrue(np.isclose(coef_in_ref_orig, coef_in_ref, rtol=1e-5, atol=1e-8).all())
+
+    def test_gabor(self):
+        '''FIXME: add tests on python only (not comparing with matlab) to test sizes, other stuff
+        NOTE: when reading arrays with complex numbers from matlab, the format for each number becomes a tuple.
+        to avoid this, I saved the real and imaginary part separately and compare the results for real and imaginary
+        separately.
+        '''
+        # calculate fields using python function using parameters retrieved from matlab test data file names
+        matlab_fun = 'gabor'
+        test_files = glob.glob(TEST_DATA_FILEPATH + matlab_fun + '*.mat')
+        # filt argument given as nparray
+        regex = matlab_fun + '\{([0-9]+)\}' + '\{(-?[0-9]+\.?[0-9]*)\}' * 2 + '.mat' 
+        for test_file in test_files:
+            match = re.search(regex, os.path.basename(test_file))
+            if match is None:
+                continue
+
+            N = int(match.group(1))
+            xi = float(match.group(2))
+            sigma = float(match.group(3))
+
+            ref_results_file = h5py.File(test_file)
+            # the following array has shape (1, len)
+            data_out_ref = ref_results_file['data_out'][0]
+            data_out = sn.gabor(N, xi, sigma)
+
+            self.assertTrue(np.isclose(data_out, data_out_ref, rtol=1e-5, atol=1e-8).all())
+
+    def test_morletify(self):
+        '''FIXME: add tests on python only (not comparing with matlab) to test sizes, other stuff
+        NOTE: when reading arrays with complex numbers from matlab, the format for each number becomes a tuple.
+        to avoid this, I saved the real and imaginary part separately and compare the results for real and imaginary
+        separately.
+        - test if input argument does not change upon function call
+        '''
+        # calculate fields using python function using parameters retrieved from matlab test data file names
+        matlab_fun = 'morletify'
+        test_files = glob.glob(TEST_DATA_FILEPATH + matlab_fun + '*.mat')
+        # filt argument given as nparray
+        regex = matlab_fun + '\{([0-9]+)\}' + '\{(-?[0-9]+\.?[0-9]*)\}' * 3 + '.mat' 
+        for test_file in test_files:
+            match = re.search(regex, os.path.basename(test_file))
+            if match is None:
+                continue
+
+            N = int(match.group(1))
+            xi = float(match.group(2))
+            sigma = float(match.group(3))
+            psi_sigma = float(match.group(4))
+
+            ref_results_file = h5py.File(test_file)
+            # the following arrays have shape (1, len)
+            data_in_ref = ref_results_file['data_in'][0]
+            data_out_ref = ref_results_file['data_out'][0]
+            data_in_ref_orig = np.copy(data_in_ref) # deepcopy
+            data_out = sn.morletify(data_in_ref, psi_sigma)
+
+            self.assertTrue(np.isclose(data_out, data_out_ref, rtol=1e-5, atol=1e-8).all())
+            # check if input array does not change upon function call
+            self.assertTrue(np.isclose(data_in_ref_orig, data_in_ref, rtol=1e-5, atol=1e-8).all())
     # FIXME: add tests on optimize_filter() and filter_freq()
 
     # def test_map_meta(self):

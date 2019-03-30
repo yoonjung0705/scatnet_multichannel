@@ -2,6 +2,7 @@
 import os
 import numpy as np
 import pdb
+import copy
 '''
 FIXME: consider name change for filter_options, filter_type
 FIXME: for functions that allow signal to be rank 1 array for number of data being 1, only allow rank 2 inputs
@@ -25,7 +26,7 @@ def T_to_J(T, filt_opt):
 
     FIXME: consider name change of Q, B, J, filt_opt
     '''
-    filt_opt = filt_opt.copy() # prevents filt_opt change upon function call
+    # filt_opt = copy.deepcopy(filt_opt) # prevents filt_opt change upon function call? FIXME: seems unnecessary
     filt_opt = fill_struct(filt_opt, Q=1)
     filt_opt = fill_struct(filt_opt, B=filt_opt['Q'])
     Q = filt_opt['Q']
@@ -62,6 +63,8 @@ def default_filter_opt(filter_type, avg_len):
     - s: dict type object containing default parameters Q, J for filters
 
     FIXME: change variable name s
+    FIXME: consider only allowing 'audio' and taking 8 in [8, 1] as the input as Q
+    FIXME: allow other fields to be calculated as well. currently many fields are calculated in morlet_filter_bank_1d()
     '''
     s = {}
     if filter_type == 'audio':
@@ -91,7 +94,10 @@ def fill_struct(s, **kwargs):
     originally did not exist, the key-value pair is updated. For keys that originally existed
     are updated only if the values were None
     
-    FIXME: consider name change of s. Consider replacing function with more readable function''' 
+    FIXME: consider name change of s.
+    FIXME: too many if statements
+    ''' 
+
     for key, value in kwargs.items():
         if key in s:
             if s[key] is None:
@@ -116,8 +122,8 @@ def morlet_freq_1d(filt_opt):
 
     outputs:
     -------- 
-    - xi_psi: list sized (J+P, ). logarithmically spaced J elements, linearly spaced P elements
-    - bw_psi: list sized (J+P+1, ). logarithmically spaced J elements, linearly spaced P+1 elements
+    - xi_psi: list sized (J+P,), logarithmically spaced J elements, linearly spaced P elements
+    - bw_psi: list sized (J+P+1,), logarithmically spaced J elements, linearly spaced P+1 elements
     both type nparray during calculations, converted to list at final output
     - bw_phi: float
     
@@ -127,7 +133,6 @@ def morlet_freq_1d(filt_opt):
     
     FIXME: consider defining local variables for the key-value pairs in filt_opt during calculations
     FIXME: consider not converting outputs to list type
-    REVIEW: manually compare results with MATLAB version
 
     DONE:FIXME: check what happens when P is 0. Not only for calculating variable "step", but also check other variables.
     '''
@@ -182,9 +187,11 @@ def optimize_filter(filter_f, lowpass, options):
 
     outputs:
     --------
-    - filt: np.array type (if fourier) or list type (if fourier_multires or fourier_truncated). If list type, the elements are nparrays at different resolutions
+    - filt: np.array type (if fourier) or list type (if fourier_multires) or dict type (if fourier_truncated).
+    If list type, the elements are nparrays with different lengths, corresponding to different resolutions
+    If dict type, the key 'coef' contains the filter which is a rank 1 np array
 
-    FIXME: I should add truncate_filter() as this function seems to be used for default settings
+    FIXME: consider deprecating
     '''
     options = fill_struct(options, truncate_threshold=1e-3)
     options = fill_struct(options, filter_format='fourier_multires')
@@ -269,7 +276,7 @@ def map_meta(from_meta, from_ind, to_meta, to_ind, exclude=[]):
         to_value[to_idx] = from_value[from_ind]
         to_meta[from_key] = to_value
 
-    return to_meta.copy() # To prevent from being linked with from_meta's values
+    return to_meta.copy() # To prevent from being linked with from_meta's values. FIXME: seems unnecessary
 
 
 # def map_meta(from_meta, from_ind, to_meta, to_ind, exclude=[]):
@@ -371,12 +378,13 @@ def map_meta(from_meta, from_ind, to_meta, to_ind, exclude=[]):
 
 def conv_sub_1d(data, filt, ds):
     '''
-    performs 1d convolution followed by downsampling in real space, which corresponds to multiplication followed by 
+    performs 1d convolution followed by downsampling in real space, given data and filters in frequency domain.
+    This corresponds to multiplication followed by 
     periodization (when downsampling) or zeropadding (when upsampling). the returned signal is in real space.
     
     used in wavelet_1d()
 
-    FIXME: only allow 'fourier_multires' option for simplicity if no significant speedup is shown. 
+    FIXME: clean up and make a version that only uses 'fourier_truncated' for simplicity. 
     check if this function is used in other functions with filt being given as list 
 
     inputs:
@@ -395,10 +403,6 @@ def conv_sub_1d(data, filt, ds):
     --------
     - y_ds: convolved signal in real space followed by downsampling 
 
-    FIXME:try broadcasting instead of np.tile() followed by elementwise multiplication
-    NOTE:seems like reading the MATLAB version, filt signal is always 1d array (either given as list or dict value)
-    when filt is given as a dict, it will have multiple 1d filters. This function finds the filter whose size matches
-    with that of the given data, and uses that filter for convolution, which is done by multiplying in fourier space in this case
     '''
 
     data = np.array(data)
@@ -416,11 +420,13 @@ def conv_sub_1d(data, filt, ds):
         if filt['type'] == 'fourier_multires':
             # NOTE: filt['coef'] is assumed to be a LIST of filters where each filter is rank 1
             # periodized multiresolution filt, output of PERIODIZE_FILTER
-            # make coef into rank 2 array sized (1, filt_len)
+            # periodize_filter() generates a set of filters whose lengths are N/2^0, N/2^1, N/2^2, ...
+            # these filters are grouped into a rank 1 list. therefore, given the original size of the filter N,
+            # and the length of the data, the length of the filter can be determined which can be found from the list
             coef = filt['coef'][int(np.round(np.log2(filt['N'] / data_len)))]
+            # make coef into rank 2 array sized (1, filt_len)
             coef = np.array(coef)[np.newaxis, :] 
-            # yf = data * np.tile(coef, (n_data, 1))
-            yf = data * coef # broadcasting. Not tested yet.
+            yf = data * coef 
         elif filt['type'] == 'fourier_truncated':
             # in this case, filt['coef'] is assumed to be an array 
             # truncated filt, output of TRUNCATE_FILTER
@@ -433,6 +439,7 @@ def conv_sub_1d(data, filt, ds):
                 # create lowpass filt
                 start0 = start % filt['N']
                 if (start0 + n_coef) <= filt['N']:
+
                     rng = np.arange(start0, n_coef - 1).astype(int)
                 else:
                     rng = np.concatenate([np.arange(start0, filt['N']), np.arange(n_coef + start0 - filt['N'])], axis=0).astype(int)
@@ -442,25 +449,21 @@ def conv_sub_1d(data, filt, ds):
                 lowpass[rng == int(data_len / 2)] = 1/2
                 lowpass[rng == int(filt['N'] - data_len / 2)] = 1/2
                 lowpass[rng > int(filt['N'] - data_len / 2)] = 1
+
                 # filter and periodize
                 coef = np.reshape(coef * lowpass, [int(n_coef / data_len), data_len]).sum(axis=0)
             # so far coef is rank 1
+            n_coef = len(coef)
             coef = coef[np.newaxis, :]
             j = int(np.round(np.log2(n_coef / data_len)))
-            print(j)
             start = start % data_len
-            print(start)
+
             if start + n_coef <= data_len:
                 # filter support contained in one period, no wrap-around
-                # FIXME: check if np.tile can be replaced with broadcasting
-                # yf = data[:, start:n_coef+start] * np.tile(coef, (n_data, 1))
                 yf = data[:, start:n_coef+start] * coef
             else:
                 # filter support wraps around, extract both parts
-                # FIXME: check if np.tile can be replaced with broadcasting
-                # yf = np.concatenate([data[:, start:], data[:, :n_coef + start - size(data,1)]], axis=1) * np.tile(coef, (n_data, 1))
                 yf = np.concatenate([data[:, start:], data[:, :n_coef + start - data_len]], axis=1) * coef
-            print(yf)
 
     else:
         # type is either list or nparray
@@ -476,32 +479,38 @@ def conv_sub_1d(data, filt, ds):
             [filt[int(data_len / 2)] / 2 + filt[int(-data_len / 2)] / 2],
             filt[int(-data_len / 2 + 1):]], axis=0) # filt_j's length is identical to data_len
         filt_j = filt_j[np.newaxis, :] # shape: (1, data_len)
-        yf = data * filt_j # will use broadcasting. 
+        yf = data * filt_j
         # FIXME: for 1 signal, a singleton dim added, resulting in yf being rank 2 array. return as in this shape?
     
     # calculate the downsampling factor with respect to yf
-    dsj = int(ds + np.round(np.log2(yf.shape[1] / data_len)))
+    dsj = ds + np.round(np.log2(yf.shape[1] / data_len))
+    assert(float(dsj).is_integer()), "dsj should be an integer"
+
     if dsj > 0:
-        # actually downsample, so periodize in Fourier
-        #print("yf shape:{}".format(yf.shape))
-        #print("n_data:{}".format(n_data))
-        #print("dsj:{}".format(dsj))
+        # downsample (periodize in Fourier)
+        # REVIEW: don't understand why reshape and sum things. Why is this downsampling in real space? (review 6.003 notes)
+        # I tested and see that this is correct. try running the following in a notebook:
+        # a = np.sin(np.linspace(0,100,10000)) + np.sin(np.linspace(0,300,10000)); af = np.fft.fft(a[np.newaxis, :]); af2 = np.reshape(af, [4,2500]).sum(axis=0); a2 = np.fft.ifft(af2)
+        # fig1,ax1 = plt.subplots(); fig2,ax2 = plt.subplots(); ax1.plot(a); ax2.plot(np.real(a2))
         yf_ds = np.reshape(yf, [n_data, int(2**dsj), int(np.round(yf.shape[1]/2**dsj))]).sum(axis=1)
     elif dsj < 0:
-        # upsample, so zero-pad in Fourier
+        # upsample (zero-pad in Fourier)
         # note that this only happens for fourier_truncated filters, since otherwise
         # filter sizes are always the same as the signal size
         # also, we have to do one-sided padding since otherwise we might break 
         # continuity of Fourier transform
-        yf_ds = np.concatenate(yf, np.zeros(yf.shape[0], (2**(-dsj)-1)*yf.shape[1]), axis=1) # FIXME: not sure
-    else: # if dsj == 0
+        yf_ds = np.concatenate(yf, np.zeros(yf.shape[0], (2**(-dsj)-1)*yf.shape[1]), axis=1)
+    else:
         yf_ds = yf
-    
     if isinstance(filt, dict):
-        if filt['type'] == 'fourier_truncated' and filt['recenter']:
-            # result has been shifted in frequency so that the zero fre-
-            # quency is actually at -filt.start+1
-            yf_ds = np.roll(yf_ds, filt['start'], axis=1)
+        if filt['type'] == 'fourier_truncated':
+            if filt['recenter']: 
+                # FIXME: seems like 'recenter' key only exists in filt dict when 'type' is fourier_truncated.
+                # remove the most inner if statement (if filt['recenter']) and also remove 'recenter'
+                # key when truncate_filter()
+                # result has been shifted in frequency so that the zero fre-
+                # quency is actually at -filt.start+1
+                yf_ds = np.roll(yf_ds, filt['start'], axis=1)
 
     y_ds = np.fft.ifft(yf_ds, axis=1) / 2**(ds/2) # ifft default axis=-1
     # the 2**(ds/2) factor seems like normalization
@@ -628,7 +637,7 @@ def periodize_filter(filter_f):
     n_filter = sum((N / 2.**(np.arange(1, np.log2(N)+1))) % 1 == 0)
     # n_filter is the number of times N can be divided with 2
     for j0 in range(n_filter):
-        filter_fj = filter_f.copy()
+        filter_fj = filter_f
 
         mask =  np.array([1.]*int(N/2.**(j0+1)) + [1./2.] + [0.]*int((1-2.**(-j0-1))*N-1))
         mask += np.array([0.]*int((1-2.**(-j0-1))*N) + [1./2.] + [1.]*int(N/2.**(j0+1)-1))
@@ -678,7 +687,8 @@ def unpad_signal(data, res, orig_len, center=False):
 
 def wavelet_1d(data, filters, options={}):
     '''
-    1d wavelet transform
+    1d wavelet transform of the given data. The data is convolved with the scaling function and a subset of filter banks so that only
+    frequency decreasing paths are considered. This corresponds to expanding a given node to branches in the graphical representation.
 
     used in wavelet_layer_1d()
     
@@ -686,30 +696,44 @@ def wavelet_1d(data, filters, options={}):
     inputs:
     -------
     - data: list or nparray shaped (data_len,) or (n_data, data_len)
-    - filters: dict type object containing filter banks and their parameters
-    - options: dict type object containing optional parameters
+    - filters: dict type object containing filter banks and their parameters. this has the following keys:
+    'psi' - dict type object containing the key 'filter'
+    'phi' - dict type object containing the key 'filter'
+    'meta' - dict type object containing keys 'size_filter' and 'boundary'
+
+    - options: dict type object containing optional parameters. this has the following keys:
+    'resolution', 'oversampling', 'psi_mask'. the key 'psi_mask' determines which filter banks will be used so that only 
+    frequency decreasing paths are computed. This is given as an input argument.
 
     outputs:
     --------
     - x_phi: nparray shaped (n_data, data_len). data convolved with scaling function, represented in real space
-    This n_data will later turn out to be the number of nodes in depth n when you are trying to calculate the n+1 layer's scattering transform
+    This n_data will later be used for the number of channels. This is NOT the number of nodes at a certain depth. This function is called within a for loop
+    in the function wavelet_layer_1d()
     - x_psi: rank 1 list of nparrays where each nparray is shaped (n_data, data_len). This is the data convolved with filters (psi) at multiple resolutions.
     For filters with whose corresponding value is False in options['psi_mask'], the convolution is skipped and gives a None value element in the list.
-    - meta_phi, meta_psi: both dict type objects containing the convolution meta data for phi, psi, respectively. keys are j, bandwidth, resolution
+    - meta_phi, meta_psi: both dict type objects containing the convolution meta data for phi, psi, respectively. keys are 'j', 'bandwidth', 'resolution'
     For meta_phi, the values of the keys are scalars whereas for meta_psi, the values are all nparrays
     FIXME: meta_psi values: change to lists instead of nparrays?
     '''
+    options = copy.deepcopy(options) # FIXME: try avoiding this if possible
+    filters = copy.deepcopy(filters)
     options = fill_struct(options, oversampling=1)
-    options = fill_struct(options, psi_mask=[True] * len(filters['psi']['filter'])) # FIXME: originally was true(1, numel(filters.psi.filter))
-    options = fill_struct(options, resolution=0)
+    options = fill_struct(options, psi_mask=[True] * len(filters['psi']['filter'])) # FIXME: in matlab, this is true(1, numel(filters.psi.filter))
+    # filters['psi']['filter']
+    options = fill_struct(options, x_resolution=0)
 
     data = np.array(data)
     if len(data.shape) == 1:
         data = data[np.newaxis, :] # data is now rank 2 with shape (n_data, data_len)
     data_len = data.shape[1]
-    _, psi_bw, phi_bw = filter_freq(filters['meta']) # filter_freq returns xi_psi, bw_psi, bw_phi
 
-    j0 = options['resolution']
+    # print("filters['meta']:{}".format(filters['meta']))
+    # print("filters['psi']['filter']:{}".format(filters['psi']['filter']))
+    _, psi_bw, phi_bw = filter_freq(filters['meta']) # filter_freq returns psi_xi, psi_bw, phi_bw
+    # print("psi_bw:{}".format(psi_bw))
+    # print("phi_bw:{}".format(phi_bw))
+    j0 = options['x_resolution']
 
     pad_len = int(filters['meta']['size_filter'] / 2**j0)
     # pad_signal()'s arguments are data, pad_len, mode='symm', center=False
@@ -717,25 +741,32 @@ def wavelet_1d(data, filters, options={}):
 
     xf = np.fft.fft(data, axis=1)
     
-    ds = np.round(np.log2(2 * np.pi / phi_bw)) - j0 - options['oversampling']
+    ds = np.round(np.log2(2 * np.pi / phi_bw)) - j0 - options['oversampling'] # REVIEW: don't understand
     ds = max(ds, 0)
     
      
     x_phi = np.real(conv_sub_1d(xf, filters['phi']['filter'], ds)) # arguments should be in frequency domain. Check where filters['phi']['filter'] is set as the frequency domain
     x_phi = unpad_signal(x_phi, ds, data_len)
+
+    # print("psi_bw:{}".format(psi_bw))
+    # print("phi_bw:{}".format(phi_bw))
+    # print("x_phi:{}".format(x_phi))
+    # FIXME: in matlab, there's reshaping done: x_phi = reshape(x_phi, [size(x_phi,1) 1 size(x_phi,2)]);
+    # IMPORTANT: check if this reshaping needs to be done
+
     # so far we padded the data (say the length became n1 -> n2) then calculated the fft of that to use as an input for conv_sub_1d()
     # the output is in realspace, has length n2 and so we run unpad_signal() to cut it down to length n1.
-    meta_phi = {'j':None, 'bandwidth':phi_bw, 'resolution':j0 + ds} # REVIEW: seems like the -1 in the matlab version is to denote that the value is empty since this is what's done for all of meta_psi's keys. confirm this is true. I switched it to None
+    meta_phi = {'j':-1, 'bandwidth':phi_bw, 'resolution':j0 + ds} # REVIEW: seems like the -1 in the matlab version is to denote that the value is empty since this is what's done for all of meta_psi's keys. confirm this is true. I switched it to None
     # the j field does not get passed down eventually. In wavelet_layer_1d, only fields bandwidth and resolution are passed on
 
     # x_psi = []
     x_psi = [None] * len(filters['psi']['filter']) # FIXME: replacing x_psi = cell(1, numel(filters.psi.filter)) with this. This line might break
     # meta_psi = {'j':-1 * np.ones((1, len(filters['psi']['filter'])))} # REVIEW:-1 is to denote that the value is empty (same for bandwidth and resolution) since you can't have -1 for these keys
-    meta_psi = {'j':[None] * len(filters['psi']['filter']) } # REVIEW:-1 is to denote that the value is empty (same for bandwidth and resolution) since you can't have -1 for these keys
+    meta_psi = {'j':[-1] * len(filters['psi']['filter']) } # REVIEW:-1 is to denote that the value is empty (same for bandwidth and resolution) since you can't have -1 for these keys
     # meta_psi['bandwidth'] = -1 * np.ones((1, len(filters['psi']['filter'])))
     # meta_psi['resolution'] = -1 * np.ones((1, len(filters['psi']['filter'])))
-    meta_psi['bandwidth'] = [None] * len(filters['psi']['filter'])
-    meta_psi['resolution'] = [None] * len(filters['psi']['filter'])
+    meta_psi['bandwidth'] = [-1] * len(filters['psi']['filter'])
+    meta_psi['resolution'] = [-1] * len(filters['psi']['filter'])
     for p1 in np.where(options['psi_mask'])[0]: # FIXME: options['psi_mask'] is a list of bool type elements
     # p1: indices where options['phi_mask'] is True
         ds = np.round(np.log2(2 * np.pi / psi_bw[p1] / 2)) - j0 - max(1, options['oversampling']) # FIXME: might break. what is 1 in max(1, options...)??
@@ -811,16 +842,16 @@ def scat(data, Wop):
     # print("starting for loop")
     # for m in range(1):
         if m < len(Wop) - 1: # if this is not the last layer,
-            print("scat:if statement")
-            print("m:{}".format(m))
-            S_m, V = Wop[m](U[m], True) # 2nd argument is for return_U. FIXME:change to more readable code
+            S_m, V = Wop[m](copy.deepcopy(U[m]), True) # 2nd argument is for return_U. FIXME:change to more readable code
+            # FIXME: remove copy.deepcopy() later
+            # FIXME: test if Wop doesn't change the arguments.
             # U[m + 1] = modulus_layer(V)
             S.append(S_m)
-            U.append(modulus_layer(V)) # NOTE: replaced U[m+1] = modulus_layer(V) with this line. I think this will not break since both current and previous implementation adds at least something to the list S and U for len(Wop) times
+            U.append(modulus_layer(copy.deepcopy(V))) # NOTE: replaced U[m+1] = modulus_layer(V) with this line. I think this will not break since both current and previous implementation adds at least something to the list S and U for len(Wop) times
+            # pdb.set_trace()
+            # error('stop')
         else: # if this is the last layer, only compute S since V won't be used
-            print("scat:else statement")
-            print("m:{}".format(m))
-            S_m = Wop[m](U[m], False) # 2nd argument is for return_U. FIXME:change to more readable code
+            S_m = Wop[m](copy.deepcopy(U[m]), False) # 2nd argument is for return_U. FIXME:change to more readable code
             S.append(S_m)
 
     return S, U
@@ -841,6 +872,7 @@ def wavelet_factory_1d(data_len, filter_opt=None, scat_opt={}):
     --------
     
     '''
+    filter_opt = copy.deepcopy(filter_opt)
     if filter_opt is None:
         filters = filter_bank(data_len)
     else:
@@ -850,25 +882,25 @@ def wavelet_factory_1d(data_len, filter_opt=None, scat_opt={}):
     
     #Wop = [None] * scat_opt['M']
     Wop = [] # REVIEW: replacing the above line with this so that I use append() instead. FIXME: this might break.
+    # pdb.set_trace()
+    # print("filters:{}".format(filters))
     for m in range(scat_opt['M'] + 1): # I think this will not break since this for loop runs M+1 times and it always adds at least something to the list, which is being done with the append() function here instead of the Wop[m] = ... original implementation
     # for m in range(1): # yoon: FIXME: testing only single iteration 
         filt_ind = min(len(filters) - 1, m)
+        # pdb.set_trace()
 
-        print("in wavelet_factory_1d()...")
-        print("m:{}".format(m))
-        # print("filters:{}".format(filters))
-        print("filters length:{}".format(len(filters)))
-        print("filters[0] keys:{}".format(filters[0].keys())) # for m=0, this matches with matlab
-        print("filters[1] keys:{}".format(filters[1].keys())) # for m=0, this matches with matlab
+        # print("filters length:{}".format(len(filters)))
+        # print("filters[0] keys:{}".format(filters[0].keys())) # for m=0, this matches with matlab
+        # print("filters[1] keys:{}".format(filters[1].keys())) # for m=0, this matches with matlab
 
-        print("filters[0] meta:{}".format(filters[0]['meta'])) # for m=0, this matches with matlab
-        print("filters[1] meta:{}".format(filters[1]['meta'])) # for m=0, this matches with matlab
+        # print("filters[0] meta:{}".format(filters[0]['meta'])) # for m=0, this matches with matlab
+        # print("filters[1] meta:{}".format(filters[1]['meta'])) # for m=0, this matches with matlab
 
-        print("filters[0] psi meta:{}".format(filters[0]['psi']['meta'])) # for m=0, this matches with matlab
-        print("filters[1] psi meta:{}".format(filters[1]['psi']['meta'])) # for m=0, this matches with matlab
+        # print("filters[0] psi meta:{}".format(filters[0]['psi']['meta'])) # for m=0, this matches with matlab
+        # print("filters[1] psi meta:{}".format(filters[1]['psi']['meta'])) # for m=0, this matches with matlab
 
-        print("filters[0] psi filter coefft:{}".format(filters[0]['psi']['filter'][0]['coef'][0][:5])) # for m=0, this matches with matlab
-        print("filters[0] psi filter coefft:{}".format(filters[1]['psi']['filter'][3]['coef'][6][:5])) # for m=0, this matches with matlab
+        # print("filters[0] psi filter coefft:{}".format(filters[0]['psi']['filter'][0]['coef'][0][:5])) # for m=0, this matches with matlab
+        # print("filters[0] psi filter coefft:{}".format(filters[1]['psi']['filter'][3]['coef'][6][:5])) # for m=0, this matches with matlab
 
 
 
@@ -879,10 +911,10 @@ def wavelet_factory_1d(data_len, filter_opt=None, scat_opt={}):
         #         print("value length:{}".format(len(value)))
         #     else:
         #         print("value:{}".format(value))
-        print("scat_opt:{}".format(scat_opt))
+        # print("scat_opt:{}".format(scat_opt))
 
         #Wop[m] = lambda x: wavelet_layer_1d(x, filters[filt_ind], scat_opt)
-        Wop_m = lambda U, return_U: wavelet_layer_1d(U, filters=filters[filt_ind], scat_opt=scat_opt, return_U=return_U)
+        Wop_m = lambda U, return_U: wavelet_layer_1d(copy.deepcopy(U), filters=copy.deepcopy(filters[filt_ind]), scat_opt=copy.deepcopy(scat_opt), return_U=return_U)
         Wop.append(Wop_m)
 
     return Wop, filters
@@ -890,7 +922,7 @@ def wavelet_factory_1d(data_len, filter_opt=None, scat_opt={}):
 
 
 
-def wavelet_layer_1d(U, filters, scat_opt={}, wavelet=wavelet_1d, return_U=True): # NOTE:using function name as a default argument
+def wavelet_layer_1d(U, filters, scat_opt={}, wavelet=wavelet_1d, return_U=True):
     '''
     computes the 1d wavelet transform from the modulus. 
     wavelet_1d() returns a list of signals (convolution at multiple resolutions) where this function uses the outputs of wavelet_1d() and organizes them into proper data structures
@@ -904,8 +936,8 @@ def wavelet_layer_1d(U, filters, scat_opt={}, wavelet=wavelet_1d, return_U=True)
     -------
     - U: dict type object with input layer to be transformed. has the following keys:
     'meta': dict type object, has keys ('bandwidth', 'resolution', 'j')  whose values are (rank1, rank1, rank2) lists, respectively.
-    'signal':rank 1 list type corresponding to the signals to be convolved # FIXME: not sure if this is rank 1...check where this function is used and what the input is.
-    - filters:
+    'signal':rank 1 list type corresponding to the signals to be convolved. different signals correspond to different nodes which in this function will be convolved with phi and psi's.
+    - filters: dict type object with the key 'meta'.
     - scat_opt:
     - wavelet: function indicating wavelet transform. default is wavelet_1d()
     - return_U: bool type, indicates whether to return 2 outputs
@@ -920,13 +952,22 @@ def wavelet_layer_1d(U, filters, scat_opt={}, wavelet=wavelet_1d, return_U=True)
         
         
     '''
+    scat_opt = copy.deepcopy(scat_opt)
+    filters = copy.deepcopy(filters)
+    U = copy.deepcopy(U) # FIXME: remove all these .copy() stuff later by only storing the necessary fields of U into a variable.
     scat_opt = fill_struct(scat_opt, path_margin=0)
     psi_xi, psi_bw, phi_bw = filter_freq(filters['meta'])
-    
     if 'bandwidth' not in U['meta'].keys():
         U['meta']['bandwidth'] = [2 * np.pi] # FIXME: confirm if this is right
+        # NOTE: the reason we initialize it as a list is not becauase S['meta']['bandwidth'] will be set to a rank 2 list.
+        # when running the invariant scattering transform, the resulting ['meta']['bandwidth'] will always be a rank 1 list.
+        # the reason is because in matlab it's done as U.meta.bandwidth = 2*pi and in this case they treat it as a length 1 array
+        # (all scalars in matlab are arrays with length 1 and can be accessed with c(1) if c is a scalar)
+        # the same argument holds for the following ['meta']['resolution']
+        # Note that ['meta']['j'] will be a rank 2 list since it shows the full path starting from the root node in the graphical representation.
     if 'resolution' not in U['meta'].keys():
         U['meta']['resolution'] = [0] # FIXME: confirm if this is right
+    # pdb.set_trace()
     
     U_phi = {'signal':[], 'meta':{}}
     U_phi['meta']['bandwidth'] = []
@@ -943,7 +984,8 @@ def wavelet_layer_1d(U, filters, scat_opt={}, wavelet=wavelet_1d, return_U=True)
     # print(len(U['signal']))
     # print(U['signal'][0].shape)
     # r = 0
-    for p1 in range(len(U['signal'])):
+    print("len(U['signal']):{}".format(len(U['signal'])))
+    for p1 in range(len(U['signal'])): # num iterations: number of nodes in the current layer that is being processed to give the next layer
         current_bw = U['meta']['bandwidth'][p1]*2**scat_opt['path_margin']
         #print("current_bw:{}".format(current_bw))
         #print("psi_xi:{}".format(psi_xi))
@@ -953,7 +995,6 @@ def wavelet_layer_1d(U, filters, scat_opt={}, wavelet=wavelet_1d, return_U=True)
         scat_opt['x_resolution'] = U['meta']['resolution'][p1]
         scat_opt['psi_mask'] = psi_mask
         x_phi, x_psi, meta_phi, meta_psi = wavelet(U['signal'][p1], filters, scat_opt)
-        
         # U_phi['signal'][0, p1] = x_phi # FIXME: matlab version does U_phi.signal{1,p1}. This line might break
         # print("x_phi:{}".format(x_phi))
         U_phi['signal'].append(x_phi) # FIXME: matlab version does U_phi.signal{1,p1}. This line might break 
@@ -986,11 +1027,16 @@ def wavelet_layer_1d(U, filters, scat_opt={}, wavelet=wavelet_1d, return_U=True)
 
         # U_phi['meta']['bandwidth'].append(U['meta']['bandwidth'][p1])
         # U_phi['meta']['resolution'].append(U['meta']['resolution'][p1])
-        if len(U['meta']['j']) > p1:
-            U_meta_j = U['meta']['j'][p1]
-        else:
-            U_meta_j = None
-        U_phi['meta']['j'].append(U_meta_j)
+
+
+        # if len(U['meta']['j']) > p1:
+        #     U_meta_j = U['meta']['j'][p1]
+        # else:
+        #     U_meta_j = None
+        # U_phi['meta']['j'].append(U_meta_j)
+
+        if len(U['meta']['j']) > p1: # FIXME: this seems true unless the layer being processed is the first layer (root). Later change it to an if statement with the depth
+            U_phi['meta']['j'].append(U['meta']['j'][p1]) # U['meta']['j'] is a rank 2 list and so U['meta']['j'][p1] is also a list
         U_phi['meta']['bandwidth'].append(meta_phi['bandwidth'])
         U_phi['meta']['resolution'].append(meta_phi['resolution'])
 
@@ -1000,7 +1046,15 @@ def wavelet_layer_1d(U, filters, scat_opt={}, wavelet=wavelet_1d, return_U=True)
         # print("U_meta_j:{}".format(U_meta_j))
         # print("meta_psi:{}".format(meta_psi))
         # print("psi_mask:{}".format(psi_mask))
-        U_psi['meta']['j'] += [[U_meta_j] + [meta_psi_j] for idx, meta_psi_j in enumerate(meta_psi['j']) if psi_mask[idx]] # FIXME: in the matlab version zeros(0,0), zeros(1,0) are used and its size can be measured. Not possible here. If the matlab version has [empty; empty; 1] for j at some p1 index, this will be [None, 1] according to this line, not [None, None, 1]. This might break...
+
+        # FIXME: this seems true unless the layer being processed is the first layer (root). Later change it to an if statement with the depth
+        if len(U['meta']['j']) > p1:
+            U_meta_j = U['meta']['j'][p1]
+            # U['meta']['j'] is a rank 2 list and so U['meta']['j'][p1] itself is a list
+        else:
+            U_meta_j = []
+        
+        U_psi['meta']['j'] += [U_meta_j + [meta_psi_j] for idx, meta_psi_j in enumerate(meta_psi['j']) if psi_mask[idx]] # FIXME: in the matlab version zeros(0,0), zeros(1,0) are used and its size can be measured. Not possible here. If the matlab version has [empty; empty; 1] for j at some p1 index, this will be [None, 1] according to this line, not [None, None, 1]. This might break...
 
 
 
@@ -1081,7 +1135,7 @@ def filter_bank(data_len, options={}):
     # enough values to specify parameters for all filter banks, the last element is used to extend the field as needed.
     for k in range(bank_count):
         # extract the kth element from each parameter field
-        options_k = options.copy()
+        options_k = copy.deepcopy(options)
         #print(len(parameter_fields))
         for l in range(len(parameter_fields)):
             if parameter_fields[l] not in options_k.keys():
@@ -1262,6 +1316,35 @@ def dyadic_freq_1d(filter_options):
     pass
 
 def truncate_filter(filter_f, threshold):
+    '''
+    truncates the given fourier transform of the filter. this filter will have values that are high in
+    only a small region. in this case, one can make a similar filter which is a hard-thresholded version
+    of the given filter. this can siginificantly speedup the computation as the convolution in the fourier
+    domain is a multiplication and so only the nonzero values have to be considered.
+    
+    first, the smallest region that contains all the values that are above a certain threshold is identified.
+    this region is extended slightly so that the region length is N/2^m where N is the length of the given
+    filter and m is some integer. during this process, the adjusted region's start and end point might be 
+    beyond the given filter. In this case, the filter is wrapped around (periodically extend the given filter
+    and then take the adjusted region.
+    
+    in order to use this filter and later reconstruct to the correct original size, keys named
+    'start' and 'N' are stored in the output dictionary
+
+    inputs:
+    -------
+    filter_f - rank 1 array or list which is the fourier representation of the filter
+    threshold - threshold relative to the maximum value of the given filter (in fourier domain), between 0 and 1
+
+    outputs:
+    --------
+    filt - dict type object containing the following keys:
+    coef: the truncated filter
+    start: starting index of the fourier domain support
+    type: fourier_truncated
+    N: original length of the filter
+    recenter: true whether fourier transform should be recentered after convolution
+    '''
     filter_f = np.array(filter_f)
     N = len(filter_f)
     
@@ -1270,7 +1353,26 @@ def truncate_filter(filter_f, threshold):
     # Could have filt.recenter = lowpass, but since we don't know if we're
     # taking the modulus or not, we always need to recenter.
     filt['recenter'] = True
-    idx_max = np.argmax(filter_f)
+    # print("filter_f_beginning:{}".format(np.abs(filter_f)))
+
+    # FIXME: for consistency the max() function in matlab is implemented below.
+    # after running tests, consider commenting the matlab version implementation
+    # and replace with numpy's argmax()
+    # FIXME: clean up and refactor the following 3 lines.
+    # I think this matters for the function output, but the convolution result might not change.
+    # If the python max function is used, the resulting filter will be shifted which will be 
+    # accounted in the 'start' key of the output dict type object. therefore using this 'start'
+    # key in conv_sub_1d(), the convolution result will be presumably the same as that of the case
+    # where the matlab version max() is used in this function. after the multiplication in the fourier
+    # domain, there might be a relative shift in the fourier domain resulting in an additive phase in the
+    # real space, but this might be corrected since the modulus is taken before convolving with the scaling
+    # function. I am not sure about the first layer in the scattering network since in the first layer
+    # the modulus is not taken but the signal is convolved with the scaling function right away.
+    maxabs = np.abs(filter_f).max()
+    maxangle = np.angle(filter_f[np.abs(filter_f) == maxabs]).max()
+    idx_max = np.where(np.logical_and(np.abs(filter_f) == maxabs, np.angle(filter_f) == maxangle))[0][0]
+    # idx_max = np.argmax(filter_f)
+
     # expects filter_f to have len being a multiple of 2 
     filter_f = np.roll(filter_f, int(N / 2) - (idx_max + 1))
     # np.where()'s return type is tuple and therefore [0] is required
@@ -1281,6 +1383,7 @@ def truncate_filter(filter_f, threshold):
 
     length = idx2 - idx1 + 1
     length = int(np.round(filt['N'] / 2**(np.floor(np.log2(filt['N'] / length)))))
+
     # before np.round(), add small amount since in np.round(), halfway values are 
     # rounded to the nearest even value, i.e., np.round(2.5) gives 2.0, NOT 3
     # if the amount is too small (1e-17, for example), treated as adding nothing
@@ -1289,8 +1392,6 @@ def truncate_filter(filter_f, threshold):
     
     filter_f = filter_f[np.arange(idx1, idx2 + 1) % filt['N']]
 
-    # filter_f = filter_f(([idx1:idx2]) % filt['N'] + 1)
-    
     filt['coef'] = filter_f
     filt['start'] = int(idx1 - (N / 2 - idx_max) + 1)
 
