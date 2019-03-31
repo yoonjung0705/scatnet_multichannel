@@ -31,26 +31,41 @@ class ScatnetTestCase(unittest.TestCase):
         - test if J is list when audio and scalar when dyadic
         - test if argument filt_opt remains instact upon function call
         - test if input argument does not change upon function call
+        - test if input argument does not change upon changing output
+        - test if output does not change upon changing intput
         FIXME: check if Q,J,B are altogether list or scalar at the same time?
         NOTE: J can be negative if T too small
         '''
         for T in [10, 100, 1000, 10000]:
-            s = sn.default_filter_opt('audio', 5)
-            s_cp = copy.deepcopy(s)
+            s = {'Q':[8, 1], 'B':[8, 1]}
+            s_orig = copy.deepcopy(s)
             J = sn.T_to_J(T, s)
+            J_orig = copy.deepcopy(J)
             self.assertIsInstance(J, list)
-            self.assertEqual(s, s_cp)
+            # check if input does not change upon function call
+            self.assertEqual(s, s_orig)
+            
+            # change input argument and confirm output does not change
+            for idx in range(len(s['Q'])):
+                s['Q'][idx] += 1
+            del s['B']
+            self.assertEqual(J, J_orig)
+            
+            # change output and confirm input argument does not change
+            # need to run the function again
+            s = copy.deepcopy(s_orig)
+            J = sn.T_to_J(T, s)
+            for idx in range(len(J)):
+                J[idx] += 1
+            self.assertEqual(s, s_orig)
 
-            s = sn.default_filter_opt('dyadic', 5)
-            s_cp = copy.deepcopy(s)
+            s = {'Q':2}
+            s_orig = copy.deepcopy(s)
             J = sn.T_to_J(T, s)
             self.assertIsInstance(J, (int, float))
-            self.assertEqual(s, s_cp)
-
-        s = sn.default_filter_opt('audio', 10)
-        s_cp = copy.deepcopy(s)
-        J = sn.T_to_J(T, s)
-        self.assertEqual(s, s_cp)
+            self.assertEqual(s, s_orig)
+            # above case outputs a scalar and therefore no need to confirm
+            # input-output are not linked
 
     def test_default_filter_opt(self):
         '''
@@ -150,8 +165,11 @@ class ScatnetTestCase(unittest.TestCase):
             options_orig = copy.deepcopy(options)
             xi_psi, bw_psi, bw_phi = sn.morlet_freq_1d(options)
 
-            xi_psi = np.array(xi_psi)
-            bw_psi = np.array(bw_psi)
+            xi_psi_orig = copy.deepcopy(xi_psi)
+            bw_psi_orig = copy.deepcopy(bw_psi)
+
+            xi_psi_arr = np.array(xi_psi)
+            bw_psi_arr = np.array(bw_psi)
             bw_phi = np.array(bw_phi)
 
             ref_results_file = h5py.File(test_file)
@@ -159,11 +177,24 @@ class ScatnetTestCase(unittest.TestCase):
             bw_psi_ref = np.array(ref_results_file['bw_psi']).squeeze(axis=1)
             bw_phi_ref = np.array(ref_results_file['bw_phi']).squeeze(axis=1)[0]
 
-            # xi_psi, xi_psi_ref, bw_psi, bw_psi_ref are all rank 1 arrays. bw_phi, bw_phi_ref are both float type scalars
-            self.assertTrue(np.isclose(xi_psi, xi_psi_ref, rtol=1e-5, atol=1e-8).all())
-            self.assertTrue(np.isclose(bw_psi, bw_psi_ref, rtol=1e-5, atol=1e-8).all())
+            # xi_psi_arr, xi_psi_ref, bw_psi_arr, bw_psi_ref are all rank 1 arrays. bw_phi, bw_phi_ref are both float type scalars
+            self.assertTrue(np.isclose(xi_psi_arr, xi_psi_ref, rtol=1e-5, atol=1e-8).all())
+            self.assertTrue(np.isclose(bw_psi_arr, bw_psi_ref, rtol=1e-5, atol=1e-8).all())
             self.assertTrue(np.isclose(bw_phi, bw_phi_ref, rtol=1e-5, atol=1e-8).all())
             # check if input array does not change upon function call
+            self.assertEqual(options, options_orig)
+
+            # check if output does not change upon changing input argument
+            options.clear()
+            self.assertEqual(xi_psi, xi_psi_orig)
+            self.assertEqual(bw_psi, bw_psi_orig)
+
+            # check if input argument does not change upon changing output
+            # need to run function again
+            options = copy.deepcopy(options_orig)
+            xi_psi, bw_psi, bw_phi = sn.morlet_freq_1d(options)
+            xi_psi.clear()
+            bw_psi.clear()
             self.assertEqual(options, options_orig)
 
     def test_pad_signal(self):
@@ -185,12 +216,13 @@ class ScatnetTestCase(unittest.TestCase):
             ref_results_file = h5py.File(test_file)
             data_in_ref = np.array(ref_results_file['data_in'])
             data_out_ref = np.array(ref_results_file['data_out'])
-            data_in_ref_orig = np.copy(data_in_ref)
+            data_in_ref_orig = np.copy(data_in_ref) # deepcopy
 
             data_out = sn.pad_signal(data_in_ref, pad_len=pad_len, mode=mode, center=center)
+            data_out_orig = np.copy(data_out)
             self.assertTrue(np.isclose(data_out, data_out_ref, rtol=1e-5, atol=1e-8).all())
             # check if input array does not change upon function call
-            self.assertTrue(np.isclose(data_in_ref, data_in_ref_orig, rtol=1e-5, atol=1e-8).all())    
+            self.assertTrue(np.isclose(data_in_ref, data_in_ref_orig, rtol=1e-5, atol=1e-8).all())
 
     def test_unpad_signal(self):
         '''FIXME: add tests on python only (not comparing with matlab) to test sizes, other stuff
