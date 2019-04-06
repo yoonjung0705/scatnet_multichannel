@@ -4,6 +4,12 @@ import numpy as np
 import pdb
 import copy
 '''
+FIXME: continue proofreading the following functions:
+- wavelet_1d()
+- wavelet_layer_1d()
+- transform()
+- modulus_layer()
+
 FIXME: consider name change and check comments for the following functions by comparing with MATLAB version
 _morlet_freq_1d, _morlet_filter_bank_1d, _conv_sub_1d
 
@@ -468,16 +474,16 @@ class ScatNet(object):
         1d wavelet transform of the given data. The data is convolved with the scaling function and a subset of filter banks so that only
         frequency decreasing paths are considered. This corresponds to expanding a given node to branches in the graphical representation.
 
-        used in _wavelet_layer_1d()
+        used in _wavelet_layer_1d(), called inside a for loop over nodes in a certain layer
         
         FIXME:REVIEW:review this function. Don't understand fully.
         inputs:
         -------
-        - data: list or nparray shaped (data_len,) or (n_data, data_len)
+        - data: rank 2 nparray shaped (n_data, data_len)
         - filters: dict type object containing filter banks and their parameters. this has the following keys:
         'psi' - dict type object containing the key 'filter'
         'phi' - dict type object containing the key 'filter'
-        'meta' - dict type object containing keys 'size_filter' and 'boundary'
+        'meta' - dict type object containing key 'size_filter'
 
         - options: dict type object containing optional parameters. this has the following keys:
         'resolution', 'oversampling', 'psi_mask'. the key 'psi_mask' determines which filter banks will be used so that only 
@@ -486,36 +492,20 @@ class ScatNet(object):
         outputs:
         --------
         - x_phi: nparray shaped (n_data, data_len). data convolved with scaling function, represented in real space
-        This n_data will later be used for the number of channels. This is NOT the number of nodes at a certain depth. This function is called within a for loop
-        in the function _wavelet_layer_1d()
         - x_psi: rank 1 list of nparrays where each nparray is shaped (n_data, data_len). This is the data convolved with filters (psi) at multiple resolutions.
-        For filters with whose corresponding value is False in options['psi_mask'], the convolution is skipped and gives a None value element in the list.
+        For filters whose corresponding value of options['psi_mask'] is False, the convolution is skipped.
         - meta_phi, meta_psi: both dict type objects containing the convolution meta data for phi, psi, respectively. keys are 'j', 'bandwidth', 'resolution'
-        For meta_phi, the values of the keys are scalars whereas for meta_psi, the values are all nparrays
-        FIXME: meta_psi values: change to lists instead of nparrays?
+        REVIEW: meaning of resolution?
+        For meta_phi, the values of the keys are scalars whereas for meta_psi, the values are all lists
         '''
-        # options = copy.deepcopy(options) # FIXME: try avoiding this if possible
-        filters = copy.deepcopy(filters)
-        # options = fill_struct(options, oversampling=1)
-        # options = fill_struct(options, psi_mask=[True] * len(filters['psi']['filter'])) # FIXME: in matlab, this is true(1, numel(filters.psi.filter))
+        filters = copy.deepcopy(filters) # consider deprecation
         if psi_mask is None:
             psi_mask = [True] * len(filters['psi']['filter'])
 
-        # filters['psi']['filter']
-        # options = fill_struct(options, x_resolution=0)
-
-        # data = np.array(data)
-        # if len(data.shape) == 1:
-        #     data = data[np.newaxis, :] # data is now rank 2 with shape (n_data, data_len)
         data_len = data.shape[1]
 
-        # print("filters['meta']:{}".format(filters['meta']))
-        # print("filters['psi']['filter']:{}".format(filters['psi']['filter']))
-        _, psi_bw, phi_bw = self._morlet_freq_1d(filters['meta']) # _morlet_freq_1d returns psi_xi, psi_bw, phi_bw
-        # print("psi_bw:{}".format(psi_bw))
-        # print("phi_bw:{}".format(phi_bw))
-        # j0 = options['x_resolution']
-        j0 = x_res
+        _, psi_bw, phi_bw = self._morlet_freq_1d(filters['meta'])
+        j0 = x_res # REVIEW
 
         pad_len = int(filters['meta']['size_filter'] / 2**j0) # FIXME: size_filter is the only field in meta. way to get rid of this or perhaps remove meta?
         # _pad_signal()'s arguments are data, pad_len, mode='symm', center=False
@@ -531,9 +521,6 @@ class ScatNet(object):
         x_phi = np.real(self._conv_sub_1d(xf, filters['phi']['filter'], ds)) # arguments should be in frequency domain. Check where filters['phi']['filter'] is set as the frequency domain
         x_phi = self._unpad_signal(x_phi, ds, data_len)
 
-        # print("psi_bw:{}".format(psi_bw))
-        # print("phi_bw:{}".format(phi_bw))
-        # print("x_phi:{}".format(x_phi))
         # FIXME: in matlab, there's reshaping done: x_phi = reshape(x_phi, [size(x_phi,1) 1 size(x_phi,2)]);
         # IMPORTANT: check if this reshaping needs to be done
 
@@ -558,8 +545,6 @@ class ScatNet(object):
 
             x_psi_tmp = self._conv_sub_1d(xf, filters['psi']['filter'][p1], ds)
             x_psi[p1] = self._unpad_signal(x_psi_tmp, ds, data_len)
-            # print(meta_psi)
-            # print(p1)
             meta_psi['j'][p1] = p1 # FIXME: might break: in matlab version this was = p1 - 1. I changed to = p1 instead.
             meta_psi['bandwidth'][p1] = psi_bw[p1] # FIXME: might break, in matlab version the LHS is meta_psi.bandwidth(:, p1). I don't know why
             meta_psi['resolution'][p1] = j0 + ds
@@ -724,7 +709,7 @@ class ScatNet(object):
         # print(len(U['signal']))
         # print(U['signal'][0].shape)
         # r = 0
-        print("len(U['signal']):{}".format(len(U['signal'])))
+        # print("len(U['signal']):{}".format(len(U['signal'])))
         for p1 in range(len(U['signal'])): # num iterations: number of nodes in the current layer that is being processed to give the next layer
             current_bw = U['meta']['bandwidth'][p1] * 2**path_margin
             #print("current_bw:{}".format(current_bw))
