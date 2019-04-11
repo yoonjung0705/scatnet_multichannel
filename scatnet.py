@@ -1,7 +1,6 @@
-'''module for pe rforming invariant scattering transformation on multichannel time series'''
+'''module for performing invariant scattering transformation on multichannel time series'''
 import os
 import numpy as np
-import pdb
 import copy
 '''
 FIXME: continue proofreading the following functions:
@@ -25,6 +24,16 @@ FIXME: namechange: remove "1d" in all variables, function names
 
 class ScatNet(object):
     def __init__(self, data_len, avg_len, n_filter_octave=[8, 1], filter_format='fourier_multires', mode='symm'):
+        '''initializes scattering transform instance.
+
+        inputs:
+        -------
+        - data_len: int type, length of data to perform scattering transform
+        - avg_len: int type, length of window of the scaling function
+        - n_filter_octave: list of ints indicating number of filters per octave at each layer
+        - filter_format: 'fourier_multires', 'fourier_truncated', 'fourier'
+        - mode: 'symm', 'per', 'zero'
+        '''
         if isinstance(n_filter_octave, int):
             n_filter_octave = [n_filter_octave]
 
@@ -32,11 +41,10 @@ class ScatNet(object):
         self._avg_len = avg_len
         self._n_filter_octave = np.array(n_filter_octave)
         self._n_layers = len(n_filter_octave)
-
         self._filter_format = filter_format
-        self._bw_recip_octave = np.array(n_filter_octave)
         self._mode = mode
 
+        self._bw_recip_octave = np.array(n_filter_octave)
         self._phi_bw_multiplier = self._get_phi_bw_multiplier(n_filter_octave=self._n_filter_octave)
         self._sigma_psi = self._get_sigma_psi(bw_recip_octave=self._bw_recip_octave)
         self._sigma_phi = self._get_sigma_phi(sigma_psi=self._sigma_psi, phi_bw_multiplier=self._phi_bw_multiplier)
@@ -45,13 +53,14 @@ class ScatNet(object):
         self._n_filter_lin = self._get_n_filter_lin(sigma_phi=self._sigma_phi, n_filter_octave=self._n_filter_octave)
         self._xi_psi = self._get_xi_psi(n_filter_octave=self._n_filter_octave)
 
-        # everything so far is correct for data length 64, T=32
         self._filters = self._get_filters()
 
-        # REVIEW: path_margin, oversampling, truncated_threshold were removed from attributes
+    def __str__(self):
+        disp = 'data_len: {}\navg_len: {}\nn_layers: {}\nn_filter_octave: {}\nfilter_format: {}\nmode: {}'.\
+        format(self._data_len, self._avg_len, self._n_layers, self._n_filter_octave,
+            self._filter_format, self._mode)
 
-    # FIXME: add a function that prints out the following attributes:
-    # data_len, avg_len, n_layers, n_filter_octave, n_filter_log, n_filter_lin, sigma_psi, sigma_phi, xi_psi, bw_recip_octave, filter_format, mode
+        return disp
 
     @property
     def data_len(self):
@@ -74,9 +83,7 @@ class ScatNet(object):
         return self._n_layers
 
     def _get_n_filter_lin(self, sigma_phi, n_filter_octave):
-        '''
-        calculates n_filter_lin, the number of filters that are linearly spaced
-        '''
+        '''calculates n_filter_lin, the number of filters that are linearly spaced'''
         sigma0 = 2 / np.sqrt(3)
         n_filter_lin = np.round((2**(-1 / n_filter_octave) - 1 / 4 * sigma0 / sigma_phi) / (1 - 2**(-1 / n_filter_octave))).astype(int)
         assert(n_filter_lin >= 0).all(), 'Invalid number of linearly spaced filters. n_filter_lin should be nonnegative'
@@ -84,9 +91,7 @@ class ScatNet(object):
         return n_filter_lin
 
     def _get_n_filter_log(self, avg_len, n_filter_octave):
-        '''
-        calculates maximal wavelet scale n_filter_log, the number of filters that are logarithmically spaced
-        '''
+        '''calculates maximal wavelet scale n_filter_log, the number of filters that are logarithmically spaced'''
         phi_bw_multiplier = (1 + (n_filter_octave==1)).astype('int')
         n_filter_log = 1 + np.round(np.log2(avg_len / (  4 * n_filter_octave / phi_bw_multiplier)) * n_filter_octave).astype(int)
         assert(n_filter_log > 0).all(), 'Invalid number of logarithmically spaced filters. n_filter_log should be positive'
@@ -94,42 +99,32 @@ class ScatNet(object):
         return n_filter_log
 
     def _get_sigma_psi(self, bw_recip_octave):
-        '''
-        calculates sigma_psi, the standard deviation of the mother wavelet in space
-        '''
+        '''calculates sigma_psi, the standard deviation of the mother wavelet in space'''
         sigma0 = 2 / np.sqrt(3)
-        sigma_psi = 1 / 2 * sigma0 / (1 - 2**(-1 / bw_recip_octave)) # FIXME: in the same reason as above, this might break, so changed to ndarray
+        sigma_psi = 1 / 2 * sigma0 / (1 - 2**(-1 / bw_recip_octave))
 
         return sigma_psi
 
     def _get_phi_bw_multiplier(self, n_filter_octave):
-        '''
-        calculates phi_bw_multiplier, the multiplier that relates sigma_phi and sigma_psi
-        '''
+        '''calculates phi_bw_multiplier, the multiplier that relates sigma_phi and sigma_psi'''
         phi_bw_multiplier = (1 + (n_filter_octave == 1)).astype(int)
 
         return phi_bw_multiplier
 
     def _get_sigma_phi(self, sigma_psi, phi_bw_multiplier):
-        '''
-        calculates sigma_phi from sigma_psi and the multiplier
-        '''
+        '''calculates sigma_phi from sigma_psi and the multiplier'''
         sigma_phi = sigma_psi / phi_bw_multiplier
 
         return sigma_phi
 
     def _get_xi_psi(self, n_filter_octave):
-        '''
-        calculates xi_psi from n_filter_octave
-        '''
+        '''calculates xi_psi from n_filter_octave'''
         xi_psi = 1 / 2 * (2**(-1 / n_filter_octave) + 1) * np.pi
 
         return xi_psi
 
     def _get_filters(self):
-        '''
-        generates filters from the attributes
-        '''
+        '''generates filters from the attributes'''
         n_layers = self._n_layers
         filters = []
         for m in range(n_layers):
@@ -174,7 +169,6 @@ class ScatNet(object):
         if n_filter_lin != 0:
             step = np.pi * 2**(-n_filter_log / n_filter_octave) * (1 - 1/4 * sigma0 / filter_options['sigma_phi'] \
                 * 2**( 1 / n_filter_octave ) ) / n_filter_lin
-
             xi_psi_lin = filter_options['xi_psi'] * 2**((-n_filter_log+1) / n_filter_octave) \
                 - step * np.arange(1, n_filter_lin + 1)
             xi_psi = np.concatenate([xi_psi, xi_psi_lin], axis=0) 
@@ -182,9 +176,9 @@ class ScatNet(object):
         sigma_psi_lin = np.full((1 + n_filter_lin,), fill_value=filter_options['sigma_psi'] \
             * 2**((n_filter_log - 1) / n_filter_octave))
         sigma_psi = np.concatenate([sigma_psi, sigma_psi_lin], axis=0)
-        # calculate scaling function bandwidth
+        # scaling function bandwidth
         sigma_phi = filter_options['sigma_phi'] * 2**((n_filter_log-1) / n_filter_octave)
-        # calculate frequential bandwidths from spatial bandwidths
+        # frequency bandwidths from spatial bandwidths
         bw_psi = np.pi / 2 * sigma0 / sigma_psi
         bw_phi = np.pi / 2 * sigma0 / sigma_phi
 
@@ -483,11 +477,10 @@ class ScatNet(object):
         - filters: dict type object containing filter banks and their parameters. this has the following keys:
         'psi' - dict type object containing keys 'filter' and 'meta'
         'phi' - dict type object containing keys 'filter' and 'meta'
-        'meta' - dict type object containing keys such as 'filter_len' 
-
-        - options: dict type object containing optional parameters. this has the following keys:
-        'resolution', 'oversampling', 'psi_mask'. the key 'psi_mask' determines which filter banks will be used so that only 
-        frequency decreasing paths are computed. This is given as an input argument.
+        'meta' - dict type object containing keys including 'filter_len'. Other keys are implicitly used
+        - psi_mask: list of bool type objects, determines which filter banks will be used so that only frequency decreasing paths are computed. 
+        - x_res: FIXME: add description
+        - oversampling: FIXME: add description
 
         outputs:
         --------
@@ -498,7 +491,7 @@ class ScatNet(object):
         REVIEW: meaning of resolution?
         For meta_phi, the values of the keys are scalars whereas for meta_psi, the values are all lists
         '''
-        filters = copy.deepcopy(filters) # consider deprecation
+        filters = copy.deepcopy(filters) # FIXME: consider deprecation
         n_psi_filters = len(filters['psi']['filter'])
         if psi_mask is None:
             psi_mask = [True] * n_psi_filters
@@ -522,23 +515,24 @@ class ScatNet(object):
 
         # so far we padded the data (say the length became n1 -> n2) then calculated the fft of that to use as an input for _conv_sub_1d()
         # the output is in realspace, has length n2 and so we run _unpad_signal() to cut it down to length n1.
-        # REVIEW: None was originally -1, presumably to denote invalid values. These values will not be used since phi_mask will be False for those whose corresponding fields are -1 at the final usage
+        
+        # the None values below will not be used anyway since the corresponding phi_mask values will be False
         meta_phi = {'j':None, 'bandwidth':phi_bw, 'resolution':j0 + ds}
 
         x_psi = [None] * n_psi_filters
         meta_psi = {'j':[None] * n_psi_filters}
         meta_psi['bandwidth'] = [None] * n_psi_filters
         meta_psi['resolution'] = [None] * n_psi_filters
-        for p1 in np.where(psi_mask)[0]:
-        # p1: indices where psi_mask is True
-            ds = np.round(np.log2(2 * np.pi / psi_bw[p1] / 2)) - j0 - max(1, oversampling) # FIXME: might break. what is 1 in max(1, oversampling)?
+        for idx in np.where(psi_mask)[0]:
+        # idx: indices where psi_mask is True
+            ds = np.round(np.log2(2 * np.pi / psi_bw[idx] / 2)) - j0 - max(1, oversampling) # FIXME: might break. what is 1 in max(1, oversampling)?
             ds = int(max(ds, 0))
 
-            x_psi_tmp = self._conv_sub_1d(xf, filters['psi']['filter'][p1], ds)
-            x_psi[p1] = self._unpad_signal(x_psi_tmp, ds, data_len)
-            meta_psi['j'][p1] = p1
-            meta_psi['bandwidth'][p1] = psi_bw[p1]
-            meta_psi['resolution'][p1] = j0 + ds
+            x_psi_tmp = self._conv_sub_1d(xf, filters['psi']['filter'][idx], ds)
+            x_psi[idx] = self._unpad_signal(x_psi_tmp, ds, data_len)
+            meta_psi['j'][idx] = idx
+            meta_psi['bandwidth'][idx] = psi_bw[idx]
+            meta_psi['resolution'][idx] = j0 + ds
 
         return x_phi, x_psi, meta_phi, meta_psi
 
@@ -550,7 +544,7 @@ class ScatNet(object):
 
         inputs:
         -------
-        - W: dict type object with keys signal, meta. signal is a list of ndarrays. For each ndarray, the modulus is computed
+        - W: dict type object with keys signal, meta. signal is a list of ndarrays and for each ndarray, the modulus is computed
 
         outputs:
         --------
@@ -572,10 +566,8 @@ class ScatNet(object):
         outputs:
         --------
         - S: list type of... FIXME: write this part after reading other functions
-        - U: list type where each element is a dict type with keys 'signal' and 'meta' and the index is the layer. this operator includes taking the modulus
-        both values of 'signal' and 'meta' are lists where the index within denotes the scattering transform (convolution with phi, convolution + modulus with psi at multiple resolutions)
-        FIXME: consider if Wop as an argument is necessary. Retain a copy of this version, but check with other demos and see if other types of Wop are used. If not, just remove that input argument and use the output of wavelet_factory_1d(). 
-        FIXME: I think we already have an answer. The function that takes _wavelet_1d() as the default function handle is _wavelet_layer_1d(). This is called in wavelet_factory_1d(), which uses _wavelet_1d() as default when calling _wavelet_layer_1d()! Therefore, since _wavelet_1d() is default, simply just change things accordingly. For this transform() function, you should fix the 2nd argument of Wop here (corresponds to return_U)
+        - U: list type where each element is a dict type with keys 'signal' and 'meta' and the index is the layer. this U is a result of the modulus operator.
+        both values of 'signal' and 'meta' are lists where the index within denotes the scattering transform node index (convolution with phi, convolution + modulus with psi at multiple resolutions)
         '''
         if len(data.shape) == 1:
             data = data[np.newaxis, :]
@@ -612,52 +604,50 @@ class ScatNet(object):
         inputs:
         -------
         - U: dict type object with input layer to be transformed. has the following keys:
-        'meta': dict type object, has keys ('bandwidth', 'resolution', 'j')  whose values are (rank1, rank1, rank2) lists, respectively.
-        'signal':rank 1 list type corresponding to the signals to be convolved. different signals correspond to different nodes
+        'meta': dict type object, has keys 'bandwidth', 'resolution', 'j', whose values are rank1, rank1, rank2 lists, respectively.
+        'signal':rank 1 list type corresponding to the signals to be convolved. 
+        For the lists in both 'meta' and 'signal', different elements correspond to different nodes
         - filters: dict type object with the key 'meta'.
         - path_margin: FIXME: add description
 
         outputs:
         --------
         - U_phi: dict type with following fields:
-        'meta': dict type object, has keys ('bandwidth', 'resolution', 'j')  whose values are (rank1, rank1, rank2) lists, respectively.
+        'meta': dict type object, has keys 'bandwidth', 'resolution', 'j'  whose values are rank1, rank1, rank2 lists, respectively.
         'signal':rank 1 list type whose elements are ndarrays
+        For the lists in both 'meta' and 'signal', different elements correspond to different nodes
         '''
         filters = copy.deepcopy(filters)
         U = copy.deepcopy(U) # FIXME: remove all these .copy() stuff later by only storing the necessary fields of U into a variable.
         psi_xi, psi_bw, phi_bw = self._morlet_freq_1d(filters['meta'])
         if 'bandwidth' not in U['meta'].keys():
-            U['meta']['bandwidth'] = [2 * np.pi] # FIXME: confirm if this is right
-            # NOTE: the reason we initialize it as a list is not becauase S['meta']['bandwidth'] will be set to a rank 2 list.
-            # when running the invariant scattering transform, the resulting ['meta']['bandwidth'] will always be a rank 1 list.
-            # the reason is because in matlab it's done as U.meta.bandwidth = 2*pi and in this case they treat it as a length 1 ndarray
-            # (all scalars in matlab are arrays with length 1 and can be accessed with c(1) if c is a scalar)
-            # the same argument holds for the following ['meta']['resolution']
-            # Note that ['meta']['j'] will be a rank 2 list since it shows the full path starting from the root node in the graphical representation.
+            U['meta']['bandwidth'] = [2 * np.pi] # REVIEW: test required
+            
         if 'resolution' not in U['meta'].keys():
-            U['meta']['resolution'] = [0] # FIXME: confirm if this is right
+            U['meta']['resolution'] = [0] # REVIEW: test required
         
         U_phi = {'signal':[], 'meta':{}}
         U_phi['meta']['bandwidth'] = []
         U_phi['meta']['resolution'] = []
-        U_phi['meta']['j'] = [] # FIXME: for this one, the elements can be scalars or length 2 lists.
+        U_phi['meta']['j'] = []
 
         
         U_psi = {'signal':[], 'meta':{}}
         U_psi['meta']['bandwidth'] = []
         U_psi['meta']['resolution'] = []
-        U_psi['meta']['j'] = [] # FIXME: for this one, the elements can be scalars or length 2 lists.
+        U_psi['meta']['j'] = []
         
-        for p1 in range(len(U['signal'])): # num iterations: number of nodes in the current layer that is being processed to give the next layer
-            current_bw = U['meta']['bandwidth'][p1] * 2**path_margin
-            psi_mask = current_bw > np.array(psi_xi) # REVIEW: I think this determines whether to continue on this path or not
+        # For U, U_phi, U_psi, ['meta']['j'] will be a rank 2 list since it shows the full path starting from the root node in the graphical representation.
+        for idx in range(len(U['signal'])): # num iterations: number of nodes in the current layer
+            current_bw = U['meta']['bandwidth'][idx] * 2**path_margin
+            psi_mask = current_bw > np.array(psi_xi)
             # In the paper, the scattering transform is computed only along frequency-decreasing paths
-            x_res = U['meta']['resolution'][p1]
-            x_phi, x_psi, meta_phi, meta_psi = self._wavelet_1d(copy.deepcopy(U['signal'][p1]), copy.deepcopy(filters), psi_mask=psi_mask, x_res=x_res)
-            U_phi['signal'].append(x_phi) # FIXME: matlab version does U_phi.signal{1,p1}. This line might break 
+            x_res = U['meta']['resolution'][idx]
+            x_phi, x_psi, meta_phi, meta_psi = self._wavelet_1d(copy.deepcopy(U['signal'][idx]), copy.deepcopy(filters), psi_mask=psi_mask, x_res=x_res) # FIXME: remove copy.deepcopy()
+            U_phi['signal'].append(x_phi) # FIXME: confirm with test
 
-            if len(U['meta']['j']) > p1: # FIXME: this seems true unless the layer being processed is the first layer (root). Later change it to an if statement with the depth
-                U_phi['meta']['j'].append(U['meta']['j'][p1]) # U['meta']['j'] is a rank 2 list and so U['meta']['j'][p1] is also a list
+            if len(U['meta']['j']) > idx: # FIXME: this seems true unless the layer being processed is the first layer (root). Later change it to an if statement with the depth
+                U_phi['meta']['j'].append(U['meta']['j'][idx]) # U['meta']['j'] is a rank 2 list and so U['meta']['j'][idx] is also a list
             U_phi['meta']['bandwidth'].append(meta_phi['bandwidth'])
             U_phi['meta']['resolution'].append(meta_phi['resolution'])
 
@@ -666,13 +656,14 @@ class ScatNet(object):
             U_psi['meta']['resolution'] += [res for idx, res in enumerate(meta_psi['resolution']) if psi_mask[idx]]
 
             # FIXME: this seems true unless the layer being processed is the first layer (root). Later change it to an if statement with the depth
-            if len(U['meta']['j']) > p1:
-                U_meta_j = U['meta']['j'][p1]
-                # U['meta']['j'] is a rank 2 list and so U['meta']['j'][p1] itself is a list
+            if len(U['meta']['j']) > idx:
+                U_meta_j = U['meta']['j'][idx]
+                # U['meta']['j'] is a rank 2 list and so U['meta']['j'][idx] itself is a list
             else:
                 U_meta_j = []
             
-            U_psi['meta']['j'] += [U_meta_j + [meta_psi_j] for idx, meta_psi_j in enumerate(meta_psi['j']) if psi_mask[idx]] # FIXME: in the matlab version zeros(0,0), zeros(1,0) are used and its size can be measured. Not possible here. If the matlab version has [empty; empty; 1] for j at some p1 index, this will be [None, 1] according to this line, not [None, None, 1]. This might break...
+            U_psi['meta']['j'] += [U_meta_j + [meta_psi_j] for idx, meta_psi_j in enumerate(meta_psi['j']) if psi_mask[idx]] 
+            # FIXME: confirm with test
 
         return U_phi, U_psi
 
@@ -711,9 +702,6 @@ class ScatNet(object):
         filters['meta']['sigma_psi'] = self._sigma_psi[layer]
         filters['meta']['sigma_phi'] = self._sigma_phi[layer]
 
-        # The normalization factor for the wavelets, calculated using the filters
-        # at the finest resolution (N)
-        
         mode = self._mode
         if mode == 'symm':
             filter_len = 2 * data_len
@@ -738,23 +726,22 @@ class ScatNet(object):
         # As it occupies a larger portion of the spectrum, it is more
         # important for the logarithmic portion of the filter bank to be
         # properly normalized, so we only sum their contributions.
-        for j1 in range(n_filter_log):
-            tmp = self._gabor(filter_len, psi_center[j1], psi_sigma[j1])
-            tmp = self._morletify(tmp, psi_sigma[j1])
+        for idx in range(n_filter_log):
+            tmp = self._gabor(filter_len, psi_center[idx], psi_sigma[idx])
+            tmp = self._morletify(tmp, psi_sigma[idx])
             sum_sqs = sum_sqs + np.abs(tmp)**2
         
         psi_amp = np.sqrt(2 / max(sum_sqs))
         
-        #print(filters['psi']['filter'])
         # Apply the normalization factor to the filters.
         filters['psi'] = {'meta':{'k':[]}, 'filter':[]}
-        for j1 in range(n_filter_log + n_filter_lin):
-            tmp = self._gabor(filter_len, psi_center[j1], psi_sigma[j1])
-            tmp = self._morletify(tmp,psi_sigma[j1])
+        for idx in range(n_filter_log + n_filter_lin):
+            tmp = self._gabor(filter_len, psi_center[idx], psi_sigma[idx])
+            tmp = self._morletify(tmp,psi_sigma[idx])
             filter_j = self._optimize_filter(psi_amp * tmp)
             filters['psi']['filter'].append(filter_j)
-            filters['psi']['meta']['k'].append(j1)
-        # FIXME: meaning of j1 and k?
+            filters['psi']['meta']['k'].append(idx)
+        # FIXME: meaning of idx and k?
 
         # Calculate the associated low-pass filter
         filters['phi'] = {'filter':self._gabor(filter_len, 0, phi_sigma)}
@@ -775,7 +762,6 @@ class ScatNet(object):
         --------
         - f: ndarray shaped (filter_len,)
         '''
-        # NOTE: this function has been manually confirmed with a few inputs that the results are identical to that of the matlab version
         extent = 1 # extent of periodization - the higher, the better
         sigma = 1 / sigma
         f = np.zeros(filter_len)
@@ -795,7 +781,6 @@ class ScatNet(object):
         outputs:
         --------
         - f: rank 1 ndarray with shape identical to that of f
-
         '''
         f0 = f[0]
         f = f - f0 * self._gabor(len(f), 0, sigma)
