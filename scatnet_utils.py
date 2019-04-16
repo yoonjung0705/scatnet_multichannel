@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import interpolate
+import copy
 import scatnet as sn
 
 def dist_scat(x1, x2):
@@ -46,17 +47,16 @@ def stack_scat(x):
     
     inputs:
     -------
-    x: list type object resulting from the scattering transform 
+    x: list type object resulting from scat.transform() 
     
     outputs:
     --------
     x_stack: ndarray shaped(n_data, n_channels, n_nodes, scat_transform_single_node_len)
-    FIXME: name change to concat_scat?
     '''
     x_stack = []
     for m in range(len(x)):
         x_stack_m = np.stack(x[m]['signal'], axis=-2)
-        x_stack.append(x_stack)
+        x_stack.append(x_stack_m)
     x_stack = np.concatenate(x_stack, axis=-2)
 
     return x_stack
@@ -66,9 +66,16 @@ def log_scat(x, eps=1.e-6):
     
     inputs:
     -------
-    x: ndarray shaped (n_data, n_channels, n_nodes, scat_transform_single_node_len) resulting from stack_scat()
+    x: list type object resulting from scat.transform()
+    eps: small amount added to prevent the log results blowing up
     
     outputs:
-    x_log: ndarray with same shape as input
+    x_log: instance of scat.transform() whose values are the logarithm of the absolute values of the input
     '''
-    return np.log(np.abs(x) + eps)
+    x = copy.deepcopy(x)
+    for m in range(len(x)):
+        n_signals = len(x[m]['signal'])
+        for n in range(n_signals):
+            res = x[m]['meta']['resolution'][n]
+            x[m]['signal'][n] = np.log(np.abs(x[m]['signal'][n]) + eps * 2**(res/2))
+    return x
