@@ -12,8 +12,6 @@ FIXME: continue proofreading the following functions:
 FIXME: consider name change and check comments for the following functions by comparing with MATLAB version
 _morlet_freq_1d, _morlet_filter_bank_1d, _conv_sub_1d
 
-FIXME: read script and check if any of the attribute objects get linked to something during function call
-
 FIXME: for functions that allow signal to be rank 1 ndarray for number of data being 1, only allow rank 2 inputs except for transform()
 (even for 1 signal, it should be shaped (1, data_len)). This is important as we want to add the channel dimension as well,
 although calculating and combining different channels might be possible to be done at a higher level (such as in function scat(), etc)
@@ -23,13 +21,13 @@ FIXME: namechange: remove "1d" in all variables, function names
 
 
 class ScatNet(object):
-    def __init__(self, data_len, avg_len, n_filter_octave=[8, 1], filter_format='fourier_multires', mode='symm'):
+    def __init__(self, data_len, avg_len, n_filter_octave=[1, 1], filter_format='fourier_truncated', mode='symm'):
         '''initializes scattering transform instance.
 
         inputs:
         -------
         - data_len: int type, length of data to perform scattering transform
-        - avg_len: int type, length of window of the scaling function
+        - avg_len: int type, length of window of the scaling function. if not given, set to uniform filter
         - n_filter_octave: list of ints indicating number of filters per octave at each layer
         - filter_format: 'fourier_multires', 'fourier_truncated', 'fourier'
         - mode: 'symm', 'per', 'zero'
@@ -220,7 +218,7 @@ class ScatNet(object):
         
         inputs:
         -------
-        - data: ndarray with shape (n_data, data_len). data to be convolved given in the frequency domain
+        - data: ndarray with shape (n_data, n_channels, data_len). data to be convolved given in the frequency domain
         - filter: dict or ndarray type given in the frequency domain.
         if filter_format is fourier_multires:
         filter is dict type with the following keys: 'coef', 'filter_len'  
@@ -236,13 +234,14 @@ class ScatNet(object):
 
         outputs:
         --------
-        - y_ds: convolved signal in real space followed by downsampling having shape (n_data, data_output_len)
+        - y_ds: convolved signal in real space followed by downsampling having shape (n_data, n_channels, data_output_len)
         
         FIXME: understand the idea of wrapping around, and other questions in the comments
         '''
 
         n_data = data.shape[0]
-        data_len = data.shape[1]
+        n_channels = data.shape[1]
+        data_len = data.shape[2]
 
         filter_format = self._filter_format
         if isinstance(filter, dict):
@@ -251,9 +250,9 @@ class ScatNet(object):
                 # these filters are grouped into a rank 1 list. therefore, given the original size of the filter filter_len,
                 # and the length of the data, the length of the filter can be determined which can be found from the list
                 coef = filter['coef'][int(np.round(np.log2(filter['filter_len'] / data_len)))]
-                # make coef into rank 2 ndarray sized (1, filter_len) for broadcasting
-                coef = coef[np.newaxis, :] 
-                yf = data * coef 
+                # make coef into rank 2 ndarray sized (1, 1, filter_len) for broadcasting
+                coef = coef[np.newaxis, np.newaxis, :] 
+                yf = data * coef
             elif filter_format == 'fourier_truncated':
                 # in this case, filter['coef'] is an ndarray
                 start = filter['start']
@@ -278,16 +277,16 @@ class ScatNet(object):
                     coef = np.reshape(coef * lowpass, [int(n_coef / data_len), data_len]).sum(axis=0)
                 # coef is rank 1
                 n_coef = len(coef)
-                coef = coef[np.newaxis, :]
+                coef = coef[np.newaxis, np.newaxis, :]
                 j = int(np.round(np.log2(n_coef / data_len)))
                 start = start % data_len
 
                 if start + n_coef <= data_len:
                     # filter support contained in one period, no wrap-around
-                    yf = data[:, start:n_coef+start] * coef
+                    yf = data[:, :, start:n_coef+start] * coef
                 else:
                     # filter support wraps around, extract both parts
-                    yf = np.concatenate([data[:, start:], data[:, :n_coef + start - data_len]], axis=1) * coef
+                    yf = np.concatenate([data[:, :, start:], data[:, :, :n_coef + start - data_len]], axis=2) * coef
 
         else:
             # filter is ndarray type. perform fourier transform.
@@ -300,11 +299,11 @@ class ScatNet(object):
             filter_j = np.concatenate([filter[:int(data_len/2)],
                 [filter[int(data_len / 2)] / 2 + filter[int(-data_len / 2)] / 2],
                 filter[int(-data_len / 2 + 1):]], axis=0)
-            filter_j = filter_j[np.newaxis, :] # shaped (1, data_len)
+            filter_j = filter_j[np.newaxis, np.newaxis, :] # shaped (1, 1, data_len)
             yf = data * filter_j
         
         # calculate the downsampling factor with respect to yf
-        dsj = ds + np.round(np.log2(yf.shape[1] / data_len))
+        dsj = ds + np.round(np.log2(yf.shape[2] / data_len))
         assert(float(dsj).is_integer()), "dsj should be an integer"
 
         if dsj > 0:
@@ -313,14 +312,14 @@ class ScatNet(object):
             # I tested and see that this is correct. try running the following in a notebook:
             # a = np.sin(np.linspace(0,100,10000)) + np.sin(np.linspace(0,300,10000)); af = np.fft.fft(a[np.newaxis, :]); af2 = np.reshape(af, [4,2500]).sum(axis=0); a2 = np.fft.ifft(af2)
             # fig1,ax1 = plt.subplots(); fig2,ax2 = plt.subplots(); ax1.plot(a); ax2.plot(np.real(a2))
-            yf_ds = np.reshape(yf, [n_data, int(2**dsj), int(np.round(yf.shape[1]/2**dsj))]).sum(axis=1)
+            yf_ds = np.reshape(yf, [n_data, n_channels, int(2**dsj), int(np.round(yf.shape[2]/2**dsj))]).sum(axis=2)
         elif dsj < 0:
             # upsample (zero-pad in Fourier)
             # note that this only happens for fourier_truncated filters, since otherwise
             # filter sizes are always the same as the signal size
             # also, we have to do one-sided padding since otherwise we might break 
             # continuity of Fourier transform
-            yf_ds = np.concatenate(yf, np.zeros(yf.shape[0], (2**(-dsj)-1)*yf.shape[1]), axis=1)
+            yf_ds = np.concatenate(yf, np.zeros(n_data, n_channels, (2**(-dsj)-1)*yf.shape[1]), axis=2)
         else:
             yf_ds = yf
         if isinstance(filter, dict):
@@ -328,9 +327,9 @@ class ScatNet(object):
                 # result has been shifted in frequency so that the zero frequency is actually at -filter.start+1
 
                 # always recenter if fourier_truncated
-                yf_ds = np.roll(yf_ds, filter['start'], axis=1)
+                yf_ds = np.roll(yf_ds, filter['start'], axis=2)
 
-        y_ds = np.fft.ifft(yf_ds, axis=1) / 2**(ds/2)
+        y_ds = np.fft.ifft(yf_ds, axis=2) / 2**(ds/2)
         # the 2**(ds/2) factor seems like normalization
 
         return y_ds
@@ -339,7 +338,7 @@ class ScatNet(object):
         '''
         inputs:
         -------
-        - data: rank 2 ndarray with shape (n_data, data_len)
+        - data: rank 3 ndarray with shape (n_data, n_channels, data_len)
         - pad_len: int type, length after padding
         - mode: string type either symm, per, zero.
         - center: bool type indicating whether to bring the padded signal to the center
@@ -348,7 +347,9 @@ class ScatNet(object):
         --------
         - data: ndarray type padded data shaped (n_data, pad_len)
         '''
-        data_len = data.shape[1]
+        n_data = data.shape[0]
+        n_channels = data.shape[1]
+        data_len = data.shape[2]
         has_imag = np.linalg.norm(np.imag(data)) > 0 # bool type that checks if any of the elements has imaginary component
 
         if mode == 'symm':
@@ -382,18 +383,18 @@ class ScatNet(object):
 
         idx = idx.astype(int)
         # idx, idx0, conjugate, conjugate0, src, dst are all rank 1 ndarrays
-        data = data[:, idx] # data shape: (n_data, data_len or pad_len)
-        conjugate = conjugate[np.newaxis, :] # conjugate shape: (1, data_len or pad_len)
+        data = data[:, :, idx] # data shape: (n_data, n_channels, data_len or pad_len)
+        conjugate = conjugate[np.newaxis, np.newaxis, :] # conjugate shape: (1, 1, data_len or pad_len)
         if has_imag:
             data = data - 2j * np.imag(data) * conjugate
         # data is shaped (n_data, data_len or pad_len)
 
         if mode == 'zero':
-            data = np.concatenate([data, np.zeros((data.shape[0], pad_len - data_len))], axis=1)
+            data = np.concatenate([data, np.zeros((n_data, n_channels, pad_len - data_len))], axis=2)
 
         if center: # if center is nonzero (negative values are allowed, too)
             margin = int(np.floor((pad_len - data_len) / 2))
-            data = np.roll(data, margin, axis=1)
+            data = np.roll(data, margin, axis=2)
 
         return data
 
@@ -441,7 +442,7 @@ class ScatNet(object):
 
         inputs:
         -------
-        - data: rank 2 ndarray data to be padded, shaped (n_data, data_len)
+        - data: rank 3 ndarray data to be padded, shaped (n_data, n_channels, data_len)
         - res: int type indicating the resolution of the signal (exponent when expressed as power of 2)
         - orig_len: int type, length of the original, unpadded version (but at different resolution). 
         - center: bool type indicating whether to center the output
@@ -450,7 +451,7 @@ class ScatNet(object):
         --------
         - data: rank 2 ndarray shaped (n_data, len) where len is orig_len*2*(-res)
         '''
-        data_len = data.shape[1] # length of a single data.
+        data_len = data.shape[2] 
 
         offset = 0
         if center:
@@ -459,7 +460,7 @@ class ScatNet(object):
         orig_len_ds = 1 + int(np.floor((orig_len-1) / 2**res)) 
         # although this is an index, the value is identical to that of the matlab version since it is used for accessing values through [...:orig_len_ds]
         # but in python indexing the last index does not get included and so for this value we do not subtract 1 to get 0 based index.
-        data = data[:, offset_ds:offset_ds + orig_len_ds]
+        data = data[:, :, offset_ds:offset_ds + orig_len_ds]
 
         return data
 
@@ -473,7 +474,7 @@ class ScatNet(object):
         FIXME:REVIEW:review this function. Don't understand fully.
         inputs:
         -------
-        - data: rank 2 ndarray shaped (n_data, data_len)
+        - data: rank 3 ndarray shaped (n_data, n_channels, data_len)
         - filters: dict type object containing filter banks and their parameters. this has the following keys:
         'psi' - dict type object containing keys 'filter' and 'meta'
         'phi' - dict type object containing keys 'filter' and 'meta'
@@ -484,8 +485,8 @@ class ScatNet(object):
 
         outputs:
         --------
-        - x_phi: ndarray shaped (n_data, data_len). data convolved with scaling function, represented in real space
-        - x_psi: rank 1 list of ndarrays where each ndarray is shaped (n_data, data_len). This is the data convolved with filters (psi) at multiple resolutions.
+        - x_phi: ndarray shaped (n_data, n_channels, data_len). data convolved with scaling function, represented in real space
+        - x_psi: rank 1 list of ndarrays where each ndarray is shaped (n_data, n_channels, data_len). This is the data convolved with filters (psi) at multiple resolutions.
         For filters whose corresponding value of options['psi_mask'] is False, the convolution is skipped.
         - meta_phi, meta_psi: both dict type objects containing the convolution meta data for phi, psi, respectively. keys are 'j', 'bandwidth', 'resolution'
         REVIEW: meaning of resolution?
@@ -496,7 +497,7 @@ class ScatNet(object):
         if psi_mask is None:
             psi_mask = [True] * n_psi_filters
 
-        data_len = data.shape[1]
+        data_len = data.shape[2]
 
         _, psi_bw, phi_bw = self._morlet_freq_1d(filters['meta'])
         j0 = x_res # REVIEW
@@ -505,7 +506,7 @@ class ScatNet(object):
         mode = self._mode
         data = self._pad_signal(data, pad_len, mode) 
 
-        xf = np.fft.fft(data, axis=1)
+        xf = np.fft.fft(data, axis=2)
         
         ds = int(np.round(np.log2(2 * np.pi / phi_bw)) - j0 - oversampling) # REVIEW: don't understand
         ds = max(ds, 0)
@@ -561,7 +562,7 @@ class ScatNet(object):
 
         inputs:
         -------
-        - data: rank 1 ndarray shaped (data_len,) or rank 2 nparray shaped (n_data, data_len)
+        - data: rank 3 ndarray shaped (n_data, n_channels, data_len)
 
         outputs:
         --------
@@ -569,9 +570,7 @@ class ScatNet(object):
         - U: list type where each element is a dict type with keys 'signal' and 'meta' and the index is the layer. this U is a result of the modulus operator.
         both values of 'signal' and 'meta' are lists where the index within denotes the scattering transform node index (convolution with phi, convolution + modulus with psi at multiple resolutions)
         '''
-        if len(data.shape) == 1:
-            data = data[np.newaxis, :]
-
+        assert(len(data.shape) == 3), 'Invalid input data shape: should be rank 3 ndarray'
         n_layers = self._n_layers
         filters = self._filters
 
