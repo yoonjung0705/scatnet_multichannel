@@ -9,7 +9,9 @@ def dist_scat(x1, x2):
     for m in range(len(x1)):
         n_signals = len(x1[m]['signal'])
         for n in range(n_signals):
-            tmp = np.sum((x1[m]['signal'][n] - x2[m]['signal'][n])**2)
+            tmp = np.sum((x1[m]['signal'][n] - x2[m]['signal'][n])**2, axis=-1) 
+            # FIXME: currently, axis=-1 works well for both input data shaped (n_data, data_len) and (data_len,). 
+            # Later when allowing multiple channels, this might break
             sum_sqs += tmp
             
     return np.sqrt(sum_sqs)
@@ -38,3 +40,35 @@ def dilate(data, scale):
     data_new = fit(x_new)
 
     return data_new
+
+def stack_scat(x):
+    '''reshapes scattering transform signal into ndarray
+    
+    inputs:
+    -------
+    x: list type object resulting from the scattering transform 
+    
+    outputs:
+    --------
+    x_stack: ndarray shaped(n_data, n_channels, n_nodes, scat_transform_single_node_len)
+    FIXME: name change to concat_scat?
+    '''
+    x_stack = []
+    for m in range(len(x)):
+        x_stack_m = np.stack(x[m]['signal'], axis=-2)
+        x_stack.append(x_stack)
+    x_stack = np.concatenate(x_stack, axis=-2)
+
+    return x_stack
+
+def log_scat(x, eps=1.e-6):
+    '''returns logarithm of scattering transform's absolute values
+    
+    inputs:
+    -------
+    x: ndarray shaped (n_data, n_channels, n_nodes, scat_transform_single_node_len) resulting from stack_scat()
+    
+    outputs:
+    x_log: ndarray with same shape as input
+    '''
+    return np.log(np.abs(x) + eps)
