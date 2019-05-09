@@ -43,7 +43,8 @@ def dilate(data, scale):
     return data_new
 
 def stack_scat(x):
-    '''reshapes scattering transform signal into ndarray
+    '''
+    reshapes scattering transform signal into ndarray
     
     inputs:
     -------
@@ -62,7 +63,8 @@ def stack_scat(x):
     return x_stack
 
 def log_scat(x, eps=1.e-6):
-    '''returns logarithm of scattering transform's absolute values
+    '''
+    returns logarithm of scattering transform's absolute values
     
     inputs:
     -------
@@ -70,6 +72,7 @@ def log_scat(x, eps=1.e-6):
     eps: small amount added to prevent the log results blowing up
     
     outputs:
+    --------
     x_log: instance of scat.transform() whose values are the logarithm of the absolute values of the input
     '''
     x = copy.deepcopy(x)
@@ -79,3 +82,35 @@ def log_scat(x, eps=1.e-6):
             res = x[m]['meta']['resolution'][n]
             x[m]['signal'][n] = np.log(np.abs(x[m]['signal'][n]) + eps * 2**(res/2))
     return x
+
+def scat_features(x, params, avg_len, n_filter_octave=[1, 1]):
+    '''returns feature matrix X from a set of time series using the scattering transform
+    calculates the logarithm of the scattering transform and takes the mean along the time axis
+    for the filter format and the boundary conditions, default parameters are used
+    (filter_format='fourier_truncated', mode='symm')
+
+    inputs:
+    -------
+    x: rank d array whose last dimension corresponds to the time axis
+    params: list of parameters. parameters can be either lists or 1d arrays
+    avg_len: scaling function width for scattering transform
+    n_filter_octave: number of filters per octave for scattering transform
+    
+    outputs:
+    --------
+    X: rank 2 array sized (n_timeseries, n_nodes)
+    y: rank 1 array sized (n_timeseries,) denoting the simulation parameters
+
+    '''
+    data_len = x.shape[-1]
+    for idx, s in enumerate(x.shape[:-1]):
+        assert(s == len(params[idx])), "Array shape does not comply with number of parameters"
+    scat = scn.ScatNet(data_len, avg_len, n_filter_octave=n_filter_octave)
+    S = scat.transform(x)
+    S_log = scu.log_scat(S)
+    S_log = scu.stack_scat(S_log)
+    S_log_mean = S_log.mean(axis=-1)
+    S_log_mean = np.reshape(S_log_mean, (-1, S_log_mean.shape[-1]))
+    
+    return S_log_mean, 
+
