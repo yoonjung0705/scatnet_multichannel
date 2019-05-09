@@ -1,3 +1,8 @@
+'''
+demonstration of scattering transform-based classification
+trajectories are scatter-plotted based on the first three principal component axes
+'''
+
 import numpy as np
 import scatnet as scn
 import sim_utils as siu
@@ -6,83 +11,124 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 from sklearn import decomposition
-import pdb
+
 # scatnet parameters
-#data_len = 2**10
-#avg_len = 2**8
-#n_filter_octave = [1, 1]
+data_len = 2**11
+avg_len = 2**8
+n_data = 1000
+n_filter_octave = [1,1]
 
-# additional simulation parameters
-#diff_coefs = [1, 10, 100]
-#dt = 0.01
-##k = 1
-##lamb = 5
-#n_sims = 100
+scat = scn.ScatNet(data_len, avg_len, n_filter_octave=n_filter_octave)
+# precision for external parameters
+n_decim = 3
 
-## generate trajectories
-##siu.onebead(data_len=data_len, diff_coef=diff_coef, k=k, dt=dt)
-##siu.poisson(data_len=data_len, lamb=lamb, dt=dt)
+# simulate brownian
+diff_coefs_brw = np.arange(4,8,1)
+dt = 0.01
+traj_brw = siu.sim_brownian(data_len, diff_coefs_brw, dt=dt, n_data=n_data)
+scat_brw = scn.ScatNet(data_len, avg_len, n_filter_octave=n_filter_octave)
+traj_brw = traj_brw.reshape(-1, 1, traj_brw.shape[-1])
+S_brw = scat.transform(traj_brw)
+S_brw_log = scu.log_scat(S_brw)
+S_brw_log = scu.stack_scat(S_brw_log)
+S_brw_log_mean = S_brw_log.mean(axis=-1)
+S_brw_log_mean = np.reshape(S_brw_log_mean, (-1, S_brw_log_mean.shape[-1]))
 
-def sim_brownian_diff_coefs(data_len=2**11, avg_len=2**9, diff_coefs=[9, 10, 11], dt=0.01, n_sims=1000):
-    diff_coefs_labels_orig = list(range(len(diff_coefs)))
-    trajs_diff_coefs = []
-    for diff_coef in diff_coefs:
-        concat_list = []
-        for _ in range(n_sims):
-            traj = siu.brownian(data_len=data_len, diff_coef=diff_coef, dt=dt)
-            concat_list.append(traj)
-            trajs = np.stack(concat_list, axis=0)
-        trajs_diff_coefs.append(trajs)
+diff_coefs_brw_str = np.round(diff_coefs_brw, n_decim).astype(str)
+labels_brw = np.repeat(diff_coefs_brw_str[:, np.newaxis], n_data, axis=-1)
+labels_brw = np.char.add('brw_D', labels_brw)
+labels_brw = labels_brw.flatten()
 
-    trajs_diff_coefs = np.stack(trajs_diff_coefs, axis=0)
-    
-    trajs2 = np.reshape(trajs_diff_coefs, [len(diff_coefs) * n_sims, data_len])
-    scat = scn.ScatNet(data_len=data_len, avg_len=avg_len, n_filter_octave=[8,1])
-    S = scat.transform(trajs2)
-    S_stack = scu.stack_scat(S)
-    #print((S_stack > 0).sum())
-    #print(S_stack.shape)
-    S_stack = np.log2(np.abs(S_stack) + 1.e-6)
+# simulate poisson
+lams_pos = np.arange(4,8,1)
+dt = 0.01
+traj_pos = siu.sim_poisson(data_len, lams_pos, dt=dt, n_data=n_data)
+scat_pos = scn.ScatNet(data_len, avg_len, n_filter_octave=n_filter_octave)
+traj_pos = traj_pos.reshape(-1, 1, traj_pos.shape[-1])
+S_pos = scat.transform(traj_pos)
+S_pos_log = scu.log_scat(S_pos)
+S_pos_log = scu.stack_scat(S_pos_log)
+S_pos_log_mean = S_pos_log.mean(axis=-1)
+S_pos_log_mean = np.reshape(S_pos_log_mean, (-1, S_pos_log_mean.shape[-1]))
 
-    concat_list_diff_coef = []
-    for diff_coef_label in diff_coefs_labels_orig:                           
-        concat_list_diff_coef.append(np.full((n_sims,), fill_value=diff_coef_label))
-    diff_coefs_labels = np.concatenate(concat_list_diff_coef, axis=0)
+lams_pos_str = np.round(lams_pos, n_decim).astype(str)
+labels_pos = np.repeat(lams_pos_str[:, np.newaxis], n_data, axis=-1)
+labels_pos = np.char.add('pos_lam', labels_pos)
+labels_pos = labels_pos.flatten()
 
-    #X = np.copy(trajs2)
-    X = np.copy(S_stack)
-    y = np.copy(diff_coefs_labels)
-    
-    print(X.shape)
-    print(y.shape)
-    fig = plt.figure(1, figsize=(4, 3))
-    plt.clf()
-    ax = Axes3D(fig, rect=[0, 0, .95, 1], elev=48, azim=134)
+# simulate one bead
+diff_coefs_obd = np.arange(4,8,0.5)
+ks_obd = np.arange(1,3,0.5)
+dt = 0.01
+traj_obd = siu.sim_one_bead(data_len, diff_coefs=diff_coefs_obd, ks=ks_obd, dt=dt, n_data=n_data)
+scat_obd = scn.ScatNet(data_len, avg_len, n_filter_octave=n_filter_octave)
+traj_obd = traj_obd.reshape(-1, 1, traj_obd.shape[-1])
+S_obd = scat.transform(traj_obd)
+S_obd_log = scu.log_scat(S_obd)
+S_obd_log = scu.stack_scat(S_obd_log)
+S_obd_log_mean = S_obd_log.mean(axis=-1)
+S_obd_log_mean = np.reshape(S_obd_log_mean, (-1, S_obd_log_mean.shape[-1]))
 
-    plt.cla()
-    pca = decomposition.PCA(n_components=3)
-    pca.fit(X)
-    X = pca.transform(X)
+diff_coefs_obd_mesh, ks_obd_mesh = np.meshgrid(diff_coefs_obd, ks_obd, indexing='ij')
 
-    #for name, label in [(str(diff_coefs[0]), diff_coefs[0]), (str(diff_coefs[1]), diff_coefs[1]), (str(diff_coefs[2]), diff_coefs[2])]:
-    #    ax.text3D(X[y == label, 0].mean(), X[y == label, 1].mean() + 1.5, X[y == label, 2].mean(), name, horizontalalignment='center', bbox=dict(alpha=.5, edgecolor='w', facecolor='w'))
-        # Reorder the labels to have colors matching the cluster results
+diff_coefs_obd_str = np.round(diff_coefs_obd_mesh, n_decim).astype(str)
+labels_diff_coefs_obd = np.repeat(np.expand_dims(diff_coefs_obd_str, axis=-1), n_data, axis=-1)
+labels_diff_coefs_obd = np.char.add('_D', labels_diff_coefs_obd)
 
-    #pdb.set_trace()
-    #y = np.choose(y, [1, 2, 0]).astype(np.float)
-    ax.scatter(X[:, 0], X[:, 1], X[:, 2], c=y, cmap=plt.cm.nipy_spectral,edgecolor='k')
+ks_obd_str = np.round(ks_obd_mesh, n_decim).astype(str)
+labels_ks_obd = np.repeat(np.expand_dims(ks_obd_str, axis=-1), n_data, axis=-1)
+labels_ks_obd = np.char.add('_k', labels_ks_obd)
 
-    #ax.w_xaxis.set_ticklabels([])
-    #ax.w_yaxis.set_ticklabels([])
-    #ax.w_zaxis.set_ticklabels([])
+labels_obd = np.char.add(labels_diff_coefs_obd, labels_ks_obd)
+labels_obd = np.char.add('obd', labels_obd)
+labels_obd = labels_obd.flatten()
 
-    plt.show()
+labels = np.concatenate([labels_brw, labels_pos, labels_obd], axis=0)
+S_log_mean = np.concatenate([S_brw_log_mean, S_pos_log_mean, S_obd_log_mean], axis=0)
+
+# def plot_scat(X, y, n_components=2):
+# X = S_log_mean
+X = S_brw_log_mean
+labels = labels_brw
+# labels_uniq = np.unique(labels)
+labels_uniq = np.unique(labels)
+y = labels
+
+# fig = plt.figure(1, figsize=(4, 3))
+# plt.clf()
+# ax = Axes3D(fig, rect=[0, 0, .95, 1], elev=48, azim=134)
+
+# plt.cla()
+pca = decomposition.PCA(n_components=3)
+pca.fit(X)
+X = pca.transform(X)
+
+fig,ax = plt.subplots()
+for label in labels_uniq:
+    X_label = X[label==labels, :]
+    ax.scatter(X_label[:, 0], X_label[:, 1], label=label)
+
+
+#for name, label in [(str(diff_coefs[0]), diff_coefs[0]), (str(diff_coefs[1]), diff_coefs[1]), (str(diff_coefs[2]), diff_coefs[2])]:
+#    ax.text3D(X[y == label, 0].mean(), X[y == label, 1].mean() + 1.5, X[y == label, 2].mean(), name, horizontalalignment='center', bbox=dict(alpha=.5, edgecolor='w', facecolor='w'))
+    # Reorder the labels to have colors matching the cluster results
+
+#pdb.set_trace()
+#y = np.choose(y, [1, 2, 0]).astype(np.float)
+ax.scatter(X[:, 0], X[:, 1], X[:, 2], label=y)
+
+#ax.w_xaxis.set_ticklabels([])
+#ax.w_yaxis.set_ticklabels([])
+#ax.w_zaxis.set_ticklabels([])
+
+plt.show()
 
 
 
 
 
 
+plot_scat(X=S_log_mean, y=labels)
 
 
     #return trajs_diff_coefs
