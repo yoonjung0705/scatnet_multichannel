@@ -73,7 +73,7 @@ def log_scat(x, eps=1.e-6):
     
     outputs:
     --------
-    x_log: instance of scat.transform() whose values are the logarithm of the absolute values of the input
+    x: instance of scat.transform() whose values are the logarithm of the absolute values of the input
     '''
     x = copy.deepcopy(x)
     for m in range(len(x)):
@@ -112,5 +112,23 @@ def scat_features(x, params, avg_len, n_filter_octave=[1, 1]):
     S_log_mean = S_log.mean(axis=-1)
     S_log_mean = np.reshape(S_log_mean, (-1, S_log_mean.shape[-1]))
     
-    return S_log_mean, 
+    return S_log_mean
+
+def merge_channels(x):
+    '''returns an instance of the result of scat.transform() whose channels are merged into a single channel
+
+    inputs:
+    -------
+    x: list type instance resulting from scat.transform()
+    
+    outputs:
+    --------
+    x: instance of scat.transform() whose values are replaced with the l2 norm along the channel axis
+    '''
+    x = copy.deepcopy(x)
+    for m in range(len(x)):
+        n_signals = len(x[m]['signal'])
+        for n in range(n_signals):
+            x[m]['signal'][n] = np.sqrt(np.sum(np.abs(x[m]['signal'][n])**2, axis=1))
+    return x
 

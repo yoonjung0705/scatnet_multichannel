@@ -250,7 +250,7 @@ class ScatNet(object):
                 # these filters are grouped into a rank 1 list. therefore, given the original size of the filter filter_len,
                 # and the length of the data, the length of the filter can be determined which can be found from the list
                 coef = filter['coef'][int(np.round(np.log2(filter['filter_len'] / data_len)))]
-                # make coef into rank 2 ndarray sized (1, 1, filter_len) for broadcasting
+                # make coef into rank 3 ndarray sized (1, 1, filter_len) for broadcasting
                 coef = coef[np.newaxis, np.newaxis, :] 
                 yf = data * coef
             elif filter_format == 'fourier_truncated':
