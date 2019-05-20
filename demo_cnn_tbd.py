@@ -56,46 +56,67 @@ S_tbd_test_merge_log_stack = scu.stack_scat(S_tbd_test_merge_log)
 S_tbd_test_merge_log_stack_mean = S_tbd_test_merge_log_stack.mean(axis=-1)
 S_tbd_test_merge_log_stack_mean_tensor = torch.tensor(S_tbd_test_merge_log_stack_mean, dtype=torch.float32)
 
-net = pyc.Net(S_tbd_merge_log_stack_mean_tensor.shape[1],200,100,2)
-optimizer = optim.SGD(net.parameters(), lr=0.01)
+net_k = pyc.Net(S_tbd_merge_log_stack_mean_tensor.shape[1],200,100,1)
+net_T = pyc.Net(S_tbd_merge_log_stack_mean_tensor.shape[1],200,100,1)
+optimizer_k = optim.SGD(net_k.parameters(), lr=0.01)
+optimizer_T = optim.SGD(net_T.parameters(), lr=0.01)
 criterion = nn.MSELoss()
-loss_arr = []
-val_arr = []
+loss_arr_k = []
+loss_arr_T = []
+val_arr_k = []
+val_arr_T = []
 
-
-target = torch.zeros(S_tbd_merge_log_stack_mean_tensor.shape[0],2)
-a = -1
+target_k_ratio = torch.zeros(S_tbd_merge_log_stack_mean_tensor.shape[0],1)
 c = 0
-for _ in range(len(k_ratios)):
-    a = a + 1
-    b = -1
+for i in range(len(k_ratios)):
     for _ in range(len(diff_coef_ratios)):
-        b = b +1
         for _ in range(n_data):
-            target[c,:] = torch.tensor([k_ratios[a],diff_coef_ratios[b]])
+            target_k_ratio[c] = torch.tensor(k_ratios[i])
             c = c + 1
 
-target_val = torch.zeros(S_tbd_val_merge_log_stack_mean_tensor.shape[0],2)
-a = -1
+target_T_ratio = torch.zeros(S_tbd_merge_log_stack_mean_tensor.shape[0],1)
 c = 0
 for _ in range(len(k_ratios)):
-    a = a + 1
-    b = -1
-    for _ in range(len(diff_coef_ratios)):
-        b = b +1
-        for _ in range(n_data_val):
-            target_val[c,:] = torch.tensor([k_ratios[a],diff_coef_ratios[b]])
+     for j in range(len(diff_coef_ratios)):
+         for _ in range(n_data):
+            target_T_ratio[c] = torch.tensor(diff_coef_ratios[j])
+            c = c + 1
+
+target_k_ratio_val = torch.zeros(S_tbd_val_merge_log_stack_mean_tensor.shape[0],1)
+c = 0
+for _ in range(len(k_ratios)):
+     for j in range(len(diff_coef_ratios)):
+          for _ in range(n_data_val):
+            target_k_ratio_val[c] = torch.tensor(diff_coef_ratios[j])
+            c = c + 1
+
+target_T_ratio_val = torch.zeros(S_tbd_val_merge_log_stack_mean_tensor.shape[0],1)
+c = 0
+for _ in range(len(k_ratios)):
+     for j in range(len(diff_coef_ratios)):
+          for _ in range(n_data_val):
+            target_T_ratio_val[c] = torch.tensor(diff_coef_ratios[j])
             c = c + 1
 
 
 for _ in range(1000):
-      output = net(S_tbd_merge_log_stack_mean_tensor)
-      validation = net(S_tbd_val_merge_log_stack_mean_tensor)
-      loss = criterion(output, target)
-      val = criterion(validation, target_val)
-      optimizer.zero_grad()
-      loss.backward()
-      optimizer.step()
-      loss_arr.append(loss.item())
-      val_arr.append(val.item())
+      output_k = net_k(S_tbd_merge_log_stack_mean_tensor)
+      validation_k = net_k(S_tbd_val_merge_log_stack_mean_tensor)
+      loss_k = criterion(output_k, target_k_ratio)
+      val_k = criterion(validation_k, target_k_ratio_val)
+      optimizer_k.zero_grad()
+      loss_k.backward()
+      optimizer_k.step()
+      loss_arr_k.append(loss_k.item())
+      val_arr_k.append(val_k.item())
 
+for _ in range(1000):
+      output_T = net_T(S_tbd_merge_log_stack_mean_tensor)
+      validation_T = net_T(S_tbd_val_merge_log_stack_mean_tensor)
+      loss_T = criterion(output_T, target_T_ratio)
+      val_T = criterion(validation_T, target_T_ratio_val)
+      optimizer_T.zero_grad()
+      loss_T.backward()
+      optimizer_T.step()
+      loss_arr_T.append(loss_T.item())
+      val_arr_T.append(val_T.item())
