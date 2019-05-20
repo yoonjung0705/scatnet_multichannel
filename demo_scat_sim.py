@@ -12,10 +12,11 @@ from mpl_toolkits.mplot3d import Axes3D
 
 from sklearn import decomposition
 
+plt.style.use('dark_background')
 # scatnet parameters
 data_len = 2**11
 avg_len = 2**8
-n_data = 1000
+n_data = 200
 n_filter_octave = [1,1]
 
 scat = scn.ScatNet(data_len, avg_len, n_filter_octave=n_filter_octave)
@@ -99,14 +100,18 @@ y = labels
 # ax = Axes3D(fig, rect=[0, 0, .95, 1], elev=48, azim=134)
 
 # plt.cla()
-pca = decomposition.PCA(n_components=3)
+pca = decomposition.PCA(n_components=2)
 pca.fit(X)
 X = pca.transform(X)
 
 fig,ax = plt.subplots()
 for label in labels_uniq:
     X_label = X[label==labels, :]
-    ax.scatter(X_label[:, 0], X_label[:, 1], label=label)
+    ax.scatter(X_label[:, 0], X_label[:, 1], 4, label=label)
+
+ax.legend()
+ax.set_xticks([])
+ax.set_yticks([])
 
 
 #for name, label in [(str(diff_coefs[0]), diff_coefs[0]), (str(diff_coefs[1]), diff_coefs[1]), (str(diff_coefs[2]), diff_coefs[2])]:
@@ -115,7 +120,7 @@ for label in labels_uniq:
 
 #pdb.set_trace()
 #y = np.choose(y, [1, 2, 0]).astype(np.float)
-ax.scatter(X[:, 0], X[:, 1], X[:, 2], label=y)
+# ax.scatter(X[:, 0], X[:, 1], X[:, 2], label=y)
 
 #ax.w_xaxis.set_ticklabels([])
 #ax.w_yaxis.set_ticklabels([])
@@ -128,7 +133,7 @@ plt.show()
 
 
 
-plot_scat(X=S_log_mean, y=labels)
+# plot_scat(X=S_log_mean, y=labels)
 
 
     #return trajs_diff_coefs
