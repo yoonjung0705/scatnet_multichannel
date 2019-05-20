@@ -87,6 +87,18 @@ labels_obd = labels_obd.flatten()
 labels = np.concatenate([labels_brw, labels_pos, labels_obd], axis=0)
 S_log_mean = np.concatenate([S_brw_log_mean, S_pos_log_mean, S_obd_log_mean], axis=0)
 
+# simulation two beads
+diff_coef_ratios = np.arange(2,10,2)
+k_ratios = [1]
+traj_tbd = siu.sim_two_beads(data_len, diff_coef_ratios, k_ratios, dt, n_data=n_data) 
+traj_tbd = traj_twobeads.reshape(-1,2,traj_twobeads.shape[-1])
+scat_tbd = scn.ScatNet(data_len, avg_len, n_filter_octave = n_filter_octave) 
+S_tbd = scat.transform(traj_tbd)
+S_tbd_merge = scu.merge_channels(S_tbd)
+S_tbd_merge_log = scu.log_scat(S_tbd_merge)
+S_tbd_merge_log_stack = scu.stack_scat(S_tbd_merge_log)   
+S_tbd_merge_log_stack_mean = S_tbd_merge_log_stack.mean(axis=-1)
+
 # def plot_scat(X, y, n_components=2):
 # X = S_log_mean
 X = S_brw_log_mean

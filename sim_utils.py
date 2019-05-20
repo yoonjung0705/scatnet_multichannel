@@ -120,7 +120,7 @@ def sim_two_beads(data_len, diff_coef_ratios, k_ratios, dt, n_data=1, n_steps_in
     n_diff_coef_ratios = len(diff_coef_ratios)
     n_k_ratios = len(k_ratios)
 
-    processes = np.empty((n_k_ratios, n_diff_coef_ratios, 2, n_data, data_len))
+    processes = np.empty((n_k_ratios, n_diff_coef_ratios, n_data, 2, data_len))
 
     for idx0, k in enumerate(k_ratios):
         for idx1, diff_coef in enumerate(diff_coef_ratios):
@@ -132,11 +132,11 @@ def sim_two_beads(data_len, diff_coef_ratios, k_ratios, dt, n_data=1, n_steps_in
             x0 = np.zeros((2, n_data))
             for idx in range(n_steps_initial):
                 x0 = x0 + np.matmul(prefactor1,x0) + np.matmul(prefactor2,rand_nums[idx])
-            processes[idx0, idx1, :, :, 0] = x0
+            processes[idx0, idx1, :, :, 0] = x0.T
 
     for idx0, k in enumerate(k_ratios):
         for idx1, diff_coef in enumerate(diff_coef_ratios):
-            x = processes[idx0, idx1, :, :, 0]
+            x = x0
             force_matrix = np.array([[-(1+k),k],[k,-(1+k)]])
             diffusion_matrix = np.array([[diff_coef,0],[0,1]])
             prefactor1 = force_matrix * dt
@@ -144,6 +144,6 @@ def sim_two_beads(data_len, diff_coef_ratios, k_ratios, dt, n_data=1, n_steps_in
             rand_nums = np.random.normal(0, 1, [data_len - 1, 2, n_data])
             for idx in range(data_len - 1):
                 x = x + np.matmul(prefactor1,x) + np.matmul(prefactor2,rand_nums[idx])
-                processes[idx0, idx1, :, :, idx + 1] = x
+                processes[idx0, idx1, :, :, idx + 1] = x.T
 
     return processes
