@@ -22,8 +22,9 @@ scat = scn.ScatNet(data_len, avg_len, n_filter_octave=n_filter_octave)
 
 
 diff_coef_ratios = np.arange(2,10,2)
+#diff_coef_ratios = [4] 
 dt = 0.01
-k_ratios = np.arange(1,4,1)
+k_ratios = np.arange(1,8,2)
 #k_ratios = [1]
 
 traj_tbd = siu.sim_two_beads(data_len, diff_coef_ratios, k_ratios, dt, n_data=n_data)
@@ -84,11 +85,12 @@ for _ in range(len(k_ratios)):
 
 target_k_ratio_val = torch.zeros(S_tbd_val_merge_log_stack_mean_tensor.shape[0],1)
 c = 0
-for _ in range(len(k_ratios)):
-     for j in range(len(diff_coef_ratios)):
-          for _ in range(n_data_val):
-            target_k_ratio_val[c] = torch.tensor(diff_coef_ratios[j])
+for i in range(len(k_ratios)):
+    for _ in range(len(diff_coef_ratios)):
+        for _ in range(n_data_val):
+            target_k_ratio_val[c] = torch.tensor(k_ratios[i])
             c = c + 1
+
 
 target_T_ratio_val = torch.zeros(S_tbd_val_merge_log_stack_mean_tensor.shape[0],1)
 c = 0
