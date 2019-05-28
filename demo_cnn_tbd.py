@@ -23,7 +23,8 @@ scat = scn.ScatNet(data_len, avg_len, n_filter_octave=n_filter_octave)
 
 diff_coef_ratios = np.arange(2,10,2)
 dt = 0.01
-k_ratios = np.arange(1,4,1)
+#k_ratios = np.arange(1,4,1)
+k_ratios = np.arange(2,10,2)
 #k_ratios = [1]
 
 traj_tbd = siu.sim_two_beads(data_len, diff_coef_ratios, k_ratios, dt, n_data=n_data)
@@ -71,7 +72,7 @@ c = 0
 for i in range(len(k_ratios)):
     for _ in range(len(diff_coef_ratios)):
         for _ in range(n_data):
-            target_k_ratio[c] = torch.tensor(k_ratios[i])
+            target_k_ratio[c] = torch.tensor(k_ratios[i], dtype=torch.float32)
             c = c + 1
 
 target_T_ratio = torch.zeros(S_tbd_merge_log_stack_mean_tensor.shape[0],1)
@@ -79,15 +80,17 @@ c = 0
 for _ in range(len(k_ratios)):
      for j in range(len(diff_coef_ratios)):
          for _ in range(n_data):
-            target_T_ratio[c] = torch.tensor(diff_coef_ratios[j])
+            target_T_ratio[c] = torch.tensor(diff_coef_ratios[j], dtype=torch.float32)
             c = c + 1
 
 target_k_ratio_val = torch.zeros(S_tbd_val_merge_log_stack_mean_tensor.shape[0],1)
 c = 0
-for _ in range(len(k_ratios)):
-     for j in range(len(diff_coef_ratios)):
+for i in range(len(k_ratios)): # Yoon: changed _ to i
+     for _ in range(len(diff_coef_ratios)): # changed j to _
           for _ in range(n_data_val):
-            target_k_ratio_val[c] = torch.tensor(diff_coef_ratios[j])
+            #target_k_ratio_val[c] = torch.tensor(diff_coef_ratios[j], dtype=torch.float32)
+            # Yoon: commented this line and replaced with the line below
+            target_k_ratio_val[c] = torch.tensor(k_ratios[i], dtype=torch.float32)
             c = c + 1
 
 target_T_ratio_val = torch.zeros(S_tbd_val_merge_log_stack_mean_tensor.shape[0],1)
@@ -95,11 +98,11 @@ c = 0
 for _ in range(len(k_ratios)):
      for j in range(len(diff_coef_ratios)):
           for _ in range(n_data_val):
-            target_T_ratio_val[c] = torch.tensor(diff_coef_ratios[j])
+            target_T_ratio_val[c] = torch.tensor(diff_coef_ratios[j], dtype=torch.float32)
             c = c + 1
 
 
-for _ in range(1000):
+for i in range(1000):
       output_k = net_k(S_tbd_merge_log_stack_mean_tensor)
       validation_k = net_k(S_tbd_val_merge_log_stack_mean_tensor)
       loss_k = criterion(output_k, target_k_ratio)
@@ -109,8 +112,9 @@ for _ in range(1000):
       optimizer_k.step()
       loss_arr_k.append(loss_k.item())
       val_arr_k.append(val_k.item())
+      print(i)
 
-for _ in range(1000):
+for i in range(1000):
       output_T = net_T(S_tbd_merge_log_stack_mean_tensor)
       validation_T = net_T(S_tbd_val_merge_log_stack_mean_tensor)
       loss_T = criterion(output_T, target_T_ratio)
@@ -120,3 +124,4 @@ for _ in range(1000):
       optimizer_T.step()
       loss_arr_T.append(loss_T.item())
       val_arr_T.append(val_T.item())
+      print(i)
