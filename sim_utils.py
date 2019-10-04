@@ -1,10 +1,12 @@
+import os
 import numpy as np
 import random
 import torch
+from datetime import datetime
 
 ROOT_DIR = './data/'
 
-def sim_brownian(data_len, diff_coefs, dt, n_data=1, file_name=None, root_dir=ROOT_DIR):
+def sim_brownian(data_len, diff_coefs, dt, n_data=1, save_file=False, root_dir=ROOT_DIR):
     '''
     returns ensemble of brownian trajectories
 
@@ -17,7 +19,8 @@ def sim_brownian(data_len, diff_coefs, dt, n_data=1, file_name=None, root_dir=RO
 
     outputs:
     --------
-    - processes: ndarray shaped (n_diff_coefs, n_data, data_len) which is an ensemble of brownian trajectories
+    - processes: ndarray shaped (n_diff_coefs, n_data, 1, data_len) which is an ensemble of brownian trajectories
+    the singleton dimension is for the number of channels
 
     FIXME: check if dimensionsare not mixed up
     '''
@@ -34,15 +37,17 @@ def sim_brownian(data_len, diff_coefs, dt, n_data=1, file_name=None, root_dir=RO
         concat_list.append(processes)
 
     processes = np.stack(concat_list, axis=0)
+    processes = np.expand_dims(processes, axis=-2)
 
-    if file_name is None:
+    if not save_file:
         return processes
-    else:
-        file_path = os.path.join(root_dir, file_name)
-        data = {'data':processes, 'labels':[diff_coefs], 'label_names':['diff_coefs']}
-        torch.save(data, file_path)
 
-def sim_one_bead(data_len, diff_coefs, ks, dt, n_data=1, n_steps_initial=10000, file_name=None, root_dir=ROOT_DIR):
+    file_name = 'brw_{}.pt'.format(datetime.now().strftime('%Y%m%d_%H%M%S'))
+    file_path = os.path.join(root_dir, file_name)
+    data = {'data':processes, 'labels':[diff_coefs], 'label_names':['diff_coefs']}
+    torch.save(data, file_path)
+
+def sim_one_bead(data_len, diff_coefs, ks, dt, n_data=1, n_steps_initial=10000, save_file=False, root_dir=ROOT_DIR):
     '''
     returns ensemble of one bead simulation trajectories. as there is only one heat bath, this is a passive trajectory
 
@@ -57,7 +62,8 @@ def sim_one_bead(data_len, diff_coefs, ks, dt, n_data=1, n_steps_initial=10000, 
 
     outputs:
     --------
-    - processes: ndarray shaped (n_ks, n_diff_coefs, n_data, data_len) which is an ensemble of one bead simulation trajectories
+    - processes: ndarray shaped (n_ks, n_diff_coefs, n_data, 1, data_len) which is an ensemble of one bead simulation trajectories
+    the singleton dimension is for the number of channels
 
     FIXME: check the code to see if the dimensions are not mixed up, check if actual simulation part is not mixed up with initial condition simulation
     '''
@@ -94,14 +100,17 @@ def sim_one_bead(data_len, diff_coefs, ks, dt, n_data=1, n_steps_initial=10000, 
                 x = x - prefactor1 * x + prefactor2 * rand_nums[idx]
                 processes[idx0, idx1, :, idx + 1] = x
 
-    if file_name is None:
-        return processes
-    else:
-        file_path = os.path.join(root_dir, file_name)
-        data = {'data':processes, 'labels':[ks, diff_coefs], 'label_names':['ks', 'diff_coefs']}
-        torch.save(data, file_path)
+    processes = np.expand_dims(processes, axis=-2)
 
-def sim_poisson(data_len, lams, dt, n_data=1, file_name=None, root_dir=ROOT_DIR):
+    if not save_file:
+        return processes
+
+    file_name = 'obd_{}.pt'.format(datetime.now().strftime('%Y%m%d_%H%M%S'))
+    file_path = os.path.join(root_dir, file_name)
+    data = {'data':processes, 'labels':[ks, diff_coefs], 'label_names':['ks', 'diff_coefs']}
+    torch.save(data, file_path)
+
+def sim_poisson(data_len, lams, dt, n_data=1, save_file=False, root_dir=ROOT_DIR):
     '''
     returns ensemble of poisson processes
 
@@ -115,6 +124,7 @@ def sim_poisson(data_len, lams, dt, n_data=1, file_name=None, root_dir=ROOT_DIR)
     outputs:
     --------
     - processes: ndarray shaped (n_lams, n_data, data_len) which is an ensemble of poisson processes
+    the singleton dimension is for the number of channels
 
     REVIEW: confirm this method of using fixed time step generates identical statistics to that of Gielespie algorithm
     FIXME: confirm dimensions are not mixed up
@@ -128,16 +138,18 @@ def sim_poisson(data_len, lams, dt, n_data=1, file_name=None, root_dir=ROOT_DIR)
         increments = np.random.poisson(lam * dt, size=[n_data, data_len])
         processes = increments.cumsum(axis=1)
         concat_list.append(processes)
-    processes = np.stack(concat_list, axis=0)
-    
-    if file_name is None:
-        return processes
-    else:
-        file_path = os.path.join(root_dir, file_name)
-        data = {'data':processes, 'labels':[lams], 'label_names':['lams']}
-        torch.save(data, file_path)
+    processes = np.stack(concat_list, axis=0)    
+    processes = np.expand_dims(processes, axis=-2)
 
-def sim_two_beads(data_len, diff_coef_ratios, k_ratios, dt, n_data=1, n_steps_initial=10000, file_name=None, root_dir=ROOT_DIR):
+    if not save_file:
+        return processes
+
+    file_name = 'psn_{}.pt'.format(datetime.now().strftime('%Y%m%d_%H%M%S'))
+    file_path = os.path.join(root_dir, file_name)
+    data = {'data':processes, 'labels':[lams], 'label_names':['lams']}
+    torch.save(data, file_path)
+
+def sim_two_beads(data_len, k_ratios, diff_coef_ratios, dt, n_data=1, n_steps_initial=10000, save_file=False, root_dir=ROOT_DIR):
     '''FIXME: add docstring'''
 
     if isinstance(diff_coef_ratios, (int, float)):
@@ -177,9 +189,10 @@ def sim_two_beads(data_len, diff_coef_ratios, k_ratios, dt, n_data=1, n_steps_in
                 x = x + np.matmul(prefactor1,x) + np.matmul(prefactor2,rand_nums[idx])
                 processes[idx0, idx1, :, :, idx + 1] = x.T
 
-    if file_name is None:
+    if not save_file:
         return processes
-    else:
-        file_path = os.path.join(root_dir, file_name)
-        data = {'data':processes, 'labels':[diff_coef_ratios, k_ratios], 'label_names':['diff_coef_ratios', 'k_ratios']}
-        torch.save(data, file_path)
+
+    file_name = 'tbd_{}.pt'.format(datetime.now().strftime('%Y%m%d_%H%M%S'))
+    file_path = os.path.join(root_dir, file_name)
+    data = {'data':processes, 'labels':[k_ratios, diff_coef_ratios], 'label_names':['k_ratios', 'diff_coef_ratios']}
+    torch.save(data, file_path)

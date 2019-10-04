@@ -1,8 +1,14 @@
+import os
+from itertools import product
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
+
+import scatnet as scn
+import scatnet_utils as scu
 
 ROOT_DIR = './data/'
 
@@ -54,7 +60,7 @@ class ToTensor:
         return sample
 
 
-def train(file_name, n_nodes, n_epochs_max, train_ratio, batch_size=100, root_dir=ROOT_DIR, n_workers=4):
+def train(file_name, n_nodes_hidden, n_epochs_max, train_ratio, avg_len, log_scat=True, n_filter_octave=[1, 1], batch_size=100, root_dir=ROOT_DIR, n_workers=4):
     file_path = os.path.join(root_dir, file_name)
     samples = torch.load(file_path)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -62,26 +68,41 @@ def train(file_name, n_nodes, n_epochs_max, train_ratio, batch_size=100, root_di
     file_path_meta = os.path.join(root_dir, file_name + '.pt')
 
     data, labels, label_names = samples['data'], samples['labels'], samples['label_names']
-    n_data, data_len = data.shape[-2:]
-    n_labels = len(labels) # number of labels to predict
+    n_data_train_val, n_channels, data_len = data.shape[-3:]
+    n_labels = len(label_names) # number of labels to predict
     phases = ['train', 'val']
-    n_data = {'train':int(n_data * train_ratio), 'val':n_data - int(n_data * train_ratio)}
-    idx_train = np.random.choice(n_data_train_val, n_train, replace=False)
-    idx_val = np.array(set(range(n_data_train_val)) - set(idx_train), dtype='int64')
-    data = {'train':np.take(data, idx_train, axis=-2), 'val':np.take(data, idx_val, axis=-2)}
+    n_data = {'train':int(n_data_train_val * train_ratio)}
+    n_data['val'] = n_data_train_val - n_data['train']
+    idx_train = np.random.choice(n_data_train_val, n_data['train'], replace=False).tolist()
+    idx_val = list(set(range(n_data_train_val)) - set(idx_train))
+    data = {'train':np.take(data, idx_train, axis=-3), 'val':np.take(data, idx_val, axis=-3)}
+
     # flatten the data
-    data = {phase:np.reshape(data[phase], [-1, data_len]) for phase in phases}
-    meta = {'file_name':file_name, 'root_dir':root_dir, 'n_nodes':n_node, 'n_epochs_max':n_epochs_max,
+    data = {phase:np.reshape(data[phase], [-1, n_channels, data_len]) for phase in phases}
+    # perform scattering transform
+    data_scat = {}
+    for phase in phases:
+        scat = scn.ScatNet(data_len, avg_len, n_filter_octave=n_filter_octave)
+        S = scat.transform(data[phase])
+        if log_scat: S = scu.log_scat(S)
+        S = scu.stack_scat(S)
+        S = S.mean(axis=-1)
+        S = np.reshape(S, (-1, S.shape[-1]))
+        data_scat[phase] = S
+
+    n_scat_nodes = data_scat['train'].shape[-1]
+    n_nodes = [n_scat_nodes] + list(n_nodes_hidden) + [1]
+    meta = {'file_name_data':file_name, 'root_dir':root_dir, 'n_nodes_hidden':n_nodes_hidden, 'n_epochs_max':n_epochs_max,
         'train_ratio':train_ratio, 'batch_size':batch_size, 'n_workers':n_workers,
         'loss_mean':{'train':[], 'val':[]}, 'epoch':[], 'weights':[]}
 
     labels = np.array(list(product(*labels)), dtype='float32').swapaxes(0, 1)
-    labels = {phase:np.repeat(labels.expand_dims(axis=-1), n_data[phase], axis=-1) for phase in phases}
+    labels = {phase:np.repeat(np.expand_dims(labels, axis=-1).reshape([n_labels, -1]), n_data[phase], axis=-1) for phase in phases}
     for idx in range(n_labels):
-        dataset = {phase:TimeSeriesDataset(data[phase], labels[phase][idx], transform=ToTensor()) for phase in phases}
+        dataset = {phase:TimeSeriesDataset(data_scat[phase], labels[phase][idx], transform=ToTensor()) for phase in phases}
         dataloader = {phase:DataLoader(dataset[phase], batch_size=batch_size, shuffle=True, num_workers=n_workers) for phase in phases}
 
-        net = Net(nodes=n_nodes).to(device)
+        net = Net(n_nodes=n_nodes).to(device)
         optimizer = optim.Adam(net.parameters(), lr=0.001, betas=(0.9, 0.999))
         criterion = nn.MSELoss(reduction='sum')
 
@@ -102,7 +123,7 @@ def train(file_name, n_nodes, n_epochs_max, train_ratio, batch_size=100, root_di
                     loss_sum[phase] += loss.data.item()
                 loss_mean[phase] = loss_sum[phase] / n_data[phase] # MSE loss per data point
             if epoch % 10 == 0:
-                loss_msg = ("{} out of {} epochs, mean_loss_train:{%.5f}, mean_loss_val:{%.5f}"
+                loss_msg = ("{} out of {} epochs, mean_loss_train:{:.5f}, mean_loss_val:{:.5f}"
                     .format(epoch, n_epochs_max, loss_mean['train'], loss_mean['val']))
                 print(loss_msg)
                 meta['epoch'].append(epoch)

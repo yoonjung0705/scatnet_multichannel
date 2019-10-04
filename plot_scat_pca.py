@@ -41,21 +41,21 @@ labels_brw = np.char.add('brw_D', labels_brw)
 labels_brw = labels_brw.flatten()
 
 # simulate poisson
-lams_pos = np.arange(4,8,1)
+lams_psn = np.arange(4,8,1)
 dt = 0.01
-traj_pos = siu.sim_poisson(data_len, lams_pos, dt=dt, n_data=n_data)
-scat_pos = scn.ScatNet(data_len, avg_len, n_filter_octave=n_filter_octave)
-traj_pos = traj_pos.reshape(-1, 1, traj_pos.shape[-1])
-S_pos = scat.transform(traj_pos)
-S_pos_log = scu.log_scat(S_pos)
-S_pos_log = scu.stack_scat(S_pos_log)
-S_pos_log_mean = S_pos_log.mean(axis=-1)
-S_pos_log_mean = np.reshape(S_pos_log_mean, (-1, S_pos_log_mean.shape[-1]))
+traj_psn = siu.sim_poisson(data_len, lams_psn, dt=dt, n_data=n_data)
+scat_psn = scn.ScatNet(data_len, avg_len, n_filter_octave=n_filter_octave)
+traj_psn = traj_psn.reshape(-1, 1, traj_psn.shape[-1])
+S_psn = scat.transform(traj_psn)
+S_psn_log = scu.log_scat(S_psn)
+S_psn_log = scu.stack_scat(S_psn_log)
+S_psn_log_mean = S_psn_log.mean(axis=-1)
+S_psn_log_mean = np.reshape(S_psn_log_mean, (-1, S_psn_log_mean.shape[-1]))
 
-lams_pos_str = np.round(lams_pos, n_decim).astype(str)
-labels_pos = np.repeat(lams_pos_str[:, np.newaxis], n_data, axis=-1)
-labels_pos = np.char.add('pos_lam', labels_pos)
-labels_pos = labels_pos.flatten()
+lams_psn_str = np.round(lams_psn, n_decim).astype(str)
+labels_psn = np.repeat(lams_psn_str[:, np.newaxis], n_data, axis=-1)
+labels_psn = np.char.add('psn_lam', labels_psn)
+labels_psn = labels_psn.flatten()
 
 # simulate one bead
 diff_coefs_obd = np.arange(4,8,0.5)
@@ -84,8 +84,8 @@ labels_obd = np.char.add(labels_diff_coefs_obd, labels_ks_obd)
 labels_obd = np.char.add('obd', labels_obd)
 labels_obd = labels_obd.flatten()
 
-labels = np.concatenate([labels_brw, labels_pos, labels_obd], axis=0)
-S_log_mean = np.concatenate([S_brw_log_mean, S_pos_log_mean, S_obd_log_mean], axis=0)
+labels = np.concatenate([labels_brw, labels_psn, labels_obd], axis=0)
+S_log_mean = np.concatenate([S_brw_log_mean, S_psn_log_mean, S_obd_log_mean], axis=0)
 
 # simulation two beads
 diff_coef_ratios = np.arange(2,10,2)
