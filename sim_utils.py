@@ -22,6 +22,10 @@ def sim_brownian(data_len, diff_coefs, dt, n_data=1, file_name=None, root_dir=RO
     FIXME: check if dimensionsare not mixed up
     '''
     concat_list = []
+    if isinstance(diff_coefs, (int, float)):
+        diff_coefs = [diff_coefs]
+    diff_coefs = np.array(diff_coefs, dtype='float32')
+
     for diff_coef in diff_coefs:
         increments = np.sqrt(2 * diff_coef * dt) * np.random.normal(0, 1, [n_data, data_len - 1])
         x0 = np.random.normal(0, 1, [n_data, 1])
@@ -35,7 +39,8 @@ def sim_brownian(data_len, diff_coefs, dt, n_data=1, file_name=None, root_dir=RO
         return processes
     else:
         file_path = os.path.join(root_dir, file_name)
-        torch.save(processes, file_path)
+        data = {'data':processes, 'labels':[diff_coefs], 'label_names':['diff_coefs']}
+        torch.save(data, file_path)
 
 def sim_one_bead(data_len, diff_coefs, ks, dt, n_data=1, n_steps_initial=10000, file_name=None, root_dir=ROOT_DIR):
     '''
@@ -62,6 +67,8 @@ def sim_one_bead(data_len, diff_coefs, ks, dt, n_data=1, n_steps_initial=10000, 
     if isinstance(ks, (int, float)):
         ks = [ks]
 
+    diff_coefs = np.array(diff_coefs, dtype='float32')
+    ks = np.array(ks, dtype='float32')
     n_diff_coefs = len(diff_coefs)
     n_ks = len(ks)
 
@@ -91,7 +98,8 @@ def sim_one_bead(data_len, diff_coefs, ks, dt, n_data=1, n_steps_initial=10000, 
         return processes
     else:
         file_path = os.path.join(root_dir, file_name)
-        torch.save(processes, file_path)
+        data = {'data':processes, 'labels':[ks, diff_coefs], 'label_names':['ks', 'diff_coefs']}
+        torch.save(data, file_path)
 
 def sim_poisson(data_len, lams, dt, n_data=1, file_name=None, root_dir=ROOT_DIR):
     '''
@@ -111,6 +119,10 @@ def sim_poisson(data_len, lams, dt, n_data=1, file_name=None, root_dir=ROOT_DIR)
     REVIEW: confirm this method of using fixed time step generates identical statistics to that of Gielespie algorithm
     FIXME: confirm dimensions are not mixed up
     '''
+    if isinstance(lams, (int, float)):
+        lams = [lams]
+    lams = np.array(lams, dtype='float32')
+    
     concat_list = []
     for lam in lams:
         increments = np.random.poisson(lam * dt, size=[n_data, data_len])
@@ -122,9 +134,11 @@ def sim_poisson(data_len, lams, dt, n_data=1, file_name=None, root_dir=ROOT_DIR)
         return processes
     else:
         file_path = os.path.join(root_dir, file_name)
-        torch.save(processes, file_path)
+        data = {'data':processes, 'labels':[lams], 'label_names':['lams']}
+        torch.save(data, file_path)
 
 def sim_two_beads(data_len, diff_coef_ratios, k_ratios, dt, n_data=1, n_steps_initial=10000, file_name=None, root_dir=ROOT_DIR):
+    '''FIXME: add docstring'''
 
     if isinstance(diff_coef_ratios, (int, float)):
         diff_coef_ratios = [diff_coef_ratios]
@@ -132,6 +146,8 @@ def sim_two_beads(data_len, diff_coef_ratios, k_ratios, dt, n_data=1, n_steps_in
     if isinstance(k_ratios, (int, float)):
         k_ratios = [k_ratios]
 
+    diff_coef_ratios = np.array(diff_coef_ratios, dtype='float32')
+    k_ratios = np.array(k_ratios, dtype='float32')
     n_diff_coef_ratios = len(diff_coef_ratios)
     n_k_ratios = len(k_ratios)
 
@@ -165,4 +181,5 @@ def sim_two_beads(data_len, diff_coef_ratios, k_ratios, dt, n_data=1, n_steps_in
         return processes
     else:
         file_path = os.path.join(root_dir, file_name)
-        torch.save(processes, file_path)
+        data = {'data':processes, 'labels':[diff_coef_ratios, k_ratios], 'label_names':['diff_coef_ratios', 'k_ratios']}
+        torch.save(data, file_path)
