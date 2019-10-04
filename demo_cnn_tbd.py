@@ -2,7 +2,7 @@ import numpy as np
 import scatnet as scn
 import sim_utils as siu
 import scatnet_utils as scu
-import pytorch_cnn as pyc
+import net_utils as nu
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -76,8 +76,8 @@ S_tbd_test_log_stack_tensor = torch.tensor(S_tbd_test_log_stack, dtype=torch.flo
 # S_tbd_test_merge_log_stack_mean = S_tbd_test_merge_log_stack.mean(axis=-1)
 # S_tbd_test_merge_log_stack_mean_tensor = torch.tensor(S_tbd_test_merge_log_stack_mean, dtype=torch.float32)
 
-net_k = pyc.Net(S_tbd_log_stack_tensor.shape[1],200,100,1)
-net_T = pyc.Net(S_tbd_log_stack_tensor.shape[1],200,100,1)
+net_k = nu.Net(S_tbd_log_stack_tensor.shape[1],200,100,1)
+net_T = nu.Net(S_tbd_log_stack_tensor.shape[1],200,100,1)
 optimizer_k = optim.SGD(net_k.parameters(), lr=0.01)
 optimizer_T = optim.SGD(net_T.parameters(), lr=0.01)
 criterion = nn.MSELoss()

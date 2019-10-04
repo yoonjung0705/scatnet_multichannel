@@ -1,7 +1,10 @@
 import numpy as np
 import random
+import torch
 
-def sim_brownian(data_len, diff_coefs, dt, n_data=1):
+ROOT_DIR = './data/'
+
+def sim_brownian(data_len, diff_coefs, dt, n_data=1, file_name=None, root_dir=ROOT_DIR):
     '''
     returns ensemble of brownian trajectories
 
@@ -28,9 +31,13 @@ def sim_brownian(data_len, diff_coefs, dt, n_data=1):
 
     processes = np.stack(concat_list, axis=0)
 
-    return processes
+    if file_name is None:
+        return processes
+    else:
+        file_path = os.path.join(root_dir, file_name)
+        torch.save(processes, file_path)
 
-def sim_one_bead(data_len, diff_coefs, ks, dt, n_data=1, n_steps_initial=10000):
+def sim_one_bead(data_len, diff_coefs, ks, dt, n_data=1, n_steps_initial=10000, file_name=None, root_dir=ROOT_DIR):
     '''
     returns ensemble of one bead simulation trajectories. as there is only one heat bath, this is a passive trajectory
 
@@ -80,9 +87,13 @@ def sim_one_bead(data_len, diff_coefs, ks, dt, n_data=1, n_steps_initial=10000):
                 x = x - prefactor1 * x + prefactor2 * rand_nums[idx]
                 processes[idx0, idx1, :, idx + 1] = x
 
-    return processes
+    if file_name is None:
+        return processes
+    else:
+        file_path = os.path.join(root_dir, file_name)
+        torch.save(processes, file_path)
 
-def sim_poisson(data_len, lams, dt, n_data=1):
+def sim_poisson(data_len, lams, dt, n_data=1, file_name=None, root_dir=ROOT_DIR):
     '''
     returns ensemble of poisson processes
 
@@ -107,9 +118,13 @@ def sim_poisson(data_len, lams, dt, n_data=1):
         concat_list.append(processes)
     processes = np.stack(concat_list, axis=0)
     
-    return processes
+    if file_name is None:
+        return processes
+    else:
+        file_path = os.path.join(root_dir, file_name)
+        torch.save(processes, file_path)
 
-def sim_two_beads(data_len, diff_coef_ratios, k_ratios, dt, n_data=1, n_steps_initial=10000):
+def sim_two_beads(data_len, diff_coef_ratios, k_ratios, dt, n_data=1, n_steps_initial=10000, file_name=None, root_dir=ROOT_DIR):
 
     if isinstance(diff_coef_ratios, (int, float)):
         diff_coef_ratios = [diff_coef_ratios]
@@ -146,4 +161,8 @@ def sim_two_beads(data_len, diff_coef_ratios, k_ratios, dt, n_data=1, n_steps_in
                 x = x + np.matmul(prefactor1,x) + np.matmul(prefactor2,rand_nums[idx])
                 processes[idx0, idx1, :, :, idx + 1] = x.T
 
-    return processes
+    if file_name is None:
+        return processes
+    else:
+        file_path = os.path.join(root_dir, file_name)
+        torch.save(processes, file_path)

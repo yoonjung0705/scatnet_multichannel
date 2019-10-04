@@ -2,7 +2,7 @@ import numpy as np
 import scatnet as scn 
 import sim_utils as siu 
 import scatnet_utils as scu 
-import pytorch_cnn as pyc 
+import net_utils as nu
 import torch 
 import torch.nn as nn 
 import torch.optim as optim 
@@ -53,7 +53,7 @@ S_brw_test_log_mean = S_brw_test_log.mean(axis=-1)
 S_brw_test_log_mean = np.reshape(S_brw_test_log_mean, (-1, S_brw_test_log_mean.shape[-1]))
 S_brw_test_log_mean_tensor =torch.tensor(S_brw_test_log_mean, dtype=torch.float32)
 
-net = pyc.Net(S_brw_log_mean_tensor.shape[1],100,50,1)
+net = nu.Net(S_brw_log_mean_tensor.shape[1],100,50,1)
 optimizer = optim.SGD(net.parameters(), lr=0.01) 
 criterion = nn.MSELoss() 
 loss_arr = [] 

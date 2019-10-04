@@ -32,7 +32,7 @@ traj_brw = traj_brw.reshape(-1, 1, traj_brw.shape[-1])
 S_brw = scat.transform(traj_brw)
 S_brw_log = scu.log_scat(S_brw)
 S_brw_log = scu.stack_scat(S_brw_log)
-S_brw_log_mean = S_brw_log.mean(axis=-1)
+S_brw_log_mean = S_brw_log.mean(axis=-1) # average along time axis
 S_brw_log_mean = np.reshape(S_brw_log_mean, (-1, S_brw_log_mean.shape[-1]))
 
 diff_coefs_brw_str = np.round(diff_coefs_brw, n_decim).astype(str)
@@ -91,7 +91,7 @@ S_log_mean = np.concatenate([S_brw_log_mean, S_pos_log_mean, S_obd_log_mean], ax
 diff_coef_ratios = np.arange(2,10,2)
 k_ratios = [1]
 traj_tbd = siu.sim_two_beads(data_len, diff_coef_ratios, k_ratios, dt, n_data=n_data) 
-traj_tbd = traj_twobeads.reshape(-1,2,traj_twobeads.shape[-1])
+traj_tbd = traj_tbd.reshape(-1,2,traj_tbd.shape[-1])
 scat_tbd = scn.ScatNet(data_len, avg_len, n_filter_octave = n_filter_octave) 
 S_tbd = scat.transform(traj_tbd)
 S_tbd_merge = scu.merge_channels(S_tbd)
