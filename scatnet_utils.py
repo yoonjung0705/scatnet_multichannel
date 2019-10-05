@@ -83,11 +83,14 @@ def log_scat(x, eps=1.e-6):
             x[m]['signal'][n] = np.log(np.abs(x[m]['signal'][n]) + eps * 2**(res/2))
     return x
 
-def scat_features(x, params, avg_len, n_filter_octave=[1, 1]):
+"""
+def scat_features(x, params, avg_len, n_filter_octave=[1, 1], log_scat=True):
     '''returns feature matrix X from a set of time series using the scattering transform
     calculates the logarithm of the scattering transform and takes the mean along the time axis
     for the filter format and the boundary conditions, default parameters are used
     (filter_format='fourier_truncated', mode='symm')
+
+    FIXME: seems not considering having multiple channels. consider deprecation
 
     inputs:
     -------
@@ -95,10 +98,11 @@ def scat_features(x, params, avg_len, n_filter_octave=[1, 1]):
     params: list of parameters. parameters can be either lists or 1d arrays
     avg_len: scaling function width for scattering transform
     n_filter_octave: number of filters per octave for scattering transform
+    log_scat: boolean indicating whether to take the log of the scattering transform results
     
     outputs:
     --------
-    X: rank 2 array sized (n_timeseries, n_nodes)
+    X: rank 2 array sized (n_timeseries, n_channels * n_nodes * data_len)
     y: rank 1 array sized (n_timeseries,) denoting the simulation parameters
 
     '''
@@ -107,12 +111,13 @@ def scat_features(x, params, avg_len, n_filter_octave=[1, 1]):
         assert(s == len(params[idx])), "Array shape does not comply with number of parameters"
     scat = scn.ScatNet(data_len, avg_len, n_filter_octave=n_filter_octave)
     S = scat.transform(x)
-    S_log = scu.log_scat(S)
-    S_log = scu.stack_scat(S_log)
-    S_log_mean = S_log.mean(axis=-1)
-    S_log_mean = np.reshape(S_log_mean, (-1, S_log_mean.shape[-1]))
+    if log_scat: S = scu.log_scat(S)
+    S = scu.stack_scat(S)
+    #S = S(axis=-1)
+    S = np.reshape(S, (-1, S.shape[-1]))
     
-    return S_log_mean
+    return S
+"""
 
 def merge_channels(x):
     '''returns an instance of the result of scat.transform() whose channels are merged into a single channel

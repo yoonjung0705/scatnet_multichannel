@@ -6,6 +6,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
+from torch.utils.data.sampler import SubsetRandomSampler
 
 import common_utils as cu
 import scatnet as scn
@@ -21,7 +22,7 @@ class Net(nn.Module):
             net.append(nn.Linear(n_nodes[idx], n_nodes[idx + 1]))
             net.append(nn.ELU(inplace=True))
             net.append(nn.BatchNorm1d(n_nodes[idx + 1]))
-            net.append(nn.Dropout())
+            #net.append(nn.Dropout())
         net.append(nn.Linear(n_nodes[-2], n_nodes[-1]))
         self.net = nn.Sequential(*net)
 
@@ -61,7 +62,7 @@ class ToTensor:
         return sample
 
 
-def train(file_name, n_nodes_hidden, train_ratio, avg_len, log_scat=True, n_filter_octave=[1, 1], n_epochs_max=500, batch_size=100, n_workers=4, root_dir=ROOT_DIR):
+def train(file_name, n_nodes_hidden, avg_len, log_scat=True, n_filter_octave=[1, 1], n_epochs_max=2000, train_ratio=0.8, batch_size=100, n_workers=4, root_dir=ROOT_DIR):
     file_name, _ = os.path.splitext(file_name)
     file_path = os.path.join(root_dir, file_name + '.pt')
     samples = torch.load(file_path)
@@ -72,39 +73,39 @@ def train(file_name, n_nodes_hidden, train_ratio, avg_len, log_scat=True, n_filt
     file_path_meta = os.path.join(root_dir, '{}_meta_nn_{}.pt'.format(file_name, idx))
 
     data, labels, label_names = samples['data'], samples['labels'], samples['label_names']
-    n_data_train_val, n_channels, data_len = data.shape[-3:]
+    n_conditions = np.prod(data.shape[:-3])
+    n_samples_train_val, n_channels, data_len = data.shape[-3:]
     n_labels = len(label_names) # number of labels to predict
     phases = ['train', 'val']
-    n_data = {'train':int(n_data_train_val * train_ratio)}
-    n_data['val'] = n_data_train_val - n_data['train']
-    idx_train = np.random.choice(n_data_train_val, n_data['train'], replace=False).tolist()
-    idx_val = list(set(range(n_data_train_val)) - set(idx_train))
-    data = {'train':np.take(data, idx_train, axis=-3), 'val':np.take(data, idx_val, axis=-3)}
+    n_samples = {'train':int(n_samples_train_val * train_ratio)}
+    n_samples['val'] = n_samples_train_val - n_samples['train']
+    n_samples['total'] = n_samples_train_val
+    idx_train = np.random.choice(n_samples_train_val, n_samples['train'], replace=False)
+    idx_val = np.array(list(set(range(n_samples_train_val)) - set(idx_train)))
+    index = {'train':idx_train, 'val':idx_val}
+    n_data = {phase:n_samples[phase] * n_conditions for phase in phases}
+    n_data['total'] = n_data['train'] + n_data['val']
 
-    # flatten the data
-    data = {phase:np.reshape(data[phase], [-1, n_channels, data_len]) for phase in phases}
+    # flatten the data to shape (n_data['total'], n_channels, data_len)
+    data = np.reshape(data, [-1, n_channels, data_len])
     # perform scattering transform
-    data_scat = {}
-    for phase in phases:
-        scat = scn.ScatNet(data_len, avg_len, n_filter_octave=n_filter_octave)
-        S = scat.transform(data[phase])
-        if log_scat: S = scu.log_scat(S)
-        S = scu.stack_scat(S)
-        S = S.mean(axis=-1)
-        S = np.reshape(S, (-1, S.shape[-1]))
-        data_scat[phase] = S
+    scat = scn.ScatNet(data_len, avg_len, n_filter_octave=n_filter_octave)
+    S = scat.transform(data)
+    if log_scat: S = scu.log_scat(S)
+    S = scu.stack_scat(S) # shaped (n_data['total'], n_channels, n_scat_nodes, data_len)
+    data_scat = np.reshape(S, (n_data['total'], -1)) # shaped (n_data['total'], n_channels * n_scat_nodes * data_len)
 
-    n_scat_nodes = data_scat['train'].shape[-1]
-    n_nodes = [n_scat_nodes] + list(n_nodes_hidden) + [1]
-    meta = {'file_name_data':file_name + '.pt', 'root_dir':root_dir, 'n_nodes_hidden':n_nodes_hidden, 'n_epochs_max':n_epochs_max,
-        'train_ratio':train_ratio, 'batch_size':batch_size, 'n_workers':n_workers,
+    n_nodes_input_layer = data_scat.shape[-1]
+    n_nodes = [n_nodes_input_layer] + list(n_nodes_hidden) + [1]
+    meta = {'file_name_data':file_name + '.pt', 'root_dir':root_dir, 'n_nodes':n_nodes, 'n_epochs_max':n_epochs_max,
+        'train_ratio':train_ratio, 'batch_size':batch_size, 'n_workers':n_workers, 'index':index,
         'loss_mean':{'train':[], 'val':[]}, 'epoch':[], 'weights':[]}
 
-    labels = np.array(list(product(*labels)), dtype='float32').swapaxes(0, 1)
-    labels = {phase:np.repeat(np.expand_dims(labels, axis=-1).reshape([n_labels, -1]), n_data[phase], axis=-1) for phase in phases}
+    labels = np.array(list(product(*labels)), dtype='float32').swapaxes(0, 1) # shaped (n_labels, n_conditions)
+    labels = np.tile(labels[:, :, np.newaxis], [1, 1, n_samples['total']]).reshape([n_labels, -1])
     for idx in range(n_labels):
-        dataset = {phase:TimeSeriesDataset(data_scat[phase], labels[phase][idx], transform=ToTensor()) for phase in phases}
-        dataloader = {phase:DataLoader(dataset[phase], batch_size=batch_size, shuffle=True, num_workers=n_workers) for phase in phases}
+        dataset = TimeSeriesDataset(data_scat, labels[idx], transform=ToTensor())
+        dataloader = {phase:DataLoader(dataset, sampler=SubsetRandomSampler(index[phase]), batch_size=batch_size, num_workers=n_workers) for phase in phases}
 
         net = Net(n_nodes=n_nodes).to(device)
         optimizer = optim.Adam(net.parameters(), lr=0.001, betas=(0.9, 0.999))
@@ -114,11 +115,11 @@ def train(file_name, n_nodes_hidden, train_ratio, avg_len, log_scat=True, n_filt
             loss_sum = {}
             loss_mean = {}
             for phase in phases:
-                net.train(phase=='train')
+                net.train(phase == 'train')
                 loss_sum[phase] = 0.
                 for batch in dataloader[phase]:
                     batch_data, batch_labels = batch['data'].to(device), batch['labels'].to(device)
-                    output = net(batch_data)
+                    output = net(batch_data)[:, 0] # output of net is shaped (batch_size, 1). drop dummy axis
                     loss = criterion(output, batch_labels)
                     optimizer.zero_grad()
                     if phase == 'train':

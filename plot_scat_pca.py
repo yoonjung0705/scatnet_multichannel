@@ -107,11 +107,6 @@ labels = labels_brw
 labels_uniq = np.unique(labels)
 y = labels
 
-# fig = plt.figure(1, figsize=(4, 3))
-# plt.clf()
-# ax = Axes3D(fig, rect=[0, 0, .95, 1], elev=48, azim=134)
-
-# plt.cla()
 pca = decomposition.PCA(n_components=2)
 pca.fit(X)
 X = pca.transform(X)
@@ -125,32 +120,5 @@ ax.legend()
 ax.set_xticks([])
 ax.set_yticks([])
 
-
-#for name, label in [(str(diff_coefs[0]), diff_coefs[0]), (str(diff_coefs[1]), diff_coefs[1]), (str(diff_coefs[2]), diff_coefs[2])]:
-#    ax.text3D(X[y == label, 0].mean(), X[y == label, 1].mean() + 1.5, X[y == label, 2].mean(), name, horizontalalignment='center', bbox=dict(alpha=.5, edgecolor='w', facecolor='w'))
-    # Reorder the labels to have colors matching the cluster results
-
-#pdb.set_trace()
-#y = np.choose(y, [1, 2, 0]).astype(np.float)
-# ax.scatter(X[:, 0], X[:, 1], X[:, 2], label=y)
-
-#ax.w_xaxis.set_ticklabels([])
-#ax.w_yaxis.set_ticklabels([])
-#ax.w_zaxis.set_ticklabels([])
-
 plt.show()
 
-
-
-
-
-
-# plot_scat(X=S_log_mean, y=labels)
-
-
-    #return trajs_diff_coefs
-
-
-
-#scat.transform(
-#scat = scn.ScatNet(data_len, avg_len, n_filter_octave=n_filter_octave)
