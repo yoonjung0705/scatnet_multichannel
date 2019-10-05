@@ -60,12 +60,15 @@ class ToTensor:
         return sample
 
 
-def train(file_name, n_nodes_hidden, n_epochs_max, train_ratio, avg_len, log_scat=True, n_filter_octave=[1, 1], batch_size=100, root_dir=ROOT_DIR, n_workers=4):
+def train(file_name, n_nodes_hidden, train_ratio, avg_len, log_scat=True, n_filter_octave=[1, 1], n_epochs_max=500, batch_size=100, n_workers=4, root_dir=ROOT_DIR):
     file_path = os.path.join(root_dir, file_name)
     samples = torch.load(file_path)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     file_name, _ = os.path.splitext(file_name)
-    file_path_meta = os.path.join(root_dir, file_name + '.pt')
+    nums = cu.match_filename(r'{}_meta_nn_([0-9]+).pt'.format(file_name)
+    nums = [int(num) for num in nums]
+    idx = max(nums if nums else 0
+    file_path_meta = os.path.join(root_dir, '{}_meta_nn_{}.pt'.format(file_name, idx))
 
     data, labels, label_names = samples['data'], samples['labels'], samples['label_names']
     n_data_train_val, n_channels, data_len = data.shape[-3:]

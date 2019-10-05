@@ -1,4 +1,5 @@
 import os
+import warnings
 import numpy as np
 import random
 import torch
@@ -10,7 +11,7 @@ import common_utils as cu
 
 ROOT_DIR = './data/'
 
-def sim_brownian(data_len, diff_coefs, dt, n_data=1, save_file=False, root_dir=ROOT_DIR):
+def sim_brownian(data_len, diff_coefs, dt, n_data=1, save_file=False, root_dir=ROOT_DIR, dtype='float32'):
     '''
     returns ensemble of brownian trajectories
 
@@ -32,13 +33,17 @@ def sim_brownian(data_len, diff_coefs, dt, n_data=1, save_file=False, root_dir=R
     if isinstance(diff_coefs, (int, float)):
         diff_coefs = [diff_coefs]
     diff_coefs = np.array(diff_coefs, dtype='float32')
+    file_size_est = data_len * len(diff_coefs) * n_data * np.dtype(dtype).itemsize
+    file_size_est_gb = file_size_est / 1.e9
+    if file_size_est_gb > 2.:
+        warnings.warn("Generating file with size roughly {:.2f} GB".format(file_size_est_gb), Category=BytesWarning)
 
     for diff_coef in diff_coefs:
         increments = np.sqrt(2 * diff_coef * dt) * np.random.normal(0, 1, [n_data, data_len - 1])
         x0 = np.random.normal(0, 1, [n_data, 1])
         increments = np.concatenate([x0, increments], axis=1)
         processes = increments.cumsum(axis=1)
-        concat_list.append(processes)
+        concat_list.append(processes.astype(dtype))
 
     processes = np.stack(concat_list, axis=0)
     processes = np.expand_dims(processes, axis=-2)
@@ -48,15 +53,63 @@ def sim_brownian(data_len, diff_coefs, dt, n_data=1, save_file=False, root_dir=R
 
     nums = cu.match_filename(r'brw_([0-9]+).pt', root_dir=ROOT_DIR)
     nums = [int(num) for num in nums]
-    idx = 0
-    while idx in nums: idx += 1
+    idx = max(nums) + 1 if nums else 0
 
     file_name = 'brw_{}.pt'.format(idx)
     file_path = os.path.join(root_dir, file_name)
     data = {'data':processes, 'labels':[diff_coefs], 'label_names':['diff_coefs']}
     torch.save(data, file_path)
 
-def sim_one_bead(data_len, diff_coefs, ks, dt, n_data=1, n_steps_initial=10000, save_file=False, root_dir=ROOT_DIR):
+def sim_poisson(data_len, lams, dt, n_data=1, save_file=False, root_dir=ROOT_DIR, dtype='float32'):
+    '''
+    returns ensemble of poisson processes
+
+    inputs:
+    -------
+    - data_len: int, length of each process
+    - lams: numeric or list or ndarray, expectation per interval
+    - dt: time step between data points
+    - n_data: number of processes in ensemble
+
+    outputs:
+    --------
+    - processes: ndarray shaped (n_lams, n_data, data_len) which is an ensemble of poisson processes
+    the singleton dimension is for the number of channels
+
+    REVIEW: confirm this method of using fixed time step generates identical statistics to that of Gielespie algorithm
+    FIXME: confirm dimensions are not mixed up
+    '''
+    if isinstance(lams, (int, float)):
+        lams = [lams]
+    lams = np.array(lams, dtype='float32')
+    
+    file_size_est = data_len * len(lams) * n_data * np.dtype(dtype).itemsize
+    file_size_est_gb = file_size_est / 1.e9
+    if file_size_est_gb > 2.:
+        warnings.warn("Generating file with size roughly {:.2f} GB".format(file_size_est_gb), Category=BytesWarning)
+
+    concat_list = []
+    for lam in lams:
+        increments = np.random.poisson(lam * dt, size=[n_data, data_len])
+        processes = increments.cumsum(axis=1)
+        concat_list.append(processes.astype(dtype))
+    processes = np.stack(concat_list, axis=0)    
+    processes = np.expand_dims(processes, axis=-2)
+
+    if not save_file:
+        return processes
+
+    nums = cu.match_filename(r'psn_([0-9]+).pt', root_dir=ROOT_DIR)
+    nums = [int(num) for num in nums]
+    idx = max(nums) + 1 if nums else 0
+
+    file_name = 'psn_{}.pt'.format(idx)
+    file_path = os.path.join(root_dir, file_name)
+    data = {'data':processes, 'labels':[lams], 'label_names':['lams']}
+    torch.save(data, file_path)
+
+def sim_one_bead(data_len, diff_coefs, ks, dt, n_data=1, n_steps_initial=10000,
+    save_file=False, root_dir=ROOT_DIR, dtype='float32'):
     '''
     returns ensemble of one bead simulation trajectories. as there is only one heat bath, this is a passive trajectory
 
@@ -87,7 +140,12 @@ def sim_one_bead(data_len, diff_coefs, ks, dt, n_data=1, n_steps_initial=10000, 
     n_diff_coefs = len(diff_coefs)
     n_ks = len(ks)
 
-    processes = np.empty((n_ks, n_diff_coefs, n_data, data_len))
+    file_size_est = data_len * n_diff_coefs * n_ks * n_data * np.dtype(dtype).itemsize
+    file_size_est_gb = file_size_est / 1.e9
+    if file_size_est_gb > 2.:
+        warnings.warn("Generating file with size roughly {:.2f} GB".format(file_size_est_gb), Category=BytesWarning)
+
+    processes = np.empty((n_ks, n_diff_coefs, n_data, data_len)).astype(dtype)
 
     for idx0, k in enumerate(ks):
         for idx1, diff_coef in enumerate(diff_coefs):
@@ -116,59 +174,15 @@ def sim_one_bead(data_len, diff_coefs, ks, dt, n_data=1, n_steps_initial=10000, 
 
     nums = cu.match_filename(r'obd_([0-9]+).pt', root_dir=ROOT_DIR)
     nums = [int(num) for num in nums]
-    idx = 0
-    while idx in nums: idx += 1
+    idx = max(nums) + 1 if nums else 0
 
     file_name = 'obd_{}.pt'.format(idx)
     file_path = os.path.join(root_dir, file_name)
     data = {'data':processes, 'labels':[ks, diff_coefs], 'label_names':['ks', 'diff_coefs']}
     torch.save(data, file_path)
 
-def sim_poisson(data_len, lams, dt, n_data=1, save_file=False, root_dir=ROOT_DIR):
-    '''
-    returns ensemble of poisson processes
-
-    inputs:
-    -------
-    - data_len: int, length of each process
-    - lams: numeric or list or ndarray, expectation per interval
-    - dt: time step between data points
-    - n_data: number of processes in ensemble
-
-    outputs:
-    --------
-    - processes: ndarray shaped (n_lams, n_data, data_len) which is an ensemble of poisson processes
-    the singleton dimension is for the number of channels
-
-    REVIEW: confirm this method of using fixed time step generates identical statistics to that of Gielespie algorithm
-    FIXME: confirm dimensions are not mixed up
-    '''
-    if isinstance(lams, (int, float)):
-        lams = [lams]
-    lams = np.array(lams, dtype='float32')
-    
-    concat_list = []
-    for lam in lams:
-        increments = np.random.poisson(lam * dt, size=[n_data, data_len])
-        processes = increments.cumsum(axis=1)
-        concat_list.append(processes)
-    processes = np.stack(concat_list, axis=0)    
-    processes = np.expand_dims(processes, axis=-2)
-
-    if not save_file:
-        return processes
-
-    nums = cu.match_filename(r'psn_([0-9]+).pt', root_dir=ROOT_DIR)
-    nums = [int(num) for num in nums]
-    idx = 0
-    while idx in nums: idx += 1
-
-    file_name = 'psn_{}.pt'.format(idx)
-    file_path = os.path.join(root_dir, file_name)
-    data = {'data':processes, 'labels':[lams], 'label_names':['lams']}
-    torch.save(data, file_path)
-
-def sim_two_beads(data_len, k_ratios, diff_coef_ratios, dt, n_data=1, n_steps_initial=10000, save_file=False, root_dir=ROOT_DIR):
+def sim_two_beads(data_len, k_ratios, diff_coef_ratios, dt, n_data=1, n_steps_initial=10000,
+    save_file=False, root_dir=ROOT_DIR, dtype='float32'):
     '''FIXME: add docstring'''
 
     if isinstance(diff_coef_ratios, (int, float)):
@@ -182,7 +196,12 @@ def sim_two_beads(data_len, k_ratios, diff_coef_ratios, dt, n_data=1, n_steps_in
     n_diff_coef_ratios = len(diff_coef_ratios)
     n_k_ratios = len(k_ratios)
 
-    processes = np.empty((n_k_ratios, n_diff_coef_ratios, n_data, 2, data_len))
+    file_size_est = data_len * n_diff_coef_ratios * n_k_ratios * n_data * 2 * np.dtype(dtype).itemsize
+    file_size_est_gb = file_size_est / 1.e9
+    if file_size_est_gb > 2.:
+        warnings.warn("Generating file with size roughly {:.2f} GB".format(file_size_est_gb), Category=BytesWarning)
+
+    processes = np.empty((n_k_ratios, n_diff_coef_ratios, n_data, 2, data_len)).astype(dtype)
 
     for idx0, k in enumerate(k_ratios):
         for idx1, diff_coef in enumerate(diff_coef_ratios):
@@ -213,8 +232,7 @@ def sim_two_beads(data_len, k_ratios, diff_coef_ratios, dt, n_data=1, n_steps_in
 
     nums = cu.match_filename(r'tbd_([0-9]+).pt', root_dir=ROOT_DIR)
     nums = [int(num) for num in nums]
-    idx = 0
-    while idx in nums: idx += 1
+    idx = max(nums) + 1 if nums else 0
 
     file_name = 'tbd_{}.pt'.format(idx)
     file_path = os.path.join(root_dir, file_name)
