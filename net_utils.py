@@ -7,6 +7,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
 
+import common_utils as cu
 import scatnet as scn
 import scatnet_utils as scu
 
@@ -61,13 +62,13 @@ class ToTensor:
 
 
 def train(file_name, n_nodes_hidden, train_ratio, avg_len, log_scat=True, n_filter_octave=[1, 1], n_epochs_max=500, batch_size=100, n_workers=4, root_dir=ROOT_DIR):
-    file_path = os.path.join(root_dir, file_name)
+    file_name, _ = os.path.splitext(file_name)
+    file_path = os.path.join(root_dir, file_name + '.pt')
     samples = torch.load(file_path)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    file_name, _ = os.path.splitext(file_name)
-    nums = cu.match_filename(r'{}_meta_nn_([0-9]+).pt'.format(file_name)
+    nums = cu.match_filename(r'{}_meta_nn_([0-9]+).pt'.format(file_name), root_dir=root_dir)
     nums = [int(num) for num in nums]
-    idx = max(nums if nums else 0
+    idx = max(nums) + 1 if nums else 0
     file_path_meta = os.path.join(root_dir, '{}_meta_nn_{}.pt'.format(file_name, idx))
 
     data, labels, label_names = samples['data'], samples['labels'], samples['label_names']
@@ -95,7 +96,7 @@ def train(file_name, n_nodes_hidden, train_ratio, avg_len, log_scat=True, n_filt
 
     n_scat_nodes = data_scat['train'].shape[-1]
     n_nodes = [n_scat_nodes] + list(n_nodes_hidden) + [1]
-    meta = {'file_name_data':file_name, 'root_dir':root_dir, 'n_nodes_hidden':n_nodes_hidden, 'n_epochs_max':n_epochs_max,
+    meta = {'file_name_data':file_name + '.pt', 'root_dir':root_dir, 'n_nodes_hidden':n_nodes_hidden, 'n_epochs_max':n_epochs_max,
         'train_ratio':train_ratio, 'batch_size':batch_size, 'n_workers':n_workers,
         'loss_mean':{'train':[], 'val':[]}, 'epoch':[], 'weights':[]}
 
