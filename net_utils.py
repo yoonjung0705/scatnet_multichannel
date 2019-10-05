@@ -97,14 +97,20 @@ def train(file_name, n_nodes_hidden, avg_len, log_scat=True, n_filter_octave=[1,
 
     n_nodes_input_layer = data_scat.shape[-1]
     n_nodes = [n_nodes_input_layer] + list(n_nodes_hidden) + [1]
-    meta = {'file_name_data':file_name + '.pt', 'root_dir':root_dir, 'n_nodes':n_nodes, 'n_epochs_max':n_epochs_max,
-        'train_ratio':train_ratio, 'batch_size':batch_size, 'n_workers':n_workers, 'index':index,
-        'loss_mean':{'train':[], 'val':[]}, 'epoch':[], 'weights':[]}
+    meta = {'file_name_data':file_name + '.pt', 'root_dir':root_dir, 'n_nodes':n_nodes,
+        'n_epochs_max':n_epochs_max, 'train_ratio':train_ratio, 'batch_size':batch_size,
+        'n_workers':n_workers, 'index':index, 'log_scat':log_scat,
+        'n_filter_octave':n_filter_octave, 'avg_len':avg_len, 'device':device,
+        'loss_mean':[{'train':[], 'val':[]} for _ in range(n_labels)],
+        'epoch':[[] for _ in range(n_labels)], 'weights':[[] for _ in range(n_labels)],
+        'labels':samples['labels'], 'label_names':samples['label_names']}
+    # NOTE: labels and label_names can also be fetched from the data file
 
+    torch.save(meta, file_path_meta)
     labels = np.array(list(product(*labels)), dtype='float32').swapaxes(0, 1) # shaped (n_labels, n_conditions)
     labels = np.tile(labels[:, :, np.newaxis], [1, 1, n_samples['total']]).reshape([n_labels, -1])
-    for idx in range(n_labels):
-        dataset = TimeSeriesDataset(data_scat, labels[idx], transform=ToTensor())
+    for idx_label in range(n_labels):
+        dataset = TimeSeriesDataset(data_scat, labels[idx_label], transform=ToTensor())
         dataloader = {phase:DataLoader(dataset, sampler=SubsetRandomSampler(index[phase]), batch_size=batch_size, num_workers=n_workers) for phase in phases}
 
         net = Net(n_nodes=n_nodes).to(device)
@@ -131,8 +137,9 @@ def train(file_name, n_nodes_hidden, avg_len, log_scat=True, n_filter_octave=[1,
                 loss_msg = ("{} out of {} epochs, mean_loss_train:{:.5f}, mean_loss_val:{:.5f}"
                     .format(epoch, n_epochs_max, loss_mean['train'], loss_mean['val']))
                 print(loss_msg)
-                meta['epoch'].append(epoch)
-                meta['weights'].append(net.state_dict())
+                meta = torch.load(file_path_meta)
+                meta['epoch'][idx_label].append(epoch)
+                meta['weights'][idx_label].append(net.state_dict())
                 for phase in phases:
-                    meta['loss_mean'][phase].append(loss_mean[phase])
+                    meta['loss_mean'][idx_label][phase].append(loss_mean[phase])
                 torch.save(meta, file_path_meta)
