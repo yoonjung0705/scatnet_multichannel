@@ -2,7 +2,11 @@ import os
 import numpy as np
 import random
 import torch
+import glob
+import re
 from datetime import datetime
+
+import common_utils as cu
 
 ROOT_DIR = './data/'
 
@@ -42,7 +46,12 @@ def sim_brownian(data_len, diff_coefs, dt, n_data=1, save_file=False, root_dir=R
     if not save_file:
         return processes
 
-    file_name = 'brw_{}.pt'.format(datetime.now().strftime('%Y%m%d_%H%M%S'))
+    nums = cu.match_filename(r'brw_([0-9]+).pt', root_dir=ROOT_DIR)
+    nums = [int(num) for num in nums]
+    idx = 0
+    while idx in nums: idx += 1
+
+    file_name = 'brw_{}.pt'.format(idx)
     file_path = os.path.join(root_dir, file_name)
     data = {'data':processes, 'labels':[diff_coefs], 'label_names':['diff_coefs']}
     torch.save(data, file_path)
@@ -105,7 +114,12 @@ def sim_one_bead(data_len, diff_coefs, ks, dt, n_data=1, n_steps_initial=10000, 
     if not save_file:
         return processes
 
-    file_name = 'obd_{}.pt'.format(datetime.now().strftime('%Y%m%d_%H%M%S'))
+    nums = cu.match_filename(r'obd_([0-9]+).pt', root_dir=ROOT_DIR)
+    nums = [int(num) for num in nums]
+    idx = 0
+    while idx in nums: idx += 1
+
+    file_name = 'obd_{}.pt'.format(idx)
     file_path = os.path.join(root_dir, file_name)
     data = {'data':processes, 'labels':[ks, diff_coefs], 'label_names':['ks', 'diff_coefs']}
     torch.save(data, file_path)
@@ -144,7 +158,12 @@ def sim_poisson(data_len, lams, dt, n_data=1, save_file=False, root_dir=ROOT_DIR
     if not save_file:
         return processes
 
-    file_name = 'psn_{}.pt'.format(datetime.now().strftime('%Y%m%d_%H%M%S'))
+    nums = cu.match_filename(r'psn_([0-9]+).pt', root_dir=ROOT_DIR)
+    nums = [int(num) for num in nums]
+    idx = 0
+    while idx in nums: idx += 1
+
+    file_name = 'psn_{}.pt'.format(idx)
     file_path = os.path.join(root_dir, file_name)
     data = {'data':processes, 'labels':[lams], 'label_names':['lams']}
     torch.save(data, file_path)
@@ -192,7 +211,12 @@ def sim_two_beads(data_len, k_ratios, diff_coef_ratios, dt, n_data=1, n_steps_in
     if not save_file:
         return processes
 
-    file_name = 'tbd_{}.pt'.format(datetime.now().strftime('%Y%m%d_%H%M%S'))
+    nums = cu.match_filename(r'tbd_([0-9]+).pt', root_dir=ROOT_DIR)
+    nums = [int(num) for num in nums]
+    idx = 0
+    while idx in nums: idx += 1
+
+    file_name = 'tbd_{}.pt'.format(idx)
     file_path = os.path.join(root_dir, file_name)
     data = {'data':processes, 'labels':[k_ratios, diff_coef_ratios], 'label_names':['k_ratios', 'diff_coef_ratios']}
     torch.save(data, file_path)
