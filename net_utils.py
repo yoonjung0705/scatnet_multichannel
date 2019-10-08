@@ -21,7 +21,9 @@ class Net(nn.Module):
         for idx in range(len(n_nodes) - 2):
             net.append(nn.Linear(n_nodes[idx], n_nodes[idx + 1]))
             net.append(nn.ELU(inplace=True))
-            net.append(nn.BatchNorm1d(n_nodes[idx + 1]))
+            # nn.BatchNorm1d() can only be processed for batch size being larger than 1.
+            # setting to be non-functional for now.
+            #net.append(nn.BatchNorm1d(n_nodes[idx + 1]))
             #net.append(nn.Dropout())
         net.append(nn.Linear(n_nodes[-2], n_nodes[-1]))
         self.net = nn.Sequential(*net)
