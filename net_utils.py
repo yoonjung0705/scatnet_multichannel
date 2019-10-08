@@ -1,6 +1,7 @@
 import os
 from itertools import product
 import numpy as np
+import cv2
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -120,28 +121,32 @@ def train(file_name, n_nodes_hidden, avg_len, log_scat=True, n_filter_octave=[1,
         criterion = nn.MSELoss(reduction='sum')
 
         for epoch in range(n_epochs_max):
-            loss_sum = {}
-            loss_mean = {}
-            for phase in phases:
-                net.train(phase == 'train')
-                loss_sum[phase] = 0.
-                for batch in dataloader[phase]:
-                    batch_data, batch_labels = batch['data'].to(device), batch['labels'].to(device)
-                    output = net(batch_data)[:, 0] # output of net is shaped (batch_size, 1). drop dummy axis
-                    loss = criterion(output, batch_labels)
-                    optimizer.zero_grad()
-                    if phase == 'train':
-                        loss.backward()
-                        optimizer.step()
-                    loss_sum[phase] += loss.data.item()
-                loss_mean[phase] = loss_sum[phase] / n_data[phase] # MSE loss per data point
-            if epoch % 10 == 0:
-                loss_msg = ("{} out of {} epochs, mean_loss_train:{:.5f}, mean_loss_val:{:.5f}"
-                    .format(epoch, n_epochs_max, loss_mean['train'], loss_mean['val']))
-                print(loss_msg)
-                meta = torch.load(file_path_meta)
-                meta['epoch'][idx_label].append(epoch)
-                meta['weights'][idx_label].append(net.state_dict())
+            try:
+                loss_sum = {}
+                loss_mean = {}
                 for phase in phases:
-                    meta['loss_mean'][idx_label][phase].append(loss_mean[phase])
-                torch.save(meta, file_path_meta)
+                    net.train(phase == 'train')
+                    loss_sum[phase] = 0.
+                    for batch in dataloader[phase]:
+                        batch_data, batch_labels = batch['data'].to(device), batch['labels'].to(device)
+                        output = net(batch_data)[:, 0] # output of net is shaped (batch_size, 1). drop dummy axis
+                        loss = criterion(output, batch_labels)
+                        optimizer.zero_grad()
+                        if phase == 'train':
+                            loss.backward()
+                            optimizer.step()
+                        loss_sum[phase] += loss.data.item()
+                    loss_mean[phase] = loss_sum[phase] / n_data[phase] # MSE loss per data point
+                if epoch % 10 == 0:
+                    loss_msg = ("{} out of {} epochs, mean_loss_train:{:.5f}, mean_loss_val:{:.5f}"
+                        .format(epoch, n_epochs_max, loss_mean['train'], loss_mean['val']))
+                    print(loss_msg)
+                    meta = torch.load(file_path_meta)
+                    meta['epoch'][idx_label].append(epoch)
+                    meta['weights'][idx_label].append(net.state_dict())
+                    for phase in phases:
+                        meta['loss_mean'][idx_label][phase].append(loss_mean[phase])
+                    torch.save(meta, file_path_meta)
+            except KeyboardInterrupt:
+                break
+                
