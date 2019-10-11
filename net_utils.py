@@ -33,10 +33,28 @@ class Net(nn.Module):
         return self.net(x)
 
 
-class LSTM(nn.Module):
-    def __init__(self, params):
-        super(LSTM, self).__init__()
-        pass
+class RNN(nn.Module):
+    '''
+    NOTE: this class should be general enough so that any input can be used
+    either the raw time series or the scattering transform result.
+    also, should allow variable length
+    '''
+    def __init__(self, input_size, hidden_size, output_size, n_layers=1):
+        super(RNN, self).__init__()
+        self.lstm = nn.LSTM(input_size, hidden_size, num_layers=n_layers)
+        self.h2o = nn.Linear(hidden_size, output_size)
+
+    def forward(self, input):
+        h_0 = self.init_hidden()
+        output, (h_n, c_n) = self.lstm(input, (h_0, c_0))
+        output = self.h2o(output)
+        
+        return output
+
+loss = nn.CrossEntropyLoss()
+rnn = RNN(input_size, hidden_size, output_size, n_layers=n_layers)
+rnn(input, hidden)
+loss(output, 
 
 
 class TimeSeriesDataset(Dataset):
@@ -150,6 +168,8 @@ def _train(dataloader, n_data, n_nodes, device, n_epochs_max, file_name, idx_lab
     outputs
     -------
     saves data into given file
+
+    FIXME: perform scat transform outside this function so that this can be used in a more general sense
     '''
     file_name, _ = os.path.splitext(file_name)
     file_path = os.path.join(root_dir, file_name + '.pt')
