@@ -29,7 +29,7 @@ import unittest
 import numpy as np
 import glob
 import re
-import scatnet as sn
+import scat_utils as scu
 import h5py
 import copy
 
@@ -48,7 +48,7 @@ class ScatnetTestCase(unittest.TestCase):
     #     NOTE: J can be negative if T too small
     #     '''
     #     # generate instance. for testing this function for this case, arguments do not matter
-    #     scat = sn.ScatNet(2**6, 2**5)
+    #     scat = scu.ScatNet(2**6, 2**5)
 
     #     for avg_len in [10, 100, 1000, 10000]:
     #         s = {'Q':[8, 1], 'B':[8, 1]}
@@ -99,7 +99,7 @@ class ScatnetTestCase(unittest.TestCase):
         FIXME: add test case where output lists have length 0(?) or 1
         '''
         # generate instance. for testing this function for this case, arguments do not matter
-        scat = sn.ScatNet(2**6, 2**5)
+        scat = scu.ScatNet(2**6, 2**5)
         filt_opt = {'xi_psi':0.5, 'sigma_psi':0.4, 'sigma_phi':0.5, 'n_filter_log':11,
             'n_filter_octave':8, 'n_filter_lin':5}
         # retain a copy of filt_opt to confirm no change upon function call
@@ -173,7 +173,7 @@ class ScatnetTestCase(unittest.TestCase):
         - test if input argument does not change upon function call
         '''
         # generate instance. for testing this function for this case, arguments do not matter
-        scat = sn.ScatNet(2**6, 2**5)
+        scat = scu.ScatNet(2**6, 2**5)
 
         # calculate fields using python function using parameters retrieved from matlab test data file names
         matlab_fun = 'pad_signal'
@@ -203,7 +203,7 @@ class ScatnetTestCase(unittest.TestCase):
         - test if input argument does not change upon function call
         '''
         # generate instance. for testing this function for this case, arguments do not matter
-        scat = sn.ScatNet(2**6, 2**5)
+        scat = scu.ScatNet(2**6, 2**5)
         # calculate fields using python function using parameters retrieved from matlab test data file names
         matlab_fun = 'unpad_signal'
         test_files = glob.glob(TEST_DATA_FILEPATH + matlab_fun + '*.mat')
@@ -231,7 +231,7 @@ class ScatnetTestCase(unittest.TestCase):
         - test if input argument does not change upon function call
         '''
         # generate instance. for testing this function for this case, arguments do not matter
-        scat = sn.ScatNet(2**6, 2**5)
+        scat = scu.ScatNet(2**6, 2**5)
         # calculate fields using python function using parameters retrieved from matlab test data file names
         matlab_fun = 'periodize_filter'
         test_files = glob.glob(TEST_DATA_FILEPATH + matlab_fun + '*.mat')
@@ -258,7 +258,7 @@ class ScatnetTestCase(unittest.TestCase):
         '''
         # generate instance. for testing this function for this case, arguments do not matter except that 
         # filter_format should be fourier
-        scat = sn.ScatNet(2**6, 2**5, filter_format='fourier')
+        scat = scu.ScatNet(2**6, 2**5, filter_format='fourier')
 
         # calculate fields using python function using parameters retrieved from matlab test data file names
         matlab_fun = 'conv_sub_1d'
@@ -307,7 +307,7 @@ class ScatnetTestCase(unittest.TestCase):
         '''
         # generate instance. for testing this function for this case, arguments do not matter except that 
         # filter_format should be fourier_multires
-        scat = sn.ScatNet(2**6, 2**5, filter_format='fourier_multires')
+        scat = scu.ScatNet(2**6, 2**5, filter_format='fourier_multires')
 
         # calculate fields using python function using parameters retrieved from matlab test data file names
         matlab_fun = 'conv_sub_1d'
@@ -371,7 +371,7 @@ class ScatnetTestCase(unittest.TestCase):
         '''
         # generate instance. for testing this function for this case, arguments do not matter except that 
         # filter_format should be fourier_truncated
-        scat = sn.ScatNet(2**6, 2**5, filter_format='fourier_truncated')
+        scat = scu.ScatNet(2**6, 2**5, filter_format='fourier_truncated')
         # calculate fields using python function using parameters retrieved from matlab test data file names
         matlab_fun = 'conv_sub_1d'
         test_files = glob.glob(TEST_DATA_FILEPATH + matlab_fun + '*.mat')
@@ -426,7 +426,7 @@ class ScatnetTestCase(unittest.TestCase):
         - test if input argument does not change upon function call
         '''
         # generate instance. for testing this function, arguments do not matter
-        scat = sn.ScatNet(2**6, 2**5)
+        scat = scu.ScatNet(2**6, 2**5)
         # calculate fields using python function using parameters retrieved from matlab test data file names
         matlab_fun = 'truncate_filter'
         test_files = glob.glob(TEST_DATA_FILEPATH + matlab_fun + '*.mat')
@@ -470,7 +470,7 @@ class ScatnetTestCase(unittest.TestCase):
         separately.
         '''
         # generate instance. for testing this function, arguments do not matter
-        scat = sn.ScatNet(2**6, 2**5)
+        scat = scu.ScatNet(2**6, 2**5)
         # calculate fields using python function using parameters retrieved from matlab test data file names
         matlab_fun = 'gabor'
         test_files = glob.glob(TEST_DATA_FILEPATH + matlab_fun + '*.mat')
@@ -500,7 +500,7 @@ class ScatnetTestCase(unittest.TestCase):
         - test if input argument does not change upon function call
         '''
         # generate instance. for testing this function, arguments do not matter
-        scat = sn.ScatNet(2**6, 2**5)
+        scat = scu.ScatNet(2**6, 2**5)
         # calculate fields using python function using parameters retrieved from matlab test data file names
         matlab_fun = 'morletify'
         test_files = glob.glob(TEST_DATA_FILEPATH + matlab_fun + '*.mat')
@@ -560,7 +560,7 @@ class ScatnetTestCase(unittest.TestCase):
     #   from_meta = self.create_meta(('key1', (8,5)), ('key2', (10,5)))
     #   to_meta = self.create_meta(('key1', (4,5)), ('key3', (4,5)))
     #   to_meta_orig = to_meta.copy()
-    #   to_meta_out = sn.map_meta(from_meta, from_ind, to_meta, to_ind)
+    #   to_meta_out = scu.map_meta(from_meta, from_ind, to_meta, to_ind)
     #   # check if to_meta's shared key's to_ind values are identical to 
     #   # from_meta's shared key's from_ind values 
     #   self.assertTrue(np.isclose(from_meta['key1'][from_ind], 
@@ -584,7 +584,7 @@ class ScatnetTestCase(unittest.TestCase):
     #   from_meta = self.create_meta(('key1', (7,5)), ('key2', (12,5)))
     #   to_meta = self.create_meta(('key1', (6,5)), ('key3', (8,5)))
     #   to_meta_orig = to_meta.copy()
-    #   to_meta_out = sn.map_meta(from_meta, from_ind, to_meta, to_ind)
+    #   to_meta_out = scu.map_meta(from_meta, from_ind, to_meta, to_ind)
     #   # check if to_meta's shared key's to_ind values are identical to 
     #   # from_meta's shared key's from_ind values 
     #   self.assertTrue(np.isclose(from_meta['key1'][from_ind], 
@@ -608,7 +608,7 @@ class ScatnetTestCase(unittest.TestCase):
     #   from_meta = self.create_meta(('key1', (7,5)), ('key2', (12,5)))
     #   to_meta = self.create_meta(('key1', (6,5)), ('key3', (8,5)))
     #   to_meta_orig = to_meta.copy()
-    #   to_meta_out = sn.map_meta(from_meta, from_ind, to_meta, to_ind)
+    #   to_meta_out = scu.map_meta(from_meta, from_ind, to_meta, to_ind)
     #   # check if to_meta's shared key's to_ind values are identical to 
     #   # from_meta's shared key's from_ind values 
     #   self.assertTrue(np.isclose(np.tile(from_meta['key1'][from_ind], 
@@ -635,7 +635,7 @@ class ScatnetTestCase(unittest.TestCase):
     #   from_meta = self.create_meta(('key1', (7,5)), ('key2', (12,5)))
     #   to_meta = {}
     #   to_meta_orig = to_meta.copy()
-    #   to_meta_out = sn.map_meta(from_meta, from_ind, to_meta, to_ind)
+    #   to_meta_out = scu.map_meta(from_meta, from_ind, to_meta, to_ind)
     #   # check if from_meta's pure key's values are copied into to_meta
     #   self.assertTrue(np.isclose(from_meta['key1'][from_ind], 
     #       to_meta_out['key1'][to_ind], rtol=1e-5, atol=1e-8).all())
@@ -648,7 +648,7 @@ class ScatnetTestCase(unittest.TestCase):
     #   from_meta = self.create_meta(('key1', (7,5)), ('key2', (12,5)))
     #   to_meta = self.create_meta(('key3', (6,5)), ('key4', (8,5)))
     #   to_meta_orig = to_meta.copy()
-    #   to_meta_out = sn.map_meta(from_meta, from_ind, to_meta, to_ind)
+    #   to_meta_out = scu.map_meta(from_meta, from_ind, to_meta, to_ind)
     #   # check if to_meta's pure key's values are identical to 
     #   # to_meta_orig's pure key's values
     #   self.assertTrue(np.isclose(to_meta_orig['key3'], 
@@ -667,7 +667,7 @@ class ScatnetTestCase(unittest.TestCase):
     #   from_meta = {}
     #   to_meta = self.create_meta(('key1', (4,5)), ('key2', (4,5)))
     #   to_meta_orig = to_meta.copy()
-    #   to_meta_out = sn.map_meta(from_meta, from_ind, to_meta, to_ind)
+    #   to_meta_out = scu.map_meta(from_meta, from_ind, to_meta, to_ind)
     #   # check if to_meta's pure key's values are identical to 
     #   # to_meta_orig's pure key's values
     #   self.assertTrue(np.isclose(to_meta_orig['key1'], 
@@ -683,7 +683,7 @@ class ScatnetTestCase(unittest.TestCase):
     #   to_meta_orig = to_meta.copy()
     #   # following should raise error
     #   with self.assertRaises(ValueError):
-    #       to_meta_out = sn.map_meta(from_meta, from_ind, to_meta, to_ind)
+    #       to_meta_out = scu.map_meta(from_meta, from_ind, to_meta, to_ind)
 
     #   # when index is out of bound for from_meta (should raise error)
     #   from_ind = [20,1]
@@ -693,7 +693,7 @@ class ScatnetTestCase(unittest.TestCase):
     #   to_meta_orig = to_meta.copy()
     #   # following should raise error
     #   with self.assertRaises(IndexError):
-    #       to_meta_out = sn.map_meta(from_meta, from_ind, to_meta, to_ind)
+    #       to_meta_out = scu.map_meta(from_meta, from_ind, to_meta, to_ind)
 
     #   # when index is out of bound for to_meta
     #   from_ind = [3,1]
@@ -701,7 +701,7 @@ class ScatnetTestCase(unittest.TestCase):
     #   from_meta = self.create_meta(('key1', (7,5)), ('key2', (12,5)))
     #   to_meta = self.create_meta(('key1', (3,5)), ('key3', (6,5)))
     #   to_meta_orig = to_meta.copy()
-    #   to_meta_out = sn.map_meta(from_meta, from_ind, to_meta, to_ind)
+    #   to_meta_out = scu.map_meta(from_meta, from_ind, to_meta, to_ind)
     #   # check if to_meta's shared key's to_ind values are identical to 
     #   # from_meta's shared key's from_ind values 
     #   self.assertTrue(np.isclose(from_meta['key1'][from_ind], 
@@ -725,7 +725,7 @@ class ScatnetTestCase(unittest.TestCase):
     #   from_meta = self.create_meta(('key1', (7,5)), ('key2', (12,5)))
     #   to_meta = self.create_meta(('key1', (3,5)), ('key3', (6,5)))
     #   to_meta_orig = to_meta.copy()
-    #   to_meta_out = sn.map_meta(from_meta, from_ind, to_meta, to_ind)     
+    #   to_meta_out = scu.map_meta(from_meta, from_ind, to_meta, to_ind)     
     #   # following should return to_meta without any change
     #   for key in to_meta.keys():
     #       self.assertTrue(np.isclose(to_meta_orig[key], to_meta_orig[key], 
@@ -737,7 +737,7 @@ class ScatnetTestCase(unittest.TestCase):
     #   from_meta = self.create_meta(('key1', (7,5)), ('key2', (12,5)))
     #   to_meta = self.create_meta(('key1', (3,5)), ('key3', (6,5)))
     #   to_meta_orig = to_meta.copy()
-    #   to_meta_out = sn.map_meta(from_meta, from_ind, to_meta, to_ind)     
+    #   to_meta_out = scu.map_meta(from_meta, from_ind, to_meta, to_ind)     
     #   # following should return to_meta without any change
     #   for key in to_meta.keys():
     #       self.assertTrue(np.isclose(to_meta_orig[key], to_meta_orig[key], 
@@ -750,7 +750,7 @@ class ScatnetTestCase(unittest.TestCase):
     #   to_meta = self.create_meta(('key1', (6,5)), ('key2', (8,5)), ('key4', (16,5)))
     #   to_meta_orig = to_meta.copy()
     #   exclude = ['key2']
-    #   to_meta_out = sn.map_meta(from_meta, from_ind, to_meta, to_ind, exclude=exclude)
+    #   to_meta_out = scu.map_meta(from_meta, from_ind, to_meta, to_ind, exclude=exclude)
     #   # check if to_meta's shared key's to_ind values are identical to 
     #   # from_meta's shared key's from_ind values 
     #   self.assertTrue(np.isclose(from_meta['key1'][from_ind], 
@@ -777,7 +777,7 @@ class ScatnetTestCase(unittest.TestCase):
     #   from_meta = self.create_meta(('key1', (7,5)), ('key2', (12,5)))
     #   to_meta = self.create_meta(('key1', (6,5)), ('key3', (8,5)))
     #   from_meta_orig = from_meta.copy()
-    #   to_meta_out = sn.map_meta(from_meta, from_ind, to_meta, to_ind)
+    #   to_meta_out = scu.map_meta(from_meta, from_ind, to_meta, to_ind)
     #   for key in from_meta.keys():
     #       self.assertTrue(np.isclose(from_meta_orig[key], 
     #           from_meta[key], rtol=1e-5, atol=1e-8).all())
@@ -791,7 +791,7 @@ class ScatnetTestCase(unittest.TestCase):
     #   to_meta_orig = to_meta.copy()
 
     #   with self.assertRaises(ValueError):
-    #       to_meta_out = sn.map_meta(from_meta, from_ind, to_meta, to_ind)
+    #       to_meta_out = scu.map_meta(from_meta, from_ind, to_meta, to_ind)
 
     # def create_meta(self, *args):
     #   '''

@@ -4,9 +4,8 @@ trajectories are scatter-plotted based on the first three principal component ax
 '''
 
 import numpy as np
-import scatnet as scn
 import sim_utils as siu
-import scatnet_utils as scu
+import scat_utils as scu
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
@@ -19,7 +18,7 @@ avg_len = 2**8
 n_data = 200
 n_filter_octave = [1,1]
 
-scat = scn.ScatNet(data_len, avg_len, n_filter_octave=n_filter_octave)
+scat = scu.ScatNet(data_len, avg_len, n_filter_octave=n_filter_octave)
 # precision for external parameters
 n_decim = 3
 
@@ -27,7 +26,7 @@ n_decim = 3
 diff_coefs_brw = np.arange(4,8,1)
 dt = 0.01
 traj_brw = siu.sim_brownian(data_len, diff_coefs_brw, dt=dt, n_data=n_data)
-scat_brw = scn.ScatNet(data_len, avg_len, n_filter_octave=n_filter_octave)
+scat_brw = scu.ScatNet(data_len, avg_len, n_filter_octave=n_filter_octave)
 traj_brw = traj_brw.reshape(-1, 1, traj_brw.shape[-1])
 S_brw = scat.transform(traj_brw)
 S_brw_log = scu.log_scat(S_brw)
@@ -44,7 +43,7 @@ labels_brw = labels_brw.flatten()
 lams_psn = np.arange(4,8,1)
 dt = 0.01
 traj_psn = siu.sim_poisson(data_len, lams_psn, dt=dt, n_data=n_data)
-scat_psn = scn.ScatNet(data_len, avg_len, n_filter_octave=n_filter_octave)
+scat_psn = scu.ScatNet(data_len, avg_len, n_filter_octave=n_filter_octave)
 traj_psn = traj_psn.reshape(-1, 1, traj_psn.shape[-1])
 S_psn = scat.transform(traj_psn)
 S_psn_log = scu.log_scat(S_psn)
@@ -62,7 +61,7 @@ diff_coefs_obd = np.arange(4,8,0.5)
 ks_obd = np.arange(1,3,0.5)
 dt = 0.01
 traj_obd = siu.sim_one_bead(data_len, diff_coefs=diff_coefs_obd, ks=ks_obd, dt=dt, n_data=n_data)
-scat_obd = scn.ScatNet(data_len, avg_len, n_filter_octave=n_filter_octave)
+scat_obd = scu.ScatNet(data_len, avg_len, n_filter_octave=n_filter_octave)
 traj_obd = traj_obd.reshape(-1, 1, traj_obd.shape[-1])
 S_obd = scat.transform(traj_obd)
 S_obd_log = scu.log_scat(S_obd)
@@ -92,7 +91,7 @@ diff_coef_ratios = np.arange(2,10,2)
 k_ratios = [1]
 traj_tbd = siu.sim_two_beads(data_len, diff_coef_ratios, k_ratios, dt, n_data=n_data) 
 traj_tbd = traj_tbd.reshape(-1,2,traj_tbd.shape[-1])
-scat_tbd = scn.ScatNet(data_len, avg_len, n_filter_octave = n_filter_octave) 
+scat_tbd = scu.ScatNet(data_len, avg_len, n_filter_octave = n_filter_octave) 
 S_tbd = scat.transform(traj_tbd)
 S_tbd_merge = scu.merge_channels(S_tbd)
 S_tbd_merge_log = scu.log_scat(S_tbd_merge)

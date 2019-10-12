@@ -6,12 +6,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+#from torch.autograd import Variable
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.data.sampler import SubsetRandomSampler
 
 import common_utils as cu
-import scatnet as scn
-import scatnet_utils as scu
+import scat_utils as scu
 
 ROOT_DIR = './data/'
 
@@ -39,22 +39,35 @@ class RNN(nn.Module):
     either the raw time series or the scattering transform result.
     also, should allow variable length
     '''
-    def __init__(self, input_size, hidden_size, output_size, n_layers=1):
+    def __init__(self, input_size, hidden_size, output_size, n_layers=1, bidirectional=False):
         super(RNN, self).__init__()
-        self.lstm = nn.LSTM(input_size, hidden_size, num_layers=n_layers)
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.output_size = output_size
+        self.n_layers = n_layers
+        self.bidirectional = bidirectional
+        self.n_directions = 2 if bidirectional else 1
+
+        self.lstm = nn.LSTM(input_size, hidden_size, num_layers=n_layers, bidirectional=bidirectional)
         self.h2o = nn.Linear(hidden_size, output_size)
 
     def forward(self, input):
-        h_0 = self.init_hidden()
+        hidden_size = self.hidden_size
+        n_layers = self.n_layers
+        n_directions = self.n_directions
+        h_0 = torch.zeros(n_layers * n_directions, batch_size, hidden_size)
+        c_0 = torch.zeros(n_layers * n_directions, batch_size, hidden_size)
+
         output, (h_n, c_n) = self.lstm(input, (h_0, c_0))
         output = self.h2o(output)
         
         return output
 
-loss = nn.CrossEntropyLoss()
-rnn = RNN(input_size, hidden_size, output_size, n_layers=n_layers)
-rnn(input, hidden)
-loss(output, 
+criterion = nn.CrossEntropyLoss()
+rnn = RNN(input_size, hidden_size, output_size, n_layers=n_layers, bidirectional=bidirectional)
+output = rnn(input, hidden)
+loss = criterion(output, target)
+loss.backward()
 
 
 class TimeSeriesDataset(Dataset):
@@ -110,7 +123,7 @@ def train(file_name, n_nodes_hidden, avg_len, log_scat=True, n_filter_octave=[1,
     # flatten the data to shape (n_data_total, n_channels, data_len)
     data = np.reshape(data, [-1, n_channels, data_len])
     # perform scattering transform
-    scat = scn.ScatNet(data_len, avg_len, n_filter_octave=n_filter_octave)
+    scat = scu.ScatNet(data_len, avg_len, n_filter_octave=n_filter_octave)
     S = scat.transform(data)
     if log_scat: S = scu.log_scat(S)
     S = scu.stack_scat(S) # shaped (n_data_total, n_channels, n_scat_nodes, data_len)

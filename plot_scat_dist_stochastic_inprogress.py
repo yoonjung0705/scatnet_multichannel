@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy import interpolate
 
-import scatnet as sn
+import scat_utils as scu
 from math import sqrt
 from scipy.stats import norm
 
@@ -30,7 +30,7 @@ n_data_take = 2**13
 avg_len = 2**10
 n_data_disp = 50
 
-scat = sn.ScatNet(data_len=n_data_take, avg_len=avg_len)
+scat = scu.ScatNet(data_len=n_data_take, avg_len=avg_len)
 
 x = np.arange(0, len(r))
 a = np.copy(r)

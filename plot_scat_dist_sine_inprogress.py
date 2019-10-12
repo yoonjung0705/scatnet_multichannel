@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy import interpolate
 
-import scatnet as sn
+import scat_utils as scu
 
 plt.style.use('dark_background')
 n_data_full = 2**17
@@ -12,7 +12,7 @@ n_data_take = 2**13
 avg_len = 2**10
 n_data_disp = 500
 
-scat = sn.ScatNet(data_len=n_data_take, avg_len=avg_len)
+scat = scu.ScatNet(data_len=n_data_take, avg_len=avg_len)
 
 x = np.linspace(0, 2*np.pi*100, n_data_full)
 a = np.sin(x) + np.sin(3*x) + np.sin(5*x)

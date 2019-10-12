@@ -1,7 +1,6 @@
 import numpy as np
-import scatnet as scn
 import sim_utils as siu
-import scatnet_utils as scu
+import scat_utils as scu
 import net_utils as nu
 import torch
 import torch.nn as nn
@@ -18,7 +17,7 @@ n_data_test = 600
 
 n_filter_octave = [1,1]
 
-scat = scn.ScatNet(data_len, avg_len, n_filter_octave=n_filter_octave)
+scat = scu.ScatNet(data_len, avg_len, n_filter_octave=n_filter_octave)
 
 
 diff_coef_ratios = np.arange(2,10,2)
@@ -30,7 +29,7 @@ k_ratios = np.arange(2,10,2)
 
 traj_tbd = siu.sim_two_beads(data_len, diff_coef_ratios, k_ratios, dt, n_data=n_data)
 traj_tbd = traj_tbd.reshape(-1,2,traj_tbd.shape[-1])
-scat_tbd = scn.ScatNet(data_len, avg_len, n_filter_octave = n_filter_octave)
+scat_tbd = scu.ScatNet(data_len, avg_len, n_filter_octave = n_filter_octave)
 S_tbd = scat.transform(traj_tbd)
 ######## This part is use the time information and do not the spatial channels ###############
 S_tbd_log = scu.log_scat(S_tbd)
@@ -46,7 +45,7 @@ S_tbd_log_stack_tensor = torch.tensor(S_tbd_log_stack, dtype=torch.float32)
 
 traj_tbd_val = siu.sim_two_beads(data_len, diff_coef_ratios, k_ratios, dt, n_data=n_data_val)
 traj_tbd_val = traj_tbd_val.reshape(-1,2,traj_tbd_val.shape[-1])
-scat_tbd_val = scn.ScatNet(data_len, avg_len, n_filter_octave = n_filter_octave)
+scat_tbd_val = scu.ScatNet(data_len, avg_len, n_filter_octave = n_filter_octave)
 S_tbd_val = scat.transform(traj_tbd_val)
 ######## This part is use the time information and do not the spatial channels ###############
 S_tbd_val_log = scu.log_scat(S_tbd_val)
@@ -62,7 +61,7 @@ S_tbd_val_log_stack_tensor = torch.tensor(S_tbd_val_log_stack, dtype=torch.float
 
 traj_tbd_test = siu.sim_two_beads(data_len, diff_coef_ratios, k_ratios, dt, n_data=n_data_test)
 traj_tbd_test = traj_tbd_test.reshape(-1,2,traj_tbd_test.shape[-1])
-scat_tbd_test = scn.ScatNet(data_len, avg_len, n_filter_octave = n_filter_octave)
+scat_tbd_test = scu.ScatNet(data_len, avg_len, n_filter_octave = n_filter_octave)
 S_tbd_test = scat.transform(traj_tbd_test)
 ######## This part is use the time information and do not the spatial channels ###############
 S_tbd_test_log = scu.log_scat(S_tbd_test)
