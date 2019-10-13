@@ -930,57 +930,54 @@ def log_scat(x, eps=1.e-6):
             x[m]['signal'][n] = np.log(np.abs(x[m]['signal'][n]) + eps * 2**(res/2))
     return x
 
-"""
-def scat_features(x, params, avg_len, n_filter_octave=[1, 1], log_scat=True):
-    '''returns feature matrix X from a set of time series using the scattering transform
-    calculates the logarithm of the scattering transform and takes the mean along the time axis
-    for the filter format and the boundary conditions, default parameters are used
-    (filter_format='fourier_truncated', mode='symm')
 
-    FIXME: seems not considering having multiple channels. consider deprecation
+def scat_transform(file_name, avg_len, log_scat=True, n_filter_octave[1, 1], save_file=False, root_dir=ROOT_DIR):
+    '''
+    performs invariant scattering transform for a given file
 
     inputs:
     -------
-    x: rank d array whose last dimension corresponds to the time axis
-    params: list of parameters. parameters can be either lists or 1d arrays
-    avg_len: scaling function width for scattering transform
-    n_filter_octave: number of filters per octave for scattering transform
-    log_scat: boolean indicating whether to take the log of the scattering transform results
-    
+    - file_name: str type file name
+    - avg_len: window length of scaling function in scat transform
+    - log_scat: boolean whether to apply logarithm on scat transform results
+    - n_filter_octave: number of filters when halving the frequency. 1 indicates dyadic filter bank
+    - save_file: boolean whether to save the results into a file or return as a dictionary
+    - root_dir: str type directory name data_len: int, length of each process
+
     outputs:
     --------
-    X: rank 2 array sized (n_timeseries, n_channels * n_nodes * data_len)
-    y: rank 1 array sized (n_timeseries,) denoting the simulation parameters
-
+    - (processes): ndarray shaped (n_param_1, n_param_2, ..., n_param_N, n_data, n_channels, n_nodes, data_len)
+    if save_file is True, no output is returned and the results are saved into a file
     '''
-    data_len = x.shape[-1]
-    for idx, s in enumerate(x.shape[:-1]):
-        assert(s == len(params[idx])), "Array shape does not comply with number of parameters"
-    scat = ScatNet(data_len, avg_len, n_filter_octave=n_filter_octave)
-    S = scat.transform(x)
-    if log_scat: S = log_scat(S)
-    S = stack_scat(S)
-    #S = S(axis=-1)
-    S = np.reshape(S, (-1, S.shape[-1]))
-    
-    return S
 
-def merge_channels(x):
-    '''returns an instance of the result of scat.transform() whose channels are merged into a single channel
-    NOTE: subject to deprecation
+    file_name, _ = os.path.splitext(file_name)
+    file_path = os.path.join(root_dir, file_name + '.pt')
+    samples = torch.load(file_path)
+    file_name_scat = file_name + '_scat'
+    file_path_scat = os.path.join(root_dir, file_name_scat + '.pt')
 
-    inputs:
-    -------
-    x: list type instance resulting from scat.transform()
+    data, labels, label_names = samples['data'], samples['labels'], samples['label_names']
     
-    outputs:
-    --------
-    x: instance of scat.transform() whose values are replaced with the l2 norm along the channel axis
-    '''
-    x = copy.deepcopy(x)
-    for m in range(len(x)):
-        n_signals = len(x[m]['signal'])
-        for n in range(n_signals):
-            x[m]['signal'][n] = np.sqrt(np.sum(np.abs(x[m]['signal'][n])**2, axis=1))
-    return x
-"""
+    # flatten the data to shape (n_data_total, n_channels, data_len)
+    n_channels, data_len = data.shape[-2:]
+    data = np.reshape(data, [-1, n_channels, data_len])
+    # perform scattering transform
+    scat = scu.ScatNet(data_len, avg_len, n_filter_octave=n_filter_octave)
+    S = scat.transform(data)
+    if log_scat: S = scu.log_scat(S)
+    S = scu.stack_scat(S) # shaped (n_data_total, n_channels, n_scat_nodes, data_len)
+    data_scat = np.reshape(S, (n_data_total, -1)) # shaped (n_data_total, n_channels * n_scat_nodes * data_len)
+
+    if not save_file:
+        return processes
+
+    nums = cu.match_filename(r'brw_([0-9]+).pt', root_dir=ROOT_DIR)
+    nums = [int(num) for num in nums]
+    idx = max(nums) + 1 if nums else 0
+
+    file_name = 'brw_{}.pt'.format(idx)
+    file_path = os.path.join(root_dir, file_name)
+    data = {'data':processes, 'labels':[diff_coefs], 'label_names':['diff_coefs']}
+    torch.save(data, file_path)
+
+

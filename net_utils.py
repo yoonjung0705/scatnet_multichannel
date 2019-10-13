@@ -52,20 +52,23 @@ class RNN(nn.Module):
         self.h2o = nn.Linear(hidden_size, output_size)
 
     def forward(self, input):
+        # no need to check input's shape as it'll be checked in self.lstm
         hidden_size = self.hidden_size
         n_layers = self.n_layers
         n_directions = self.n_directions
-        h_0 = torch.zeros(n_layers * n_directions, batch_size, hidden_size)
-        c_0 = torch.zeros(n_layers * n_directions, batch_size, hidden_size)
+        batch_size = input.shape[1]
+        h_0 = torch.zeros(n_layers, batch_size, hidden_size) # dtype is default to float32
+        c_0 = torch.zeros(n_layers, batch_size, hidden_size)
 
         output, (h_n, c_n) = self.lstm(input, (h_0, c_0))
-        output = self.h2o(output)
+        output = self.h2o(output[-1, :, :])
         
         return output
 
-criterion = nn.CrossEntropyLoss()
+#criterion = nn.CrossEntropyLoss()
+criterion = nn.MSELoss(reduction='sum')
 rnn = RNN(input_size, hidden_size, output_size, n_layers=n_layers, bidirectional=bidirectional)
-output = rnn(input, hidden)
+output = rnn(input)
 loss = criterion(output, target)
 loss.backward()
 

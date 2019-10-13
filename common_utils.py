@@ -12,7 +12,7 @@ def match_filename(pattern, root_dir):
     root_dir - directory to search the files
 
     outputs
-    matches - list of strings that contain
+    matches - list of strings that are file names that match the given pattern
     -------
     
     '''
