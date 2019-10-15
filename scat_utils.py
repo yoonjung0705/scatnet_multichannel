@@ -3,7 +3,9 @@ import os
 import numpy as np
 import copy
 from scipy import interpolate
+import torch
 
+ROOT_DIR='./data/'
 '''
 FIXME: continue proofreading the following functions:
 - wavelet_1d()
@@ -931,7 +933,8 @@ def log_scat(x, eps=1.e-6):
     return x
 
 
-def scat_transform(file_name, avg_len, log_scat=True, n_filter_octave[1, 1], save_file=False, root_dir=ROOT_DIR):
+def scat_transform(file_name, avg_len, log_transform=True, n_filter_octave=[1, 1], 
+    filter_format='fourier_truncated', save_file=False, root_dir=ROOT_DIR):
     '''
     performs invariant scattering transform for a given file
 
@@ -939,8 +942,9 @@ def scat_transform(file_name, avg_len, log_scat=True, n_filter_octave[1, 1], sav
     -------
     - file_name: str type file name
     - avg_len: window length of scaling function in scat transform
-    - log_scat: boolean whether to apply logarithm on scat transform results
+    - log_transform: boolean whether to apply logarithm on scat transform results
     - n_filter_octave: number of filters when halving the frequency. 1 indicates dyadic filter bank
+    - filter_format: 'fourier_multires', 'fourier_truncated', 'fourier'
     - save_file: boolean whether to save the results into a file or return as a dictionary
     - root_dir: str type directory name data_len: int, length of each process
 
@@ -959,25 +963,20 @@ def scat_transform(file_name, avg_len, log_scat=True, n_filter_octave[1, 1], sav
     data, labels, label_names = samples['data'], samples['labels'], samples['label_names']
     
     # flatten the data to shape (n_data_total, n_channels, data_len)
+    n_params = data.shape[:-3]
+    n_data = data.shape[-3]
     n_channels, data_len = data.shape[-2:]
     data = np.reshape(data, [-1, n_channels, data_len])
     # perform scattering transform
-    scat = scu.ScatNet(data_len, avg_len, n_filter_octave=n_filter_octave)
+    scat = ScatNet(data_len, avg_len, n_filter_octave=n_filter_octave, filter_format=filter_format)
     S = scat.transform(data)
-    if log_scat: S = scu.log_scat(S)
-    S = scu.stack_scat(S) # shaped (n_data_total, n_channels, n_scat_nodes, data_len)
-    data_scat = np.reshape(S, (n_data_total, -1)) # shaped (n_data_total, n_channels * n_scat_nodes * data_len)
+    if log_transform: S = log_scat(S)
+    S = stack_scat(S) # shaped (n_data_total, n_channels, n_scat_nodes, data_len)
+    # following is shaped (n_param1, n_param2,..., n_paramN, n_data, n_channels, n_scat_nodes, data_len)
+    data_scat = np.reshape(S, list(n_params) + [n_data] + list(S.shape[-3:])) 
 
     if not save_file:
-        return processes
+        return data_scat
 
-    nums = cu.match_filename(r'brw_([0-9]+).pt', root_dir=ROOT_DIR)
-    nums = [int(num) for num in nums]
-    idx = max(nums) + 1 if nums else 0
-
-    file_name = 'brw_{}.pt'.format(idx)
-    file_path = os.path.join(root_dir, file_name)
-    data = {'data':processes, 'labels':[diff_coefs], 'label_names':['diff_coefs']}
-    torch.save(data, file_path)
-
-
+    data = {'data':data_scat, 'labels':labels, 'label_names':label_names, 'avg_len':avg_len, 'log_transform':log_transform, 'n_filter_octave':n_filter_octave, 'filter_format':filter_format, 'file_name':file_name}
+    torch.save(data, file_path_scat)

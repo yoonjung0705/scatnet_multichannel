@@ -1,6 +1,6 @@
 '''module containing functions that are currently not used'''
 
-def scat_features(x, params, avg_len, n_filter_octave=[1, 1], log_scat=True):
+def scat_features(x, params, avg_len, n_filter_octave=[1, 1], log_transform=True):
     '''returns feature matrix X from a set of time series using the scattering transform
     calculates the logarithm of the scattering transform and takes the mean along the time axis
     for the filter format and the boundary conditions, default parameters are used
@@ -14,7 +14,7 @@ def scat_features(x, params, avg_len, n_filter_octave=[1, 1], log_scat=True):
     params: list of parameters. parameters can be either lists or 1d arrays
     avg_len: scaling function width for scattering transform
     n_filter_octave: number of filters per octave for scattering transform
-    log_scat: boolean indicating whether to take the log of the scattering transform results
+    log_transform: boolean indicating whether to take the log of the scattering transform results
     
     outputs:
     --------
@@ -27,7 +27,7 @@ def scat_features(x, params, avg_len, n_filter_octave=[1, 1], log_scat=True):
         assert(s == len(params[idx])), "Array shape does not comply with number of parameters"
     scat = ScatNet(data_len, avg_len, n_filter_octave=n_filter_octave)
     S = scat.transform(x)
-    if log_scat: S = log_scat(S)
+    if log_transform: S = log_scat(S)
     S = stack_scat(S)
     #S = S(axis=-1)
     S = np.reshape(S, (-1, S.shape[-1]))
