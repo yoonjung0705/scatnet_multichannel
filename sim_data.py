@@ -26,3 +26,4 @@ siu.sim_poisson(data_len, lams, dt, n_data, save_file=True, root_dir=ROOT_DIR)
 k_ratios = np.arange(1,3,0.5)
 diff_coef_ratios = np.arange(2,8,1)
 siu.sim_two_beads(data_len, k_ratios, diff_coef_ratios, dt, n_data, n_steps_initial=10000, save_file=True, root_dir=ROOT_DIR)
+

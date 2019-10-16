@@ -73,7 +73,7 @@ def sim_poisson(data_len, lams, dt, n_data=1, save_file=False, root_dir=ROOT_DIR
 
     outputs:
     --------
-    - processes: ndarray shaped (n_lams, n_data, data_len) which is an ensemble of poisson processes
+    - processes: ndarray shaped (n_lams, n_data, 1, data_len) which is an ensemble of poisson processes
     the singleton dimension is for the number of channels
 
     REVIEW: confirm this method of using fixed time step generates identical statistics to that of Gielespie algorithm

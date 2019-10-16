@@ -7,84 +7,69 @@ from scipy import interpolate
 import scat_utils as scu
 
 plt.style.use('dark_background')
-n_data_full = 2**17
-n_data_take = 2**13
-avg_len = 2**10
-n_data_disp = 500
+fontsize_title = 18
+fontsize_labels = 18
+#padded_len = 2**17
+data_len = 2**8
+avg_len = 2**5
+n_data = 8
+eps = 0.015
+padded_len = data_len * (1 + eps * n_data)
 
-scat = scu.ScatNet(data_len=n_data_take, avg_len=avg_len)
+x = np.arange(0, data_len)
+a = np.sin(np.pi * x) + np.sin(3 * np.pi * x) + np.sin(5 * np.pi * x)
 
-x = np.linspace(0, 2*np.pi*100, n_data_full)
-a = np.sin(x) + np.sin(3*x) + np.sin(5*x)
 f = interpolate.interp1d(x, a)
+scat = scu.ScatNet(data_len=data_len, avg_len=avg_len)
 
+data = [f(x * (1-eps*idx)) for idx in range(n_data)]
+data = np.stack(data, axis=0) # shaped (n_data, data_len)
+#x2 = x * (1-eps*1)
+#x3 = x * (1-eps*2)
+#x4 = x * (1-eps*3)
+#x5 = x * (1-eps*4)
+#x6 = x * (1-eps*5)
+#x7 = x * (1-eps*6)
+#x8 = x * (1-eps*7)
 
-# a = np.sin(np.linspace(0,2*np.pi*100,n_data_full)) + np.sin(np.linspace(0,2*np.pi*300,n_data_full))
-# a = np.sin(x) + np.sin(3*x) + np.sin(5*x)
-# af = np.fft.fft(a[np.newaxis, :])
-# af2 = np.reshape(af, [ds2,-1]).sum(axis=0)
-# af3 = np.reshape(af, [ds3,-1]).sum(axis=0)
-# af4 = np.reshape(af, [ds4,-1]).sum(axis=0)
-# af5 = np.reshape(af, [ds5,-1]).sum(axis=0)
-# a2 = np.real(np.fft.ifft(af2))
-# a3 = np.real(np.fft.ifft(af3))
-# a4 = np.real(np.fft.ifft(af4))
-# a5 = np.real(np.fft.ifft(af5))
-eps_step = 0.015
-x2 = x * (1-eps_step*1)
-x3 = x * (1-eps_step*2)
-x4 = x * (1-eps_step*3)
-x5 = x * (1-eps_step*4)
-x6 = x * (1-eps_step*5)
-x7 = x * (1-eps_step*6)
-x8 = x * (1-eps_step*7)
+scales = 1 - eps * np.arange(n_data)
+#a2 = f(x2)
+#a3 = f(x3)
+#a4 = f(x4)
+#a5 = f(x5)
+#a6 = f(x6)
+#a7 = f(x7)
+#a8 = f(x8)
 
-scales = 1-eps_step * np.arange(8)
-a2 = f(x2)
-a3 = f(x3)
-a4 = f(x4)
-a5 = f(x5)
-a6 = f(x6)
-a7 = f(x7)
-a8 = f(x8)
+fig1, ax1 = plt.subplots()
 
-fig1,ax1 = plt.subplots()
+ax1.plot(data.swapaxes(0,1))
+ax1.set_title('Dilated time series', fontsize=fontsize_title)
+ax1.set_xlabel('x', fontsize=fontsize_labels)
+ax1.set_ylabel('Amplitude', fontsize=fontsize_labels)
 
-ax1.plot(a[:n_data_disp])
-ax1.plot(a2[:n_data_disp])
-ax1.plot(a3[:n_data_disp])
-ax1.plot(a4[:n_data_disp])
-ax1.plot(a5[:n_data_disp])
-# ax1.plot(a6[:n_data_disp])
-# ax1.plot(a7[:n_data_disp])
-# ax1.plot(a8[:n_data_disp])
+#scales_rev = scales[::-1]
+#dilation = scales_rev / scales_rev[0]
 
-ax1.set_title('Set of dilated signals', fontsize=18)
-# ax1.set_xlabel('x', fontsize=18)
-# ax1.set_ylabel('distance (a.u.)', fontsize=18)
-ax1.set_xticks([])
-ax1.set_yticks([])
+#a = a[:data_len]
+#a2 = a2[:data_len]
+#a3 = a3[:data_len]
+#a4 = a4[:data_len]
+#a5 = a5[:data_len]
+#a6 = a6[:data_len]
+#a7 = a7[:data_len]
+#a8 = a8[:data_len]
 
-scales_rev = scales[::-1]
-dilation = scales_rev / scales_rev[0]
+S = scat.transform(data[:, np.newaxis, :])
+S = scu.stack_scat(S) # (n_data, 1, n_nodes, data_scat_len)
+#y2 = scat.transform(a2[np.newaxis, np.newaxis, :])
+#y3 = scat.transform(a3[np.newaxis, np.newaxis, :])
+#y4 = scat.transform(a4[np.newaxis, np.newaxis, :])
+#y5 = scat.transform(a5[np.newaxis, np.newaxis, :])
+#y6 = scat.transform(a6[np.newaxis, np.newaxis, :])
+#y7 = scat.transform(a7[np.newaxis, np.newaxis, :])
+#y8 = scat.transform(a8[np.newaxis, np.newaxis, :])
 
-a = a[:n_data_take]
-a2 = a2[:n_data_take]
-a3 = a3[:n_data_take]
-a4 = a4[:n_data_take]
-a5 = a5[:n_data_take]
-a6 = a6[:n_data_take]
-a7 = a7[:n_data_take]
-a8 = a8[:n_data_take]
-
-y = scat.transform(a[np.newaxis, np.newaxis, :])
-y2 = scat.transform(a2[np.newaxis, np.newaxis, :])
-y3 = scat.transform(a3[np.newaxis, np.newaxis, :])
-y4 = scat.transform(a4[np.newaxis, np.newaxis, :])
-y5 = scat.transform(a5[np.newaxis, np.newaxis, :])
-y6 = scat.transform(a6[np.newaxis, np.newaxis, :])
-y7 = scat.transform(a7[np.newaxis, np.newaxis, :])
-y8 = scat.transform(a8[np.newaxis, np.newaxis, :])
 
 def diff_scat(S1,S2):
     sum_sqs = 0
