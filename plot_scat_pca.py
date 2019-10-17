@@ -7,6 +7,7 @@ import sim_utils as siu
 import scat_utils as scu
 import matplotlib.pyplot as plt
 from sklearn import decomposition
+from mpl_toolkits.mplot3d import Axes3D
 
 #plt.style.use('dark_background')
 

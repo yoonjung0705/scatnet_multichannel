@@ -1,5 +1,78 @@
-plt.style.use('dark_background')
-fig, ax = plt.subplots()
+'''this is a module that loads the meta data of the neural net (FC and/or RNN) and generates figures that compare/show the performance'''
+# FIXME: for now we test prediction results for data simulated with hyperparameters that were used for the training data.
+# Later, include data simulated with hyperparameters whose values were not the ones used for the training data
+
+'''standard imports'''
+import os
+import torch
+import matplotlib.pyplot as plt
+
+'''custom libraries'''
+import scat_utils as scu
+import net_utils as nu
+
+# plt.style.use('dark_background')
+file_names = ['tbd_1_scat.pt', 'tbd_1.pt']
+file_names_meta = ['tbd_0_scat_meta_rnn_2.pt', 'tbd_0_meta_rnn_1.pt']
+root_dir = './data/'
+epochs = [50, 40]
+
+'''sanity check'''
+# add .pt extension if not provided
+file_names = [os.path.splitext(file_name)[0] + '.pt' for file_name in file_names]
+file_names_meta = [os.path.splitext(file_name_meta)[0] + '.pt' for file_name_meta in file_names_meta]
+
+# make file_names into list
+if isinstance(file_names, str):
+    file_names = [file_names]
+
+# check number of files match with number of meta files
+assert(len(file_names) == len(file_names_meta))
+
+# check if all meta files are trained on the same dataset
+file_names_meta_common = [re.fullmatch(r'([a-z]{3}_[0-9]+)_.*_meta', file_name_meta).group(1) for file_name_meta in file_names_meta]
+assert(len(set(file_name_common)) == 1), "The given neural networks are trained on different data sets"
+
+# check if all meta files are testing on the same dataset
+file_names_common = [re.fullmatch(r'([a-z]{3}_[0-9]+).*', file_name).group(1) for file_name in file_names]
+assert(len(set(file_names_common)) == 1), "The given neural networks are tested on different data sets"
+
+# if the training was done on scat transformed data, it should be tested on scat transformed data, too.
+# if the training was done on pure time series data, it should be tested on pure time series data, too.
+file_names_meta_is_scat = [re.fullmatch(r'[a-z]{3}_[0-9]+_?(.*)_?meta.*', file_name_meta).group(1) for file_name_meta in file_names_meta]
+file_names_is_scat = [re.fullmatch(r'[a-z]{3}_[0-9]+_?(.*)\.pt', file_name_meta).group(1) for file_name_meta in file_names_meta]
+assert(file_names_meta_is_scat == file_names_is_scat), "The training and test data are not transformed in the same manner"
+
+file_paths = [os.path.join(root_dir, file_name) for file_name in file_names]
+idx_epochs = [idx_epoch // 10 for idx_epoch in idx_epochs]
+
+for file_path in file_paths:
+    #fig, ax = plt.subplots()
+    meta = torch.load(file_path)
+    n_labels = len(meta['label_names'])
+    if 'meta_rnn' in file_path:
+        for idx_label in range(n_labels):
+            net = nu.RNN(input_size=meta['input_size'], hidden_size=meta['hidden_size'], n_layers=meta['n_layers'], bidirectional=meta['bidirectional'])
+            net.load_state_dict(meta['weights'][idx_label][idx_epochs[idx_label]], map_location='cpu')
+
+
+
+
+
+
+
+
+
+
+    elif 'meta_nn' in file_path:
+    else:
+        raise IOError("Invalid file name: should be meta data of the trained network")
+
+
+
+    torch.load(
+
+
 output_arr = output.data.numpy()
 target_arr = output.data.numpy()
 output_arr = np.squeeze(output_arr, axis=1)
