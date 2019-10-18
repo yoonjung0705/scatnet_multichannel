@@ -6,7 +6,7 @@ ROOT_DIR = './data/'
 # inputs common to different simulations
 data_len = 2**11
 dt = 0.01 # REVIEW
-n_data = 1000
+n_data = 100
 
 
 # simulate brownian

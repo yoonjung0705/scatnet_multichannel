@@ -20,8 +20,9 @@ from torch.utils.data.sampler import SequentialSampler
 import scat_utils as scu
 import net_utils as nu
 
-file_names = ['tbd_1.pt', 'tbd_1_scat.pt']
-file_names_meta = ['tbd_0_meta_rnn_0.pt', 'tbd_0_scat_meta_rnn_0.pt']
+file_names = ['tbd_2.pt', 'tbd_2_scat.pt']
+#file_names_meta = ['tbd_0_meta_rnn_0.pt', 'tbd_0_scat_meta_rnn_0.pt']
+file_names_meta = ['tbd_0_meta_nn_0.pt', 'tbd_0_scat_meta_nn_0.pt']
 root_dir = './data/'
 epochs = [[50, 50], [50, 50]]
 
@@ -105,7 +106,7 @@ for idx_file in range(n_files):
             for idx_batch, batch in enumerate(dataloader):
                 output.append(net(batch['data'].permute([2, 0, 1])).detach().numpy()[:, 0])
                 print("{} out of {} samples propagated".format(min((idx_batch + 1) * batch_size, n_data_total), n_data_total))
-            output = np.stack(output, axis=0)
+            output = np.concatenate(output, axis=0)
 
             if transformed:
                 output = output.reshape(samples['data'].shape[:-3])
@@ -131,7 +132,7 @@ for idx_file in range(n_files):
             n_data_total = np.prod(data.shape[:-2])
             n_features = data.shape[-2]
             data_len = data.shape[-1]
-            input = data.reshape(data, [n_data_total, n_features * data_len])
+            input = data.reshape([n_data_total, n_features * data_len])
 
         input = torch.tensor(input, dtype=torch.get_default_dtype())
         # following is shaped (n_labels, n_conditions)
@@ -147,7 +148,7 @@ for idx_file in range(n_files):
             for idx_batch, batch in enumerate(dataloader):
                 output.append(net(batch['data']).detach().numpy()[:, 0])
                 print("{} out of {} samples propagated".format(min((idx_batch + 1) * batch_size, n_data_total), n_data_total))
-            output = np.stack(output, axis=0)
+            output = np.concatenate(output, axis=0)
 
             if transformed:
                 output = output.reshape(samples['data'].shape[:-3])

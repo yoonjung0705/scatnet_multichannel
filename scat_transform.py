@@ -1,7 +1,7 @@
 import scat_utils as scu
 
 root_dir = './data/'
-file_name = 'tbd_1.pt'
+file_name = 'tbd_2.pt'
 avg_len = 2**8
 log_transform = True
 n_filter_octave = [1, 1]

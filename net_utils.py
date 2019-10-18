@@ -299,6 +299,7 @@ def _train_nn(dataloader, n_nodes_hidden, device, n_epochs_max, idx_label, file_
                 loss_sum[phase] = 0.
                 for batch in dataloader[phase]:
                     batch_data, batch_labels = batch['data'].to(device), batch['labels'].to(device)
+                    print("batch_labels:{}".format(batch_labels))
                     output = net(batch_data)[:, 0] # output of net is shaped (batch_size, 1). drop dummy axis
                     loss = criterion(output, batch_labels)
                     optimizer.zero_grad()
