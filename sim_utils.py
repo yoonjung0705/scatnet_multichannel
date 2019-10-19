@@ -21,11 +21,16 @@ def sim_brownian(data_len, diff_coefs, dt, n_data=1, save_file=False, root_dir=R
     - diff_coef: numeric or list or ndarray, diffusion coefficient. 
     - dt: float, time step between data points
     - n_data: int, number of processes in ensemble
+    - save_file: boolean, whether or not to save the file. If True, file name is returned.
+        Otherwise, data is returned
+    - root_dir: string, root directory to save file if save_file is True
+    - dtype: 'float32' or 'float64', precision of output data
 
     outputs:
     --------
-    - processes: ndarray shaped (n_diff_coefs, n_data, 1, data_len) which is an ensemble of brownian trajectories
-    the singleton dimension is for the number of channels
+    - (processes): ndarray shaped (n_diff_coefs, n_data, 1, data_len) which is an ensemble of brownian trajectories
+    the singleton dimension is for the number of channels. returned if save_file is False
+    - (file_name): string type file name of the simulated data. returned if save_file is True
 
     FIXME: check if dimensionsare not mixed up
     '''
@@ -59,6 +64,7 @@ def sim_brownian(data_len, diff_coefs, dt, n_data=1, save_file=False, root_dir=R
     file_path = os.path.join(root_dir, file_name)
     data = {'data':processes, 'labels':[diff_coefs], 'label_names':['diff_coefs']}
     torch.save(data, file_path)
+    return file_name
 
 def sim_poisson(data_len, lams, dt, n_data=1, save_file=False, root_dir=ROOT_DIR, dtype='float32'):
     '''
@@ -70,11 +76,17 @@ def sim_poisson(data_len, lams, dt, n_data=1, save_file=False, root_dir=ROOT_DIR
     - lams: numeric or list or ndarray, expectation per interval
     - dt: time step between data points
     - n_data: number of processes in ensemble
+    - save_file: boolean, whether or not to save the file. If True, file name is returned.
+        Otherwise, data is returned
+    - root_dir: string, root directory to save file if save_file is True
+    - dtype: 'float32' or 'float64', precision of output data
 
     outputs:
     --------
-    - processes: ndarray shaped (n_lams, n_data, 1, data_len) which is an ensemble of poisson processes
-    the singleton dimension is for the number of channels
+    - (processes): ndarray shaped (n_lams, n_data, 1, data_len) which is an ensemble of poisson processes
+    the singleton dimension is for the number of channels. returned if save_file is False
+    - (file_name): string type file name of the simulated data. returned if save_file is True
+
 
     REVIEW: confirm this method of using fixed time step generates identical statistics to that of Gielespie algorithm
     FIXME: confirm dimensions are not mixed up
@@ -107,6 +119,7 @@ def sim_poisson(data_len, lams, dt, n_data=1, save_file=False, root_dir=ROOT_DIR
     file_path = os.path.join(root_dir, file_name)
     data = {'data':processes, 'labels':[lams], 'label_names':['lams']}
     torch.save(data, file_path)
+    return file_name
 
 def sim_one_bead(data_len, diff_coefs, ks, dt, n_data=1, n_steps_initial=10000,
     save_file=False, root_dir=ROOT_DIR, dtype='float32'):
@@ -121,11 +134,17 @@ def sim_one_bead(data_len, diff_coefs, ks, dt, n_data=1, n_steps_initial=10000,
     - dt: time step between data points
     - n_data: number of processes in ensemble
     - n_steps_initial: number of steps to take in Langevin equation for simulating initial positions
+    - save_file: boolean, whether or not to save the file. If True, file name is returned.
+        Otherwise, data is returned
+    - root_dir: string, root directory to save file if save_file is True
+    - dtype: 'float32' or 'float64', precision of output data
 
     outputs:
     --------
-    - processes: ndarray shaped (n_ks, n_diff_coefs, n_data, 1, data_len) which is an ensemble of one bead simulation trajectories
-    the singleton dimension is for the number of channels
+    - (processes): ndarray shaped (n_ks, n_diff_coefs, n_data, 1, data_len) which is an ensemble of one bead simulation trajectories
+    the singleton dimension is for the number of channels. returned if save_file is False
+    - (file_name): string type file name of the simulated data. returned if save_file is True
+
 
     FIXME: check the code to see if the dimensions are not mixed up, check if actual simulation part is not mixed up with initial condition simulation
     '''
@@ -180,10 +199,35 @@ def sim_one_bead(data_len, diff_coefs, ks, dt, n_data=1, n_steps_initial=10000,
     file_path = os.path.join(root_dir, file_name)
     data = {'data':processes, 'labels':[ks, diff_coefs], 'label_names':['ks', 'diff_coefs']}
     torch.save(data, file_path)
+    return file_name
 
 def sim_two_beads(data_len, k_ratios, diff_coef_ratios, dt, n_data=1, n_steps_initial=10000,
     save_file=False, root_dir=ROOT_DIR, dtype='float32'):
-    '''FIXME: add docstring'''
+    '''
+    returns ensemble of two bead simulation trajectories.
+
+    inputs:
+    -------
+    - data_len: int, length of each process
+    - k_ratios: numeric or list-like, ratios of spring constants
+    - diff_coef_ratios: numeric or list-like, ratios of diffusion coefficients
+    - dt: float, time step between data points
+    - n_data: int, number of processes in ensemble
+    - n_steps_initial: number of steps to take in Langevin equation for simulating initial positions
+    - save_file: boolean, whether or not to save the file. If True, file name is returned.
+        Otherwise, data is returned
+    - root_dir: string, root directory to save file if save_file is True
+    - dtype: 'float32' or 'float64', precision of output data
+
+    outputs:
+    --------
+    - (processes): ndarray shaped (n_ks, n_diff_coefs, n_data, 1, data_len) which is an ensemble of one bead simulation trajectories
+    the singleton dimension is for the number of channels. returned if save_file is False
+    - (file_name): string type file name of the simulated data. returned if save_file is True
+
+
+    FIXME: check the code to see if the dimensions are not mixed up, check if actual simulation part is not mixed up with initial condition simulation
+    '''
 
     if isinstance(diff_coef_ratios, (int, float)):
         diff_coef_ratios = [diff_coef_ratios]
@@ -238,3 +282,4 @@ def sim_two_beads(data_len, k_ratios, diff_coef_ratios, dt, n_data=1, n_steps_in
     file_path = os.path.join(root_dir, file_name)
     data = {'data':processes, 'labels':[k_ratios, diff_coef_ratios], 'label_names':['k_ratios', 'diff_coef_ratios']}
     torch.save(data, file_path)
+    return file_name

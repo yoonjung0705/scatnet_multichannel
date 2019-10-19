@@ -8,7 +8,6 @@ data_len = 2**11
 dt = 0.01 # REVIEW
 n_data = 100
 
-
 # simulate brownian
 diff_coefs = np.arange(4,8, 0.5)
 siu.sim_brownian(data_len, diff_coefs, dt, n_data, save_file=True, root_dir=ROOT_DIR)

@@ -35,9 +35,6 @@ class Net(nn.Module):
 
 class RNN(nn.Module):
     '''
-    NOTE: this class should be general enough so that any input can be used
-    either the raw time series or the scattering transform result.
-    also, should allow variable length
     '''
     # FIXME: figure out how to move hidden states h_0 and c_0 to device when doing rnn.to(device)
     # FIXME: check if whether it's necessary to detach() tensors so that unnecessary weight updates
@@ -81,7 +78,7 @@ class TimeSeriesDataset(Dataset):
         return self._len
 
     def __getitem__(self, index):
-        sample = {'data':self._data[index, :], 'labels':self._labels[index]}
+        sample = {'data':self._data[index], 'labels':self._labels[index]}
         if self._transform is not None:
             sample = self._transform(sample)
 
@@ -156,7 +153,7 @@ def train_rnn(file_name, hidden_size, n_layers=1, bidirectional=False, n_epochs_
     n_samples_total = data.shape[-n_none_param_dims]
     n_data_total = np.prod(data.shape[:-(n_none_param_dims - 1)])
     n_labels = len(label_names) # number of labels to predict
-    index = _train_test_split(n_samples_total, train_ratio); index['val'] = index.pop('test')
+    index = _train_test_split(n_data_total, train_ratio); index['val'] = index.pop('test')
 
     # reshape data. output is shaped (n_data_total, n_channels * (n_scat_nodes), data_len).
     # (n_scat_nodes) means 1 if data not transformed
@@ -175,7 +172,7 @@ def train_rnn(file_name, hidden_size, n_layers=1, bidirectional=False, n_epochs_
     # following is shaped (n_labels, n_conditions)
     labels = np.array(list(product(*labels)), dtype='float32').swapaxes(0, 1)
     # following is shaped (n_labels, n_data_total)
-    labels = np.tile(labels[:, :, np.newaxis], [1, 1, n_samples_total]).reshape([n_labels, -1])
+    labels = np.tile(labels[:, :, np.newaxis], [1, 1, n_samples_total]).reshape([n_labels, n_data_total])
     for idx_label in range(n_labels):
         dataset = TimeSeriesDataset(data, labels[idx_label], transform=ToTensor())
         dataloader = {phase:DataLoader(dataset, sampler=SubsetRandomSampler(index[phase]),
@@ -217,7 +214,7 @@ def train_nn(file_name, n_nodes_hidden, n_epochs_max=2000, train_ratio=0.8, batc
     nums = [int(num) for num in nums]; idx = max(nums) + 1 if nums else 0
     file_name_meta = '{}_meta_nn_{}.pt'.format(file_name, idx)
 
-    # data shape: (n_param_1, n_param_2,..., n_param_N, n_samples, n_channels, (n_nodes), data_len)
+    # data shape: (n_param_1, n_param_2,..., n_param_N, n_samples_total, n_channels, (n_nodes), data_len)
     data, labels, label_names = samples['data'], samples['labels'], samples['label_names']
     # the number of dimensions that do not correspond to the batch dimension is 4 if scat transformed.
     # Otherwise, it's 3
@@ -225,7 +222,7 @@ def train_nn(file_name, n_nodes_hidden, n_epochs_max=2000, train_ratio=0.8, batc
     n_samples_total = data.shape[-n_none_param_dims]
     n_data_total = np.prod(data.shape[:-(n_none_param_dims - 1)])
     n_labels = len(label_names) # number of labels to predict
-    index = _train_test_split(n_samples_total, train_ratio); index['val'] = index.pop('test')
+    index = _train_test_split(n_data_total, train_ratio); index['val'] = index.pop('test')
 
     # reshape data. output is shaped (n_data_total, n_channels * (n_scat_nodes) * data_len).
     # (n_scat_nodes) means 1 if data not transformed
@@ -242,7 +239,7 @@ def train_nn(file_name, n_nodes_hidden, n_epochs_max=2000, train_ratio=0.8, batc
     # following is shaped (n_labels, n_conditions)
     labels = np.array(list(product(*labels)), dtype='float32').swapaxes(0, 1)
     # following is shaped (n_labels, n_data_total)
-    labels = np.tile(labels[:, :, np.newaxis], [1, 1, n_samples_total]).reshape([n_labels, -1])
+    labels = np.tile(labels[:, :, np.newaxis], [1, 1, n_samples_total]).reshape([n_labels, n_data_total])
     for idx_label in range(n_labels):
         dataset = TimeSeriesDataset(data, labels[idx_label], transform=ToTensor())
         dataloader = {phase:DataLoader(dataset, sampler=SubsetRandomSampler(index[phase]),
@@ -299,7 +296,6 @@ def _train_nn(dataloader, n_nodes_hidden, device, n_epochs_max, idx_label, file_
                 loss_sum[phase] = 0.
                 for batch in dataloader[phase]:
                     batch_data, batch_labels = batch['data'].to(device), batch['labels'].to(device)
-                    print("batch_labels:{}".format(batch_labels))
                     output = net(batch_data)[:, 0] # output of net is shaped (batch_size, 1). drop dummy axis
                     loss = criterion(output, batch_labels)
                     optimizer.zero_grad()

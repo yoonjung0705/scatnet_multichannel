@@ -933,8 +933,8 @@ def log_scat(x, eps=1.e-6):
     return x
 
 
-def scat_transform(file_name, avg_len, log_transform=True, n_filter_octave=[1, 1], 
-    filter_format='fourier_truncated', save_file=False, root_dir=ROOT_DIR):
+def scat_transform(file_name, avg_len, log_transform=False, n_filter_octave=[1, 1], 
+    filter_format='fourier_truncated', save_file=True, root_dir=ROOT_DIR):
     '''
     performs invariant scattering transform for a given file
 
@@ -978,5 +978,7 @@ def scat_transform(file_name, avg_len, log_transform=True, n_filter_octave=[1, 1
     if not save_file:
         return data_scat
 
-    data = {'data':data_scat, 'labels':labels, 'label_names':label_names, 'avg_len':avg_len, 'log_transform':log_transform, 'n_filter_octave':n_filter_octave, 'filter_format':filter_format, 'file_name':file_name}
+    data = {'data':data_scat, 'labels':labels, 'label_names':label_names,
+        'avg_len':avg_len, 'log_transform':log_transform, 'n_filter_octave':n_filter_octave,
+        'filter_format':filter_format, 'file_name':file_name}
     torch.save(data, file_path_scat)
