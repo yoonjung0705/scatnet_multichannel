@@ -129,7 +129,8 @@ def train_nn(file_name, n_nodes_hidden, n_epochs_max=2000, train_ratio=0.8, batc
     inputs
     ------
     file_name: string type name of file
-    n_nodes_hidden: list type, number of nodes in the hidden layers
+    n_nodes_hidden: list type, where values are list of nodes in the hidden layers
+        The number of lists should match with the number of labels to predict
     n_epochs_max: maximum number of epochs to run. 
         can terminate with ctrl + c to move on to next neural network training.
     train_ratio: float indicating ratio for training data. should be between 0 and 1
@@ -160,13 +161,16 @@ def train_nn(file_name, n_nodes_hidden, n_epochs_max=2000, train_ratio=0.8, batc
     n_samples_total = data.shape[-n_none_param_dims]
     n_data_total = np.prod(data.shape[:-(n_none_param_dims - 1)])
     n_labels = len(label_names) # number of labels to predict
+    assert(isinstance(n_nodes_hidden, list)), "Invalid format of nodes given. Should be type list"
+    assert(all([isinstance(n_nodes_hidden_label, list) for n_nodes_hidden_label in n_nodes_hidden])),\
+        "Invalid format of nodes given. Should provide list of {} lists".format(n_labels)
     index = _train_test_split(n_data_total, train_ratio); index['val'] = index.pop('test')
 
     # reshape data. output is shaped (n_data_total, n_channels * (n_scat_nodes) * data_len).
     # (n_scat_nodes) means 1 if data not transformed
     data = np.reshape(data, (n_data_total, -1)) 
 
-    n_nodes = [data.shape[-1]] + list(n_nodes_hidden) + [1]
+    n_nodes = [[data.shape[-1]] + n_nodes_hidden_label + [1] for n_nodes_hidden_label in n_nodes_hidden]
     # initialize meta data and save it to a file
     _init_meta(file_name=file_name_meta, root_dir=root_dir, n_nodes=n_nodes,
         n_epochs_max=n_epochs_max, train_ratio=train_ratio, batch_size=batch_size,
@@ -181,7 +185,7 @@ def train_nn(file_name, n_nodes_hidden, n_epochs_max=2000, train_ratio=0.8, batc
     for idx_label in range(n_labels):
         dataset = TimeSeriesDataset(data, labels[idx_label], transform=ToTensor())
         # train the neural network for the given idx_label
-        _train_nn(dataset, index, n_nodes_hidden=n_nodes_hidden, n_epochs_max=n_epochs_max,
+        _train_nn(dataset, index, n_nodes_hidden=n_nodes_hidden[idx_label], n_epochs_max=n_epochs_max,
             batch_size=batch_size,device=device, n_workers=n_workers, idx_label=idx_label,
             file_name=file_name_meta, root_dir=root_dir)
 
@@ -260,7 +264,7 @@ def train_rnn(file_name, hidden_size, n_layers=1, bidirectional=False, n_epochs_
     inputs
     ------
     file_name: string type name of file
-    hidden_size: size of hidden state
+    hidden_size: list type, sizes of hidden states
     n_layers: number of recurrent layers
     bidirectional: if True, becomes a bidirectional LSTM
     n_epochs_max: maximum number of epochs to run. 
@@ -292,6 +296,8 @@ def train_rnn(file_name, hidden_size, n_layers=1, bidirectional=False, n_epochs_
     n_samples_total = data.shape[-n_none_param_dims]
     n_data_total = np.prod(data.shape[:-(n_none_param_dims - 1)])
     n_labels = len(label_names) # number of labels to predict
+    assert(isinstance(hidden_size, list)),\
+        "Invalid format of hidden state sizes given. Should provide list of size {}".format(n_labels)
     index = _train_test_split(n_data_total, train_ratio); index['val'] = index.pop('test')
 
     # reshape data. output is shaped (n_data_total, n_channels * (n_scat_nodes), data_len).
@@ -315,7 +321,7 @@ def train_rnn(file_name, hidden_size, n_layers=1, bidirectional=False, n_epochs_
     for idx_label in range(n_labels):
         dataset = TimeSeriesDataset(data, labels[idx_label], transform=ToTensor())
         # train the neural network for the given idx_label
-        _train_rnn(dataset, index, hidden_size=hidden_size, n_layers=n_layers,
+        _train_rnn(dataset, index, hidden_size=hidden_size[idx_label], n_layers=n_layers,
             bidirectional=bidirectional, n_epochs_max=n_epochs_max, batch_size=batch_size,
             device=device, n_workers=n_workers, idx_label=idx_label, file_name=file_name_meta,
             root_dir=root_dir)
