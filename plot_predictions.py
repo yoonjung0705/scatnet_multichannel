@@ -63,6 +63,12 @@ file_names_meta_is_scat = ['scat' in file_name_meta for file_name_meta in file_n
 file_names_is_scat = ['scat' in file_name for file_name in file_names]
 assert(file_names_meta_is_scat == file_names_is_scat), "The training and test data are not transformed in the same manner"
 
+# training and testing should NOT be done on same data.
+# since the source of data for files in file_names_meta are all identical and
+# the source of data for files in file_names are all identical, we only need to compare the first element of file_names_meta_common and
+# first element of file_names_common
+assert(file_names_meta_common[0] != file_names_common[0]), "Training and testing cannot be done on same data"
+
 for idx_file in range(n_files):
     #fig, ax = plt.subplots()
     file_name = file_names[idx_file]

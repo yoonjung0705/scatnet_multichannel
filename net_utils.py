@@ -49,7 +49,7 @@ class RNN(nn.Module):
         self.n_directions = 2 if bidirectional else 1
 
         self.lstm = nn.LSTM(input_size, hidden_size, num_layers=n_layers, bidirectional=bidirectional)
-        self.h2o = nn.Linear(hidden_size, output_size)
+        self.h2o = nn.Linear(self.n_directions * hidden_size, output_size)
 
     def forward(self, input):
         # no need to check input's shape as it'll be checked in self.lstm
@@ -185,6 +185,7 @@ def train_nn(file_name, n_nodes_hidden, n_epochs_max=2000, train_ratio=0.8, batc
     for idx_label in range(n_labels):
         dataset = TimeSeriesDataset(data, labels[idx_label], transform=ToTensor())
         # train the neural network for the given idx_label
+        print("Beginning training of {}:".format(samples['label_names'][idx_label]))
         _train_nn(dataset, index, n_nodes_hidden=n_nodes_hidden[idx_label], n_epochs_max=n_epochs_max,
             batch_size=batch_size,device=device, n_workers=n_workers, idx_label=idx_label,
             file_name=file_name_meta, root_dir=root_dir)
@@ -321,6 +322,7 @@ def train_rnn(file_name, hidden_size, n_layers=1, bidirectional=False, n_epochs_
     for idx_label in range(n_labels):
         dataset = TimeSeriesDataset(data, labels[idx_label], transform=ToTensor())
         # train the neural network for the given idx_label
+        print("Beginning training of {}:".format(samples['label_names'][idx_label]))
         _train_rnn(dataset, index, hidden_size=hidden_size[idx_label], n_layers=n_layers,
             bidirectional=bidirectional, n_epochs_max=n_epochs_max, batch_size=batch_size,
             device=device, n_workers=n_workers, idx_label=idx_label, file_name=file_name_meta,

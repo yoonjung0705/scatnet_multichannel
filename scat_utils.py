@@ -945,13 +945,15 @@ def scat_transform(file_name, avg_len, log_transform=False, n_filter_octave=[1, 
     - log_transform: boolean whether to apply logarithm on scat transform results
     - n_filter_octave: number of filters when halving the frequency. 1 indicates dyadic filter bank
     - filter_format: 'fourier_multires', 'fourier_truncated', 'fourier'
-    - save_file: boolean whether to save the results into a file or return as a dictionary
+    - save_file: boolean whether to save the results into a file or return as a dictionary.
+        If True, file name is returned. Otherwise, data is returned
     - root_dir: str type directory name data_len: int, length of each process
 
     outputs:
     --------
     - (processes): ndarray shaped (n_param_1, n_param_2, ..., n_param_N, n_data, n_channels, n_nodes, data_len)
-    if save_file is True, no output is returned and the results are saved into a file
+        Returned if save_file is False
+    - (file_name): string type file name of the simulated data. returned if save_file is True
     '''
 
     file_name, _ = os.path.splitext(file_name)
@@ -982,3 +984,4 @@ def scat_transform(file_name, avg_len, log_transform=False, n_filter_octave=[1, 
         'avg_len':avg_len, 'log_transform':log_transform, 'n_filter_octave':n_filter_octave,
         'filter_format':filter_format, 'file_name':file_name}
     torch.save(data, file_path_scat)
+    return file_name_scat + '.pt'
