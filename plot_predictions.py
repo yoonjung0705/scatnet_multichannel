@@ -20,15 +20,12 @@ from torch.utils.data.sampler import SequentialSampler
 import scat_utils as scu
 import net_utils as nu
 
-file_names = ['tbd_0_scat.pt', 'tbd_0_scat.pt']
-#file_names = ['tbd_2_scat.pt']
-file_names_meta = ['tbd_2_scat_meta_nn_0.pt', 'tbd_2_scat_meta_rnn_2.pt']
-#file_names_meta = ['tbd_0_scat_meta_rnn_0.pt']
+file_names = ['tbd_1.pt', 'tbd_1_scat.pt']
+file_names_meta = ['tbd_0_meta_rnn_1.pt', 'tbd_0_scat_meta_rnn_2.pt']
 root_dir = './data/'
-epochs = [[50, 50], [450, 450]]
-#epochs = [[70, 70]]
+epochs = [[800, 800], [930, 930]]
 
-# plt.style.use('dark_background')
+plt.style.use('dark_background')
 fontsize_title = 18
 fontsize_label = 14
 batch_size = 1000 # batch size when performing forward propagation on test data using trained weights
@@ -104,7 +101,7 @@ for idx_file in range(n_files):
         # following is shaped (n_labels, n_conditions)
         labels = np.array(list(product(*samples['labels'])), dtype='float32').swapaxes(0, 1)
         for idx_label in range(n_labels):
-            net = nu.RNN(input_size=meta['input_size'], hidden_size=meta['hidden_size'], output_size=1, n_layers=meta['n_layers'], bidirectional=meta['bidirectional'])
+            net = nu.RNN(input_size=meta['input_size'], hidden_size=meta['hidden_size'][idx_label], output_size=1, n_layers=meta['n_layers'], bidirectional=meta['bidirectional'])
             net.load_state_dict(meta['weights'][idx_label][idx_epochs[idx_label]])
 
             dataset = nu.TimeSeriesDataset(input, np.zeros((n_data_total,)))

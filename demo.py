@@ -16,17 +16,21 @@ root_dir = ROOT_DIR
 file_names_data = []
 file_names_scat = []
 
-# NN inputs
-#n_nodes_hiddens = [] # FIXME: add later
 n_epochs_max = 1000
 train_ratio = 0.8
 batch_size = 100
 n_workers = 4
 
+# NN inputs
+#n_nodes_hiddens = [] # FIXME: add later
+
 # RNN inputs
-hidden_sizes = [5, 20, 50, 100, 200]
-n_layerss = [1, 2]
-bidirectionals = [True, False]
+#hidden_sizes = [5, 20, 50, 100, 200]
+hidden_sizes = [50, 100, 200]
+#n_layerss = [1, 2]
+n_layerss = [1]
+#bidirectionals = [True, False]
+bidirectionals = [False]
 
 """
 # simulate brownian
@@ -54,13 +58,18 @@ for n_data in n_datas:
     file_names_scat.append(file_name_scat)
 
 # train RNNs for scat transformed data
-for file_name_scat in file_names_scat:
+#for file_name_scat in file_names_scat:
+for file_name_data in file_names_data:
     for hidden_size in hidden_sizes:
         for n_layers in n_layerss:
             for bidirectional in bidirectionals:
-                print("training rnn for {}, hidden_size:{}, n_layers:{}, bidirectional:{}".format(file_name_scat, hidden_size, n_layers, bidirectional))
-                nu.train_rnn(file_name_scat, [hidden_size, hidden_size], n_layers, bidirectional,
+                #print("training rnn for {}, hidden_size:{}, n_layers:{}, bidirectional:{}".format(file_name_scat, hidden_size, n_layers, bidirectional))
+                print("training rnn for {}, hidden_size:{}, n_layers:{}, bidirectional:{}".format(file_name_data, hidden_size, n_layers, bidirectional))
+                #nu.train_rnn(file_name_scat, [hidden_size, hidden_size], n_layers, bidirectional,
+                #    n_epochs_max=n_epochs_max, train_ratio=train_ratio, batch_size=batch_size,
+                #    n_workers=n_workers, root_dir=root_dir)
+
+                nu.train_rnn(file_name_data, [hidden_size, hidden_size], n_layers, bidirectional,
                     n_epochs_max=n_epochs_max, train_ratio=train_ratio, batch_size=batch_size,
                     n_workers=n_workers, root_dir=root_dir)
-
 
