@@ -17,18 +17,20 @@ from torch.utils.data import Dataset, DataLoader
 from torch.utils.data.sampler import SequentialSampler
 
 '''custom libraries'''
+import common_utils as cu
 import scat_utils as scu
 import net_utils as nu
 
 file_names = ['tbd_1.pt', 'tbd_1_scat.pt']
 file_names_meta = ['tbd_0_meta_rnn_1.pt', 'tbd_0_scat_meta_rnn_2.pt']
 root_dir = './data/'
+root_dir_results = './data/results/'
 epochs = [[800, 800], [930, 930]]
 
 plt.style.use('dark_background')
 fontsize_title = 18
 fontsize_label = 14
-batch_size = 1000 # batch size when performing forward propagation on test data using trained weights
+batch_size = 100 # batch size when performing forward propagation on test data using trained weights
 
 '''sanity check'''
 # add .pt extension if not provided
@@ -66,8 +68,11 @@ assert(file_names_meta_is_scat == file_names_is_scat), "The training and test da
 # first element of file_names_common
 assert(file_names_meta_common[0] != file_names_common[0]), "Training and testing cannot be done on same data"
 
+figs = []; axs = [] 
+for _ in range(n_files):
+    fig, ax = plt.subplots()
+    figs.append(fig); axs.append(ax)
 for idx_file in range(n_files):
-    #fig, ax = plt.subplots()
     file_name = file_names[idx_file]
     file_path = file_paths[idx_file]
     file_path_meta = file_paths_meta[idx_file]
@@ -166,90 +171,36 @@ for idx_file in range(n_files):
             labels_targets.append(labels_target)
 
     result = {'labels':samples['labels'], 'label_names':samples['label_names'], 'prediction':outputs, 'epochs':epochs_file, 'file_name':file_name, 'root_dir':root_dir}
-    torch.save(result, os.path.join(root_dir, os.path.splitext(file_name_meta)[0] + '_test.pt'))
+    file_name_test = os.path.splitext(file_name_meta)[0] + '_test_on_' + os.path.splitext(file_name)[0] + '.pt'
+    file_path_test = os.path.join(root_dir_results, file_name_test)
+    torch.save(result, file_path_test)
             
     if n_labels == 1:
-        fig, ax = plt.subplots()
-        ax.errorbar(labels_target, output_mean, yerr=output_std, ls='', capsize=10, fmt='o')
-        ax.errorbar(labels_target, labels_target, ls='--')
-        ax.set_title(label_names[0].replace('_', ' ').capitalize(), fontsize=fontsize_title)
-        ax.set_xlabel('Ground truth', fontsize=fontsize_label)
-        ax.set_ylabel('Prediction', fontsize=fontsize_label)
-        plt.show()
+        axs[idx_file].errorbar(labels_target, output_mean, yerr=output_std, ls='', capsize=10, fmt='o')
+        axs[idx_file].errorbar(labels_target, labels_target, ls='--')
+        #axs[idx_file].set_title(label_names[0].replace('_', ' ').capitalize(), fontsize=fontsize_title)
+        axs[idx_file].set_title('Inferred ' + cu.str2math(label_names[0]), fontsize=fontsize_title)
+        axs[idx_file].set_xlabel('Ground truth', fontsize=fontsize_label)
+        axs[idx_file].set_ylabel('Prediction', fontsize=fontsize_label)
     elif n_labels == 2:
         n_conditions = len(labels_target)
         color = cm.rainbow(np.linspace(0, 1, n_conditions))
-        fig, ax = plt.subplots()
         for i in range(n_conditions):
-            ax.errorbar(output_means[0][i], output_means[1][i], xerr=output_stds[0][i], yerr=output_stds[1][i], fmt='o', capsize=10, c=color[i])
-            ax.plot([output_means[0][i], labels_targets[0][i]], [output_means[1][i], labels_targets[1][i]], marker='o', color=color[i])
+            axs[idx_file].errorbar(output_means[0][i], output_means[1][i], xerr=output_stds[0][i], yerr=output_stds[1][i], fmt='o', capsize=10, c=color[i])
+            axs[idx_file].plot([output_means[0][i], labels_targets[0][i]], [output_means[1][i], labels_targets[1][i]], marker='o', color=color[i])
 
-        ax.set_xlabel(samples['label_names'][0], fontsize=fontsize_label)
-        ax.set_ylabel(samples['label_names'][1], fontsize=fontsize_label)
-        plt.show()
+        axs[idx_file].set_xlabel(cu.str2math(samples['label_names'][0]), fontsize=fontsize_label)
+        axs[idx_file].set_ylabel(cu.str2math(samples['label_names'][1]), fontsize=fontsize_label)
 
+# match the axis limits
+xlim_low = min([ax.get_xlim()[0] for ax in axs])
+xlim_high = max([ax.get_xlim()[1] for ax in axs])
+ylim_low = min([ax.get_ylim()[0] for ax in axs])
+ylim_high = max([ax.get_ylim()[1] for ax in axs])
 
-
-"""
-ax.errorbar([1,2,3,4],[mean1, mean2, mean3, mean4], yerr=[std1, std2, std3, std4], ls='', capsize=10, fmt='o')
-ax.errorbar([1,2,3,4],[1,2,3,4], ls='--')
-ax.set_title('Diffusion coefficients',fontsize=18)
-ax.set_xlabel('Ground truth', fontsize=18)
-ax.set_ylabel('Prediction', fontsize=18)
-ax.set_xlim([0.8,4.2])
-ax.set_ylim([0.8,4.2])
-plt.show()
-
-validation_k_arr = np.squeeze(validation_k.data.numpy(), axis=1)
-validation_T_arr = np.squeeze(validation_T.data.numpy(), axis=1)
-
-k_ratios_gt = np.arange(1,4,1)
-diff_coef_ratios_gt = np.arange(2,10,2)
-np.tile(k_ratios_gt[:, np.newaxis], (1, len(diff_coef_ratios_gt))).shape
-k_ratios_gt_tiled = np.tile(k_ratios_gt[:, np.newaxis], (1, len(diff_coef_ratios_gt))).flatten()
-diff_coef_ratios_gt_tiled = np.tile(diff_coef_ratios_gt[np.newaxis, :], (len(k_ratios_gt), 1)).flatten()
-
-#diff_coef_ratios_gt_label = np.tile(diff_coef_ratios_gt_tiled.flatten()[:, np.newaxis], (1, n_data_val)).flatten()
-#k_ratios_gt_label = np.tile(k_ratios_gt_tiled.flatten()[:, np.newaxis], (1, n_data_val)).flatten()
-
-
-
-validation_k_arr_std = validation_k_arr.reshape([-1, n_data_val]).std(axis=1)
-validation_k_arr_mean = validation_k_arr.reshape([-1, n_data_val]).mean(axis=1)
-
-validation_T_arr_std = validation_T_arr.reshape([-1, n_data_val]).std(axis=1)
-validation_T_arr_mean = validation_T_arr.reshape([-1, n_data_val]).mean(axis=1)
-'''
-fig, ax = plt.subplots()
-for i in range(12):
-    ax.errorbar([validation_k_arr_mean[i], k_ratios_gt_tiled[i]], [validation_T_arr_mean[i], diff_coef_ratios_gt_tiled[i]], xerr=[validation_k_arr_std[i], 0], yerr=[validation_T_arr_std[i], 0], fmt='o', ls='-', capsize=10)
-    #ax.errorbar([validation_k_arr_mean[i], k_ratios_gt_tiled[i]], [validation_T_arr_mean[i], diff_coef_ratios_gt_tiled[i]], xerr=[validation_k_arr_std[i], 1], yerr=[validation_T_arr_std[i], 1])
-
+for idx_file in range(n_files):
+    axs[idx_file].set_xlim(xlim_low, xlim_high)
+    axs[idx_file].set_ylim(ylim_low, ylim_high)
+    figs[idx_file].savefig(os.path.splitext(file_path_test)[0] + '.png')
 
 plt.show()
-'''
-
-from matplotlib.pyplot import cm
-color=cm.rainbow(np.linspace(0,1,12))
-
-fig, ax = plt.subplots()
-for i in range(12):
-    ax.errorbar(validation_k_arr_mean[i], validation_T_arr_mean[i], xerr=validation_k_arr_std[i], yerr=validation_T_arr_std[i], fmt='o', capsize=10, c=color[i])
-    ax.plot([validation_k_arr_mean[i], k_ratios_gt_tiled[i]], [validation_T_arr_mean[i], diff_coef_ratios_gt_tiled[i]], marker='o', color=color[i])
-    #ax.errorbar([validation_k_arr_mean[i], k_ratios_gt_tiled[i]], [validation_T_arr_mean[i], diff_coef_ratios_gt_tiled[i]], xerr=[validation_k_arr_std[i], 1], yerr=[validation_T_arr_std[i], 1])
-
-ax.set_ylabel('Temperature ratio', fontsize=18)
-ax.set_xlabel('Spring constant ratio', fontsize=18)
-
-plt.show()
-"""
-
-
-
-
-
-
-
-
-
-
