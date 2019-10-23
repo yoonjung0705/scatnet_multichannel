@@ -62,7 +62,7 @@ def sim_brownian(data_len, diff_coefs, dt, n_data=1, save_file=False, root_dir=R
 
     file_name = 'brw_{}.pt'.format(idx)
     file_path = os.path.join(root_dir, file_name)
-    data = {'data':processes, 'labels':[diff_coefs], 'label_names':['diff_coefs']}
+    data = {'data':processes, 'labels':[diff_coefs], 'label_names':['diff_coefs'], 'dt':dt}
     torch.save(data, file_path)
     return file_name
 
@@ -117,7 +117,7 @@ def sim_poisson(data_len, lams, dt, n_data=1, save_file=False, root_dir=ROOT_DIR
 
     file_name = 'psn_{}.pt'.format(idx)
     file_path = os.path.join(root_dir, file_name)
-    data = {'data':processes, 'labels':[lams], 'label_names':['lams']}
+    data = {'data':processes, 'labels':[lams], 'label_names':['lams'], 'dt':dt}
     torch.save(data, file_path)
     return file_name
 
@@ -197,7 +197,8 @@ def sim_one_bead(data_len, diff_coefs, ks, dt, n_data=1, n_steps_initial=10000,
 
     file_name = 'obd_{}.pt'.format(idx)
     file_path = os.path.join(root_dir, file_name)
-    data = {'data':processes, 'labels':[ks, diff_coefs], 'label_names':['ks', 'diff_coefs']}
+    data = {'data':processes, 'labels':[ks, diff_coefs], 'label_names':['ks', 'diff_coefs'],
+        'dt':dt, 'n_steps_initial':n_steps_initial}
     torch.save(data, file_path)
     return file_name
 
@@ -280,6 +281,7 @@ def sim_two_beads(data_len, k_ratios, diff_coef_ratios, dt, n_data=1, n_steps_in
 
     file_name = 'tbd_{}.pt'.format(idx)
     file_path = os.path.join(root_dir, file_name)
-    data = {'data':processes, 'labels':[k_ratios, diff_coef_ratios], 'label_names':['k_ratios', 'diff_coef_ratios']}
+    data = {'data':processes, 'labels':[k_ratios, diff_coef_ratios],
+        'label_names':['k_ratios', 'diff_coef_ratios'], 'dt':dt, 'n_steps_initial':n_steps_initial}
     torch.save(data, file_path)
     return file_name

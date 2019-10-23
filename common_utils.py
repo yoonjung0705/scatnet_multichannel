@@ -1,6 +1,7 @@
 import os
 import re
 import glob
+from collections import OrderedDict
 
 def match_filename(pattern, root_dir):
     '''returns list of matched patterns in file names
@@ -25,7 +26,8 @@ def match_filename(pattern, root_dir):
 def str2math(text):
     '''revises given string to mathtext format for axis label or title display in figures'''
     #lut = {'diff': 'diffusion', 'coef':'coefficient', 'k ':'spring constant '}
-    lut = {'diff': r'$D$', 'coef':'', 'k ':r'$k$ '}
+    lut = OrderedDict({'diffusion': r'$D$', 'diff': r'$D$', 'coefficients':'', 'coefficient':'',
+        'coef':'', 'k ':r'$k$ '})
     text = text.lower().replace('_', ' ')
     for key, value in lut.items():
         text = text.replace(key, value)
