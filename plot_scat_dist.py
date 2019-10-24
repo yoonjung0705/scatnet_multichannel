@@ -17,14 +17,14 @@ fontsize_label = 14
 data_len = 2**12
 avg_len = 2**8
 disp_len = 2**7
-dt = 0.05
+dt = 0.001
 n_data = 10
 eps = 0.015
 
 padded_len = np.ceil(data_len * (1 + eps * n_data))
 t = np.arange(0, data_len) * dt
 t_padded = np.arange(0, padded_len) * dt
-a_padded = np.sin(t_padded) + np.sin(3 * t_padded) + np.sin(5 * t_padded)
+a_padded = np.sin(10 * t_padded) + np.sin(30 * t_padded) + np.sin(50 * t_padded)
 
 f = interpolate.interp1d(t_padded, a_padded)
 scat = scu.ScatNet(data_len=data_len, avg_len=avg_len)

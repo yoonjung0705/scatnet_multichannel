@@ -21,10 +21,20 @@ import common_utils as cu
 import scat_utils as scu
 import net_utils as nu
 
-file_names = ['tbd_1.pt', 'tbd_1_scat.pt']
-file_names_meta = ['tbd_0_meta_rnn_1.pt', 'tbd_0_scat_meta_rnn_2.pt']
-root_dir = './data/'
-root_dir_results = './data/results/'
+#root_dir = './data/'
+#root_dir_results = './data/results/'
+root_dir = '/home/yoonjung/SeagateSSHD/scat_data/trial_0'
+root_dir_results = os.path.join(root_dir, 'results/')
+
+# provide file names and paths manually
+#file_names = ['tbd_1.pt', 'tbd_1_scat.pt']
+#file_names_meta = ['tbd_0_meta_rnn_1.pt', 'tbd_0_scat_meta_rnn_2.pt']
+
+# OR, provide file names and paths using regular expression
+file_paths_meta = glob.glob(os.path.join(root_dir, 'tbd_0_scat_meta_rnn_*.pt'))
+file_names_meta = [os.path.basename(file_path) for file_path in file_paths]
+file_names = ['tbd_1_scat.pt'] * len(file_paths_meta)
+
 epochs = [[800, 800], [930, 930]]
 
 plt.style.use('dark_background')
@@ -69,14 +79,14 @@ assert(file_names_meta_is_scat == file_names_is_scat), "The training and test da
 assert(file_names_meta_common[0] != file_names_common[0]), "Training and testing cannot be done on same data"
 
 figs = []; axs = [] 
-for _ in range(n_files):
-    fig, ax = plt.subplots()
-    figs.append(fig); axs.append(ax)
 for idx_file in range(n_files):
     file_name = file_names[idx_file]
     file_path = file_paths[idx_file]
     file_path_meta = file_paths_meta[idx_file]
     file_name_meta = file_names_meta[idx_file]
+
+    fig, ax = plt.subplots(num=idx_file)
+    figs.append(fig); axs.append(ax)
 
     samples = torch.load(file_path)
     data = samples['data']
@@ -85,7 +95,7 @@ for idx_file in range(n_files):
     n_labels = len(meta['label_names'])
     epochs_file = epochs[idx_file]
     idx_epochs = [epoch_file // 10 for epoch_file in epochs_file]
-    transformed = 'scat' in file_path
+    transformed = 'scat' in file_name
     outputs = []
     output_means = []
     output_stds = []
@@ -201,6 +211,13 @@ ylim_high = max([ax.get_ylim()[1] for ax in axs])
 for idx_file in range(n_files):
     axs[idx_file].set_xlim(xlim_low, xlim_high)
     axs[idx_file].set_ylim(ylim_low, ylim_high)
+    figs[idx_file].suptitle(file_names_meta[idx_file])
+
+    file_name_meta = file_names_meta[idx_file]
+    file_name = file_names[idx_file]
+    file_name_test = os.path.splitext(file_name_meta)[0] + '_test_on_' + os.path.splitext(file_name)[0] + '.pt'
+    file_path_test = os.path.join(root_dir_results, file_name_test)
+
     figs[idx_file].savefig(os.path.splitext(file_path_test)[0] + '.png')
 
 plt.show()

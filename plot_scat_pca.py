@@ -15,7 +15,7 @@ from mpl_toolkits.mplot3d import Axes3D
 data_len = 2**11
 avg_len = 2**8
 n_data = 200
-dt = 0.01
+dt = 0.001
 n_filter_octave = [1,1]
 sim_type = 'tbd' # 'brw', 'psn', 'obd', 'tbd'
 
