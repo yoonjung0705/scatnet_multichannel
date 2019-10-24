@@ -9,7 +9,7 @@ import torch.optim as optim
 #from torch.autograd import Variable
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.data.sampler import SubsetRandomSampler
-
+import time
 import common_utils as cu
 import scat_utils as scu
 
@@ -227,11 +227,11 @@ def _train_nn(dataset, index, n_nodes_hidden, n_epochs_max, batch_size, device, 
     net = Net(n_nodes=n_nodes).to(device)
     optimizer = optim.Adam(net.parameters(), lr=lr, betas=betas)
     criterion = nn.MSELoss(reduction='sum')
+    time_start = time.time()
     for epoch in range(n_epochs_max):
         try:
             loss_sum = {}
             loss_mean = {}
-            time_start = time.time()
             for phase in ['train', 'val']:
                 net.train(phase == 'train')
                 loss_sum[phase] = 0.
@@ -247,7 +247,7 @@ def _train_nn(dataset, index, n_nodes_hidden, n_epochs_max, batch_size, device, 
                 loss_mean[phase] = loss_sum[phase] / n_data[phase] # MSE loss per data point
             if epoch % 10 == 0:
                 time_curr = time.time()
-                elapsed = time_curr - start
+                elapsed = time_curr - time_start
                 loss_msg = ("{} out of {} epochs, mean_loss_train:{:.5f}, mean_loss_val:{:.5f}, elapsed seconds:{:.2f}"
                     .format(epoch, n_epochs_max, loss_mean['train'], loss_mean['val'], elapsed))
                 print(loss_msg)
@@ -318,7 +318,8 @@ def train_rnn(file_name, hidden_size, n_layers=1, bidirectional=False, n_epochs_
         n_workers=n_workers, index=index, device=device,
         loss_mean=[{'train':[], 'val':[]} for _ in range(n_labels)],
         epoch=[[] for _ in range(n_labels)], weights=[[] for _ in range(n_labels)],
-        labels=samples['labels'], label_names=samples['label_names'])
+        elapsed=[[] for _ in range(n_labels)], labels=samples['labels'],
+        label_names=samples['label_names'])
 
     # following is shaped (n_labels, n_conditions)
     labels = np.array(list(product(*labels)), dtype='float32').swapaxes(0, 1)
@@ -372,11 +373,11 @@ def _train_rnn(dataset, index, hidden_size, n_layers, bidirectional, n_epochs_ma
         bidirectional=bidirectional).to(device)
     optimizer = optim.Adam(rnn.parameters(), lr=lr, betas=betas)
     criterion = nn.MSELoss(reduction='sum')
+    time_start = time.time()
     for epoch in range(n_epochs_max):
         try:
             loss_sum = {}
             loss_mean = {}
-            time_start = time.time()
             for phase in ['train', 'val']:
                 rnn.train(phase == 'train')
                 loss_sum[phase] = 0.
@@ -394,7 +395,7 @@ def _train_rnn(dataset, index, hidden_size, n_layers, bidirectional, n_epochs_ma
                 loss_mean[phase] = loss_sum[phase] / n_data[phase] # MSE loss per data point
             if epoch % 10 == 0:
                 time_curr = time.time()
-                elapsed = time_curr - start
+                elapsed = time_curr - time_start
                 loss_msg = ("{} out of {} epochs, mean_loss_train:{:.5f}, mean_loss_val:{:.5f}, elapsed seconds:{:.2f}"
                     .format(epoch, n_epochs_max, loss_mean['train'], loss_mean['val'], elapsed))
                 print(loss_msg)

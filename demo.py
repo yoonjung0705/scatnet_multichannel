@@ -27,10 +27,10 @@ n_workers = 4
 # RNN inputs
 #hidden_sizes = [5, 20, 50, 100, 200]
 hidden_sizes = [50]
-n_layerss = [1, 2]
+n_layerss = [1]
 #n_layerss = [1]
-bidirectionals = [True, False]
-#bidirectionals = [False]
+#bidirectionals = [True, False]
+bidirectionals = [True]
 
 """
 # simulate brownian
