@@ -9,12 +9,12 @@ import scat_utils as scu
 root_dir = '/home/yoonjung/SeagateSSHD/scat_data/trial_0'
 
 # provide file names and paths manually
-#file_names = ['tbd_0_meta_rnn_0.pt' ,'tbd_0_meta_rnn_1.pt']
-#file_paths = [os.path.join(root_dir, file_name) for file_name in file_names]
+file_names = ['tbd_0_meta_rnn_0.pt' ,'tbd_1_meta_rnn_0.pt', 'tbd_2_meta_rnn_0.pt']
+file_paths = [os.path.join(root_dir, file_name) for file_name in file_names]
 
 # provide file names and paths using regular expression
-file_paths = glob.glob(os.path.join(root_dir, 'tbd_1_scat_meta_rnn_*.pt'))
-file_names = [os.path.basename(file_path) for file_path in file_paths]
+#file_paths = glob.glob(os.path.join(root_dir, 'tbd_*_scat_meta_rnn_0.pt'))
+#file_names = [os.path.basename(file_path) for file_path in file_paths]
 
 plt.style.use('dark_background')
 fontsize_label = 14

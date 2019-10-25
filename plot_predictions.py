@@ -21,21 +21,20 @@ import common_utils as cu
 import scat_utils as scu
 import net_utils as nu
 
-#root_dir = './data/'
-#root_dir_results = './data/results/'
-root_dir = '/home/yoonjung/SeagateSSHD/scat_data/trial_0'
+root_dir = './data/'
+#root_dir = '/home/yoonjung/SeagateSSHD/scat_data/trial_0'
 root_dir_results = os.path.join(root_dir, 'results/')
 
 # provide file names and paths manually
-#file_names = ['tbd_1.pt', 'tbd_1_scat.pt']
-#file_names_meta = ['tbd_0_meta_rnn_1.pt', 'tbd_0_scat_meta_rnn_2.pt']
+file_names = ['tbd_4_test.pt', 'tbd_4_scat_test.pt']
+file_names_meta = ['tbd_1_meta_rnn_0.pt', 'tbd_1_scat_meta_rnn_0.pt']
 
 # OR, provide file names and paths using regular expression
-file_paths_meta = glob.glob(os.path.join(root_dir, 'tbd_0_scat_meta_rnn_*.pt'))
-file_names_meta = [os.path.basename(file_path) for file_path in file_paths]
-file_names = ['tbd_1_scat.pt'] * len(file_paths_meta)
+#file_paths_meta = glob.glob(os.path.join(root_dir, 'tbd_0_scat_meta_rnn_*.pt'))
+#file_names_meta = [os.path.basename(file_path) for file_path in file_paths]
+#file_names = ['tbd_1_scat.pt'] * len(file_paths_meta)
 
-epochs = [[800, 800], [930, 930]]
+epochs = [[990, 990], [990, 990]]
 
 plt.style.use('dark_background')
 fontsize_title = 18
