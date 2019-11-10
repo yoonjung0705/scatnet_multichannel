@@ -5,6 +5,9 @@ import copy
 from scipy import interpolate
 import torch
 
+'''custom libraries'''
+import common_utils as cu
+
 ROOT_DIR='./data/'
 '''
 FIXME: continue proofreading the following functions:
@@ -959,8 +962,11 @@ def scat_transform(file_name, avg_len, log_transform=False, n_filter_octave=[1, 
     file_name, _ = os.path.splitext(file_name)
     file_path = os.path.join(root_dir, file_name + '.pt')
     samples = torch.load(file_path)
-    file_name_scat = file_name + '_scat'
-    file_path_scat = os.path.join(root_dir, file_name_scat + '.pt')
+
+    nums = cu.match_filename(r'{}_scat_([0-9]+).pt'.format(file_name), root_dir=root_dir)
+    nums = [int(num) for num in nums]; idx = max(nums) + 1 if nums else 0
+    file_name_scat = '{}_scat_{}.pt'.format(file_name, idx)
+    file_path_scat = os.path.join(root_dir, file_name_scat)
 
     data, labels, label_names = samples['data'], samples['labels'], samples['label_names']
     
@@ -984,4 +990,4 @@ def scat_transform(file_name, avg_len, log_transform=False, n_filter_octave=[1, 
         'avg_len':avg_len, 'log_transform':log_transform, 'n_filter_octave':n_filter_octave,
         'filter_format':filter_format, 'file_name':file_name}
     torch.save(data, file_path_scat)
-    return file_name_scat + '.pt'
+    return file_name_scat

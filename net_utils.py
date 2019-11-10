@@ -146,7 +146,7 @@ def train_nn(file_name, n_nodes_hidden, n_epochs_max=2000, train_ratio=0.8, batc
 
     file_name, _ = os.path.splitext(file_name)
     file_path = os.path.join(root_dir, file_name + '.pt')
-    transformed = file_name.endswith('scat')
+    transformed = 'scat' in file_name
     samples = torch.load(file_path)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     nums = cu.match_filename(r'{}_meta_nn_([0-9]+).pt'.format(file_name), root_dir=root_dir)
@@ -287,7 +287,7 @@ def train_rnn(file_name, hidden_size, n_layers=1, bidirectional=False, n_epochs_
     '''
     file_name, _ = os.path.splitext(file_name)
     file_path = os.path.join(root_dir, file_name + '.pt')
-    transformed = file_name.endswith('scat')
+    transformed = 'scat' in file_name
     samples = torch.load(file_path)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     nums = cu.match_filename(r'{}_meta_rnn_([0-9]+).pt'.format(file_name), root_dir=root_dir)
@@ -325,7 +325,8 @@ def train_rnn(file_name, hidden_size, n_layers=1, bidirectional=False, n_epochs_
     labels = np.array(list(product(*labels)), dtype='float32').swapaxes(0, 1)
     # following is shaped (n_labels, n_data_total)
     labels = np.tile(labels[:, :, np.newaxis], [1, 1, n_samples_total]).reshape([n_labels, n_data_total])
-    for idx_label in range(n_labels):
+    #for idx_label in range(n_labels):
+    for idx_label in [0]:
         dataset = TimeSeriesDataset(data, labels[idx_label], transform=ToTensor())
         # train the neural network for the given idx_label
         print("Beginning training of {}:".format(samples['label_names'][idx_label]))
