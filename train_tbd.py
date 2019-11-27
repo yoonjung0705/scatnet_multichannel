@@ -11,9 +11,9 @@ import common_utils as cu
 ROOT_DIR = './data/'
 
 # common inputs
-data_len = 2**11
-avg_lens = [2**4, 2**6, 2**8, 2**9]
-n_filter_octaves = list(product([1,4,8], [1,4,8]))
+data_len = 2**9
+avg_lens = [2**4, 2**5, 2**6, 2**7]
+n_filter_octaves = list(product([1,2,4,8], [1,2,4,8]))
 # [(1,1), (1,2), (1,4), (2,1), (2,2), (2,4), (4,1), (4,2), (4,4)]
 dt = 0.001
 #n_datas = [50, 100, 200]
@@ -24,7 +24,7 @@ root_dir = ROOT_DIR
 file_names_data = []
 file_names_scat = []
 
-n_epochs_max = 10
+n_epochs_max = 1000
 train_ratio = 0.8
 batch_size = 100
 n_workers = 4
@@ -33,8 +33,8 @@ n_workers = 4
 #n_nodes_hiddens = [] # FIXME: add later
 
 # RNN inputs
-hidden_sizes = [50]
-n_layerss = [1]
+hidden_sizes = [30, 50, 100, 200]
+n_layerss = [2]
 bidirectionals = [True]
 
 #k_ratios = [1., 2., 4., 6., 8., 10., 12]
@@ -70,7 +70,7 @@ os.rename(os.path.join(root_dir, file_name_test_data_orig), os.path.join(root_di
 for avg_len in avg_lens:
     for n_filter_octave in n_filter_octaves:
         try:
-            print("scat transforming n_data:{} with parameters avg_len:{}, n_filter_octave:{} for testing".format(n_data, avg_len, n_filter_octave))
+            print("scat transforming n_data:{} with parameters avg_len:{}, n_filter_octave:{} for testing".format(n_data_test, avg_len, n_filter_octave))
             file_name_test_scat_orig = scu.scat_transform(file_name_test_data, avg_len, log_transform=False, n_filter_octave=n_filter_octave, save_file=True, root_dir=root_dir)
         except:
             pass
@@ -92,8 +92,19 @@ for file_name_scat in file_names_scat:
                 except:
                     pass
 
-                #print("training rnn for {}, hidden_size:{}, n_layers:{}, bidirectional:{}".format(file_name_data, hidden_size, n_layers, bidirectional))
-                #nu.train_rnn(file_name_data, [hidden_size, hidden_size], n_layers, bidirectional,
-                #    n_epochs_max=n_epochs_max, train_ratio=train_ratio, batch_size=batch_size,
-                #    n_workers=n_workers, root_dir=root_dir)
+
+'''
+# train RNNs for raw data
+for file_name_data in file_names_data:
+    for hidden_size in hidden_sizes:
+        for n_layers in n_layerss:
+            for bidirectional in bidirectionals:
+                try:
+                    print("training rnn for {}, hidden_size:{}, n_layers:{}, bidirectional:{}".format(file_name_data, hidden_size, n_layers, bidirectional))
+                    nu.train_rnn(file_name_data, [hidden_size, hidden_size], n_layers, bidirectional,
+                        n_epochs_max=n_epochs_max, train_ratio=train_ratio, batch_size=batch_size,
+                        n_workers=n_workers, root_dir=root_dir)
+                except:
+                    pass
+'''
 

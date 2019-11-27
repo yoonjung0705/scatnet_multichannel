@@ -94,8 +94,7 @@ class ToTensor:
 
 def _train_test_split(n_data, train_ratio):
     '''
-    splits the data uniformly (equal number of data among different conditions)
-    and returns indices of train and test
+    splits the data indices for training and testing
 
     inputs
     ------
@@ -110,6 +109,32 @@ def _train_test_split(n_data, train_ratio):
     idx_train = np.random.choice(n_data, int(n_data * train_ratio), replace=False)
     idx_test = np.array(list(set(range(n_data)) - set(idx_train)))
     index = {'train':idx_train, 'test':idx_test}
+    return index
+
+def _train_val_test_split(n_data, train_val_ratio):
+    '''
+    splits the data indices for training and validation and testing
+
+    inputs
+    ------
+    n_data: int type number of data
+    train_val_ratio: list-like with float elements indicating ratio for training and validation data.
+        sum should be between 0 and 1
+
+    outputs
+    -------
+    index: dict with keys train and test while values being lists of indices
+    '''
+    assert(len(train_val_ratio) == 2), "Split ratio should be given as a length 2 list like input"
+    for ratio in train_val_ratio:
+        assert(ratio > 0 and ratio < 1), "Invalid train_val_ratio given. Elements should be between 0 and 1"
+    assert(sum(train_val_ratio) > 0 and sum(train_val_ratio) < 1), "Invalid train_val_ratio given.\
+        Not enough data to be assigned for test purposes"
+    idx_train = np.random.choice(n_data, int(n_data * train_val_ratio[0]), replace=False)
+    idx_val_test = np.array(list(set(range(n_data)) - set(idx_train)))
+    idx_val = np.random.choice(idx_val_test, int(n_data * train_val_ratio[1]), replace=False)
+    idx_test = np.array(list(set(idx_val_test) - set(idx_val)))
+    index = {'train':idx_train, 'val':idx_val, 'test':idx_test}
     return index
 
 def _init_meta(file_name, root_dir=ROOT_DIR, **kwargs):
