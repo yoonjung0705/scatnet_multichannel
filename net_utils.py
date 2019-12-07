@@ -146,7 +146,7 @@ def _init_meta(file_name, root_dir=ROOT_DIR, **kwargs):
     torch.save(meta, file_path)
 
 def train_nn(file_name, n_nodes_hidden, n_epochs_max=2000, train_ratio=0.8, batch_size=100,
-        n_workers=4, root_dir=ROOT_DIR):
+        n_workers=4, root_dir=ROOT_DIR, lr=0.001, betas=(0.9, 0.999)):
     '''
     trains the neural network given a file that contains data.
     this data can be either scat transformed or pure simulated data
@@ -163,6 +163,8 @@ def train_nn(file_name, n_nodes_hidden, n_epochs_max=2000, train_ratio=0.8, batc
     n_workers: how many subprocesses to use for data loading.
         0 means that the data will be loaded in the main process.
     root_dir: string type root directory name
+    lr - float type learning rate
+    betas - tuple of floats indicating betas arguments in Adam optimizer
 
     outputs
     -------
@@ -273,7 +275,7 @@ def _train_nn(dataset, index, n_nodes_hidden, n_epochs_max, batch_size, device, 
             if epoch % 10 == 0:
                 time_curr = time.time()
                 elapsed = time_curr - time_start
-                loss_msg = ("{} out of {} epochs, mean_loss_train:{:.5f}, mean_loss_val:{:.5f}, elapsed seconds:{:.2f}"
+                loss_msg = ("{} out of {} epochs, mean_loss_train:{:.15f}, mean_loss_val:{:.15f}, elapsed seconds:{:.2f}"
                     .format(epoch, n_epochs_max, loss_mean['train'], loss_mean['val'], elapsed))
                 print(loss_msg)
                 meta = torch.load(file_path)
@@ -287,7 +289,7 @@ def _train_nn(dataset, index, n_nodes_hidden, n_epochs_max, batch_size, device, 
             break
 
 def train_rnn(file_name, hidden_size, n_layers=1, bidirectional=False, n_epochs_max=2000,
-        train_ratio=0.8, batch_size=100, n_workers=4, root_dir=ROOT_DIR):
+        train_ratio=0.8, batch_size=100, n_workers=4, root_dir=ROOT_DIR, lr=0.001, betas=(0.9, 0.999)):
     '''
     trains the recurrent neural network given a file that contains data.
     this data can be either scat transformed or pure simulated data
@@ -305,6 +307,8 @@ def train_rnn(file_name, hidden_size, n_layers=1, bidirectional=False, n_epochs_
     n_workers: how many subprocesses to use for data loading.
         0 means that the data will be loaded in the main process.
     root_dir: string type root directory name
+    lr - float type learning rate
+    betas - tuple of floats indicating betas arguments in Adam optimizer
 
     outputs
     -------
@@ -358,7 +362,7 @@ def train_rnn(file_name, hidden_size, n_layers=1, bidirectional=False, n_epochs_
         _train_rnn(dataset, index, hidden_size=hidden_size[idx_label], n_layers=n_layers,
             bidirectional=bidirectional, n_epochs_max=n_epochs_max, batch_size=batch_size,
             device=device, n_workers=n_workers, idx_label=idx_label, file_name=file_name_meta,
-            root_dir=root_dir)
+            root_dir=root_dir, lr=lr, betas=betas)
   
 def _train_rnn(dataset, index, hidden_size, n_layers, bidirectional, n_epochs_max, batch_size,
         device, n_workers, idx_label, file_name, root_dir=ROOT_DIR, lr=0.001, betas=(0.9, 0.999)):
@@ -422,7 +426,7 @@ def _train_rnn(dataset, index, hidden_size, n_layers, bidirectional, n_epochs_ma
             if epoch % 10 == 0:
                 time_curr = time.time()
                 elapsed = time_curr - time_start
-                loss_msg = ("{} out of {} epochs, mean_loss_train:{:.5f}, mean_loss_val:{:.5f}, elapsed seconds:{:.2f}"
+                loss_msg = ("{} out of {} epochs, mean_loss_train:{:.15f}, mean_loss_val:{:.15f}, elapsed seconds:{:.2f}"
                     .format(epoch, n_epochs_max, loss_mean['train'], loss_mean['val'], elapsed))
                 print(loss_msg)
                 meta = torch.load(file_path)

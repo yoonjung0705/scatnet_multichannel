@@ -1,3 +1,4 @@
+'''module that simulates the two beads data and trains the LSTM and scat-transform + LSTM model'''
 import os
 import numpy as np
 import scat_utils as scu

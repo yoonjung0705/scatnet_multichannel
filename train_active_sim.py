@@ -1,4 +1,4 @@
-'''module that processes the optical trap passive experiment data into the form for scat transform and LSTM training'''
+'''module that processes the active-passive particle simulation data and trains on it'''
 import os
 import numpy as np
 import pandas as pd
@@ -11,14 +11,39 @@ from itertools import product
 
 '''custom libraries'''
 import common_utils as cu
-ROOT_DIR = './data/experiment/position_stiffness'
+ROOT_DIR = './data/simulations/active_passive_sim'
 
 # common inputs
-data_len = 2**9
+data_len = 2**11
 root_dir = ROOT_DIR
-train_test_ratio = [0.6, 0.2]
+# we take train_ratio amount of data which includes training and validation data
+# within this data, we take train_ratio amount and use it for training.
+# the remaining data is for test
+train_ratio = 0.8
 
-file_names_data = glob.glob(os.path.join(root_dir, 'L_*.csv'))
+dir_names = glob.glob(os.path.join(root_dir, 'Phia*'))
+
+
+# scat transform inputs
+avg_lens = [2**5, 2**7, 2**9]
+n_filter_octaves = list(product([1,4], [1,4]))
+# [(1,1), (1,2), (1,4), (2,1), (2,2), (2,4), (4,1), (4,2), (4,4)]
+file_names_scat = []
+
+# training inputs
+n_epochs_max = 1000
+batch_size = 100
+n_workers = 4
+
+# NN inputs
+#n_nodes_hiddens = [] # FIXME: add later
+
+# RNN inputs
+hidden_sizes = [10, 50, 200, 500]
+n_layerss = [2]
+bidirectionals = [True]
+lr = 0.0001
+betas = (0.9, 0.999)
 
 file_data_lens = []
 # determine number of timepoints per condition in case it differs among files
@@ -28,46 +53,37 @@ for file_name_data in file_names_data:
 
 data_len_total = min(file_data_lens) - 1 # the first element is the stiffness
 print("Data length of the files:{}, taking {} timepoints for each file.".format(file_data_lens, data_len_total))
-    k = data.loc[0, 0]
-    data = data.loc[1:, 0].values
-    
+k = data.loc[0, 0]
+data = data.loc[1:, 0].values
+datas = []
+labels = []
 # load and split data
 for file_name_data in file_names_data:
     data = pd.read_csv(file_name_data, header=None)
     k = data.loc[0, 0]
     data = data.loc[1:data_len_total + 1, 0].values
-    data_len_total = data_len_total // data_len * data_len
+    n_data = data_len_total // data_len
+    data_len_total = n_data * data_len
     data = data[:data_len_total].reshape([-1, 1, data_len]) # shaped [n_data, 1, data_len]
     datas.append(data)
     labels.append(k)
 
+idx = nu._train_test_split(n_data, train_ratio=train_ratio)
 data = np.stack(datas, axis=0) # shaped (n_conditions, n_data, 1, data_len)
-samples = {'data':data, 'label_names':['k'], 'labels':labels}
+samples_train = {'data':data[:, idx['train'], :, :], 'label_names':['k'], 'labels':[np.array(labels)]}
+samples_test = {'data':data[:, idx['test'], :, :], 'label_names':['k'], 'labels':[np.array(labels)]}
         
-torch.save(samples, os.path.join(root_dir, 
-        file_name_data = siu.sim_two_beads(data_len, k_ratios, diff_coef_ratios, dt, n_data, n_steps_initial=10000, save_file=True, root_dir=root_dir)
-        file_names_data.append(file_name_data)
-        for avg_len in avg_lens:
-            for n_filter_octave in n_filter_octaves:
-                try:
-                    print("scat transforming n_data:{} with parameters avg_len:{}, n_filter_octave:{}".format(n_data, avg_len, n_filter_octave))
-                    file_name_scat = scu.scat_transform(file_name_data, avg_len, log_transform=False, n_filter_octave=n_filter_octave, save_file=True, root_dir=root_dir)
-                    file_names_scat.append(file_name_scat)
-                except:
-                    pass
+torch.save(samples_train, os.path.join(root_dir, 'obd_exp.pt'))
+torch.save(samples_test, os.path.join(root_dir, 'obd_exp_test.pt'))
 
-# simulate data for testing performance
-print("simulating data for evaluation")
-file_name_test_data_orig = siu.sim_two_beads(data_len, k_ratios_test, diff_coef_ratios_test, dt, n_data_test, n_steps_initial=10000, save_file=True, root_dir=root_dir)
-nums = cu.match_filename(r'tbd_([0-9]+)_test.pt', root_dir=root_dir)
-nums = [int(num) for num in nums]; idx = max(nums) + 1 if nums else 0
-file_name_test_data = 'tbd_{}_test.pt'.format(idx)
-os.rename(os.path.join(root_dir, file_name_test_data_orig), os.path.join(root_dir, file_name_test_data))
+# create scat transformed versions
 for avg_len in avg_lens:
     for n_filter_octave in n_filter_octaves:
         try:
-            print("scat transforming n_data:{} with parameters avg_len:{}, n_filter_octave:{} for testing".format(n_data_test, avg_len, n_filter_octave))
-            file_name_test_scat_orig = scu.scat_transform(file_name_test_data, avg_len, log_transform=False, n_filter_octave=n_filter_octave, save_file=True, root_dir=root_dir)
+            print("scat transforming data_len:{} with parameters avg_len:{}, n_filter_octave:{}".format(data_len, avg_len, n_filter_octave))
+            file_name_scat = scu.scat_transform('obd_exp.pt', avg_len, log_transform=False, n_filter_octave=n_filter_octave, save_file=True, root_dir=root_dir)
+            file_name_test_scat = scu.scat_transform('obd_exp_test.pt', avg_len, log_transform=False, n_filter_octave=n_filter_octave, save_file=True, root_dir=root_dir)
+            file_names_scat.append(file_name_scat)
         except:
             pass
 
@@ -82,9 +98,9 @@ for file_name_scat in file_names_scat:
                 try:
                     print("training rnn for {}, avg_len:{}, n_filter_octave:{}, hidden_size:{}, n_layers:{}, bidirectional:{}"\
                         .format(file_name_scat, avg_len, n_filter_octave, hidden_size, n_layers, bidirectional))
-                    nu.train_rnn(file_name_scat, [hidden_size, hidden_size], n_layers, bidirectional,
+                    nu.train_rnn(file_name_scat, [hidden_size], n_layers, bidirectional,
                         n_epochs_max=n_epochs_max, train_ratio=train_ratio, batch_size=batch_size,
-                        n_workers=n_workers, root_dir=root_dir)
+                        n_workers=n_workers, root_dir=root_dir, lr=lr, betas=betas)
                 except:
                     pass
 
@@ -99,7 +115,7 @@ for file_name_data in file_names_data:
                     print("training rnn for {}, hidden_size:{}, n_layers:{}, bidirectional:{}".format(file_name_data, hidden_size, n_layers, bidirectional))
                     nu.train_rnn(file_name_data, [hidden_size, hidden_size], n_layers, bidirectional,
                         n_epochs_max=n_epochs_max, train_ratio=train_ratio, batch_size=batch_size,
-                        n_workers=n_workers, root_dir=root_dir)
+                        n_workers=n_workers, root_dir=root_dir, lr=lr, betas=betas)
                 except:
                     pass
 '''
