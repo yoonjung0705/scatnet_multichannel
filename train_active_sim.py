@@ -1,5 +1,6 @@
 '''module that processes the active-passive particle simulation data and trains on it'''
 import os
+import re
 import numpy as np
 import pandas as pd
 import scat_utils as scu
@@ -16,19 +17,60 @@ ROOT_DIR = './data/simulations/active_passive_sim'
 # common inputs
 data_len = 2**11
 root_dir = ROOT_DIR
+n_data = 300
 # we take train_ratio amount of data which includes training and validation data
 # within this data, we take train_ratio amount and use it for training.
 # the remaining data is for test
 train_ratio = 0.8
+n_data_test = int(n_data * (1 - train_ratio))
 
 dir_names = glob.glob(os.path.join(root_dir, 'Phia*'))
+dir_names = [os.path.basename(dir_name) for dir_name in dir_names]
+regex = r'Phia_([0-9p]+)_v_([0-9p]+)'
+cs = [re.match(regex, dir_name).group(1) for dir_name in dir_names]
+cs = np.array([float(c.replace('p', '.')) for c in cs])
+vs = [re.match(regex, dir_name).group(2) for dir_name in dir_names]
+vs = np.array([float(v.replace('p', '.')) for v in vs])
 
+cs_uniq = np.unique(cs) # np.unique() also sorts the elements in ascending order
+vs_uniq = np.unique(vs)
+xys = []
+xys_test = []
+for c in cs_uniq:
+    for v in vs_uniq:
+        idx_dir_name = np.where((c == cs) & (v == vs))[0][0]
+        dir_name = dir_names[idx_dir_name]
+        data = pd.read_csv(os.path.join(root_dir, dir_name, 'pos'), sep='\t', skiprows=1, header=None).values
+        x = np.reshape(data[:n_data * data_len, 0], [n_data, data_len])
+        y = np.reshape(data[:n_data * data_len, 1], [n_data, data_len])
+        xy = np.stack([x, y], axis=1) # shaped (n_data, 2, data_len)
+        xys.append(xy)
+        x_test = np.reshape(data[n_data * data_len:(n_data + n_data_test) * data_len, 0], [n_data_test, data_len])
+        y_test = np.reshape(data[n_data * data_len:(n_data + n_data_test) * data_len, 1], [n_data_test, data_len])
+        xy_test = np.stack([x_test, y_test], axis=1) # shaped (n_data, 2, data_len)
+        xys_test.append(xy_test)
+data = np.stack(xys, axis=0).reshape([len(cs_uniq), len(vs_uniq), n_data, 2, data_len])
+data_test = np.stack(xys_test, axis=0).reshape([len(cs_uniq), len(vs_uniq), n_data_test, 2, data_len])
+samples = {'data':data, 'labels':[cs_uniq, vs_uniq], 'label_names':['c', 'v'], 'Dr':1, 'Dt':0.05, 'T':25, 'K':10, 'dt':0.001}
+samples_test = {'data':data_test, 'labels':[cs_uniq, vs_uniq], 'label_names':['c', 'v'], 'Dr':1, 'Dt':0.05, 'T':25, 'K':10, 'dt':0.001}
+
+nums = cu.match_filename(r'pos_([0-9]+).pt', root_dir=root_dir)
+nums = [int(num) for num in nums]; idx = max(nums) + 1 if nums else 0
+file_name_data = 'pos_{}.pt'.format(idx)
+
+nums_test = cu.match_filename(r'pos_([0-9]+)_test.pt', root_dir=root_dir)
+nums_test = [int(num) for num in nums_test]; idx_test = max(nums_test) + 1 if nums_test else 0
+file_name_data_test = 'pos_{}_test.pt'.format(idx_test)
+
+torch.save(samples, os.path.join(root_dir, file_name_data))
+torch.save(samples, os.path.join(root_dir, file_name_data_test))
 
 # scat transform inputs
-avg_lens = [2**5, 2**7, 2**9]
+avg_lens = [2**4, 2**6, 2**8]
 n_filter_octaves = list(product([1,4], [1,4]))
 # [(1,1), (1,2), (1,4), (2,1), (2,2), (2,4), (4,1), (4,2), (4,4)]
 file_names_scat = []
+file_names_scat_test = []
 
 # training inputs
 n_epochs_max = 1000
@@ -42,48 +84,18 @@ n_workers = 4
 hidden_sizes = [10, 50, 200, 500]
 n_layerss = [2]
 bidirectionals = [True]
-lr = 0.0001
+lr = 0.001
 betas = (0.9, 0.999)
-
-file_data_lens = []
-# determine number of timepoints per condition in case it differs among files
-for file_name_data in file_names_data:
-    data = pd.read_csv(file_name_data, header=None)
-    file_data_lens.append(len(data))
-
-data_len_total = min(file_data_lens) - 1 # the first element is the stiffness
-print("Data length of the files:{}, taking {} timepoints for each file.".format(file_data_lens, data_len_total))
-k = data.loc[0, 0]
-data = data.loc[1:, 0].values
-datas = []
-labels = []
-# load and split data
-for file_name_data in file_names_data:
-    data = pd.read_csv(file_name_data, header=None)
-    k = data.loc[0, 0]
-    data = data.loc[1:data_len_total + 1, 0].values
-    n_data = data_len_total // data_len
-    data_len_total = n_data * data_len
-    data = data[:data_len_total].reshape([-1, 1, data_len]) # shaped [n_data, 1, data_len]
-    datas.append(data)
-    labels.append(k)
-
-idx = nu._train_test_split(n_data, train_ratio=train_ratio)
-data = np.stack(datas, axis=0) # shaped (n_conditions, n_data, 1, data_len)
-samples_train = {'data':data[:, idx['train'], :, :], 'label_names':['k'], 'labels':[np.array(labels)]}
-samples_test = {'data':data[:, idx['test'], :, :], 'label_names':['k'], 'labels':[np.array(labels)]}
-        
-torch.save(samples_train, os.path.join(root_dir, 'obd_exp.pt'))
-torch.save(samples_test, os.path.join(root_dir, 'obd_exp_test.pt'))
 
 # create scat transformed versions
 for avg_len in avg_lens:
     for n_filter_octave in n_filter_octaves:
         try:
             print("scat transforming data_len:{} with parameters avg_len:{}, n_filter_octave:{}".format(data_len, avg_len, n_filter_octave))
-            file_name_scat = scu.scat_transform('obd_exp.pt', avg_len, log_transform=False, n_filter_octave=n_filter_octave, save_file=True, root_dir=root_dir)
-            file_name_test_scat = scu.scat_transform('obd_exp_test.pt', avg_len, log_transform=False, n_filter_octave=n_filter_octave, save_file=True, root_dir=root_dir)
+            file_name_scat = scu.scat_transform(os.path.join(root_dir, file_name_data), avg_len, log_transform=False, n_filter_octave=n_filter_octave, save_file=True, root_dir=root_dir)
+            file_name_test_scat = scu.scat_transform(os.path.join(root_dir, file_name_data_test), avg_len, log_transform=False, n_filter_octave=n_filter_octave, save_file=True, root_dir=root_dir)
             file_names_scat.append(file_name_scat)
+            file_names_scat_test.append(file_name_scat_test)
         except:
             pass
 
@@ -98,7 +110,7 @@ for file_name_scat in file_names_scat:
                 try:
                     print("training rnn for {}, avg_len:{}, n_filter_octave:{}, hidden_size:{}, n_layers:{}, bidirectional:{}"\
                         .format(file_name_scat, avg_len, n_filter_octave, hidden_size, n_layers, bidirectional))
-                    nu.train_rnn(file_name_scat, [hidden_size], n_layers, bidirectional,
+                    nu.train_rnn(file_name_scat, [hidden_size, hidden_size], n_layers, bidirectional,
                         n_epochs_max=n_epochs_max, train_ratio=train_ratio, batch_size=batch_size,
                         n_workers=n_workers, root_dir=root_dir, lr=lr, betas=betas)
                 except:
@@ -107,16 +119,15 @@ for file_name_scat in file_names_scat:
 
 '''
 # train RNNs for raw data
-for file_name_data in file_names_data:
-    for hidden_size in hidden_sizes:
-        for n_layers in n_layerss:
-            for bidirectional in bidirectionals:
-                try:
-                    print("training rnn for {}, hidden_size:{}, n_layers:{}, bidirectional:{}".format(file_name_data, hidden_size, n_layers, bidirectional))
-                    nu.train_rnn(file_name_data, [hidden_size, hidden_size], n_layers, bidirectional,
-                        n_epochs_max=n_epochs_max, train_ratio=train_ratio, batch_size=batch_size,
-                        n_workers=n_workers, root_dir=root_dir, lr=lr, betas=betas)
-                except:
-                    pass
+for hidden_size in hidden_sizes:
+    for n_layers in n_layerss:
+        for bidirectional in bidirectionals:
+            try:
+                print("training rnn for {}, hidden_size:{}, n_layers:{}, bidirectional:{}".format(file_name_data, hidden_size, n_layers, bidirectional))
+                nu.train_rnn(file_name_data, [hidden_size, hidden_size], n_layers, bidirectional,
+                    n_epochs_max=n_epochs_max, train_ratio=train_ratio, batch_size=batch_size,
+                    n_workers=n_workers, root_dir=root_dir, lr=lr, betas=betas)
+            except:
+                pass
 '''
 
