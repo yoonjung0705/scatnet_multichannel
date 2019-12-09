@@ -24,6 +24,28 @@ n_data = 300
 train_ratio = 0.8
 n_data_test = int(n_data * (1 - train_ratio))
 
+# scat transform inputs
+avg_lens = [2**4, 2**6, 2**8]
+n_filter_octaves = list(product([1,4], [1,4]))
+# [(1,1), (1,2), (1,4), (2,1), (2,2), (2,4), (4,1), (4,2), (4,4)]
+file_names_scat = []
+file_names_scat_test = []
+
+# training inputs
+n_epochs_max = 1000
+batch_size = 100
+n_workers = 4
+
+# NN inputs
+#n_nodes_hiddens = [] # FIXME: add later
+
+# RNN inputs
+hidden_sizes = [10, 50, 200, 500]
+n_layerss = [2]
+bidirectionals = [True]
+lr = 0.001
+betas = (0.9, 0.999)
+
 dir_names = glob.glob(os.path.join(root_dir, 'Phia*'))
 dir_names = [os.path.basename(dir_name) for dir_name in dir_names]
 regex = r'Phia_([0-9p]+)_v_([0-9p]+)'
@@ -65,28 +87,6 @@ file_name_data_test = 'pos_{}_test.pt'.format(idx_test)
 torch.save(samples, os.path.join(root_dir, file_name_data))
 torch.save(samples, os.path.join(root_dir, file_name_data_test))
 
-# scat transform inputs
-avg_lens = [2**4, 2**6, 2**8]
-n_filter_octaves = list(product([1,4], [1,4]))
-# [(1,1), (1,2), (1,4), (2,1), (2,2), (2,4), (4,1), (4,2), (4,4)]
-file_names_scat = []
-file_names_scat_test = []
-
-# training inputs
-n_epochs_max = 1000
-batch_size = 100
-n_workers = 4
-
-# NN inputs
-#n_nodes_hiddens = [] # FIXME: add later
-
-# RNN inputs
-hidden_sizes = [10, 50, 200, 500]
-n_layerss = [2]
-bidirectionals = [True]
-lr = 0.001
-betas = (0.9, 0.999)
-
 # create scat transformed versions
 for avg_len in avg_lens:
     for n_filter_octave in n_filter_octaves:
@@ -117,7 +117,6 @@ for file_name_scat in file_names_scat:
                     pass
 
 
-'''
 # train RNNs for raw data
 for hidden_size in hidden_sizes:
     for n_layers in n_layerss:
@@ -129,5 +128,3 @@ for hidden_size in hidden_sizes:
                     n_workers=n_workers, root_dir=root_dir, lr=lr, betas=betas)
             except:
                 pass
-'''
-
