@@ -21,13 +21,16 @@ import common_utils as cu
 import scat_utils as scu
 import net_utils as nu
 
-root_dir = './data/'
+root_dir = './data/simulations/active_passive_sim'
+#root_dir = './data/'
 #root_dir = '/home/yoonjung/SeagateSSHD/scat_data/trial_0'
 root_dir_results = os.path.join(root_dir, 'results/')
 
 # provide file names and paths manually
-file_names = ['tbd_13_scat_test.pt']
-file_names_meta = ['tbd_12_scat_meta_rnn_0.pt']
+#file_names = ['tbd_13_scat_test.pt']
+#file_names_meta = ['tbd_12_scat_meta_rnn_0.pt']
+file_names = ['pos_0_test_scat_0.pt']
+file_names_meta = ['pos_0_scat_meta_rnn_1.pt']
 
 # OR, provide file names and paths using regular expression
 #file_paths_meta = glob.glob(os.path.join(root_dir, 'tbd_0_scat_meta_rnn_*.pt'))
@@ -36,12 +39,11 @@ file_names_meta = ['tbd_12_scat_meta_rnn_0.pt']
 
 epochs = [[990, 990], [990, 990]]
 
-plt.style.use('dark_background')
+#plt.style.use('dark_background')
 fontsize_title = 18
 fontsize_label = 14
 batch_size = 100 # batch size when performing forward propagation on test data using trained weights
 
-'''sanity check'''
 # add .pt extension if not provided
 file_names = [os.path.splitext(file_name)[0] + '.pt' for file_name in file_names]
 file_names_meta = [os.path.splitext(file_name_meta)[0] + '.pt' for file_name_meta in file_names_meta]
@@ -54,6 +56,9 @@ n_files = len(file_paths)
 if isinstance(file_names, str):
     file_names = [file_names]
 
+'''sanity check'''
+
+'''
 # check number of files match with number of meta files
 assert(len(file_names) == len(file_names_meta))
 
@@ -76,6 +81,7 @@ assert(file_names_meta_is_scat == file_names_is_scat), "The training and test da
 # the source of data for files in file_names are all identical, we only need to compare the first element of file_names_meta_common and
 # first element of file_names_common
 assert(file_names_meta_common[0] != file_names_common[0]), "Training and testing cannot be done on same data"
+'''
 
 figs = []; axs = [] 
 for idx_file in range(n_files):

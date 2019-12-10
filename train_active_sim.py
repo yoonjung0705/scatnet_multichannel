@@ -85,7 +85,7 @@ nums_test = [int(num) for num in nums_test]; idx_test = max(nums_test) + 1 if nu
 file_name_data_test = 'pos_{}_test.pt'.format(idx_test)
 
 torch.save(samples, os.path.join(root_dir, file_name_data))
-torch.save(samples, os.path.join(root_dir, file_name_data_test))
+torch.save(samples_test, os.path.join(root_dir, file_name_data_test))
 
 # create scat transformed versions
 for avg_len in avg_lens:
