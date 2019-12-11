@@ -18,11 +18,8 @@ ROOT_DIR = './data/simulations/active_passive_sim'
 data_len = 2**11
 root_dir = ROOT_DIR
 n_data = 300
-# we take train_ratio amount of data which includes training and validation data
-# within this data, we take train_ratio amount and use it for training.
-# the remaining data is for test
+n_data_test = 50
 train_ratio = 0.8
-n_data_test = int(n_data * (1 - train_ratio))
 
 # scat transform inputs
 avg_lens = [2**4, 2**6, 2**8]
@@ -79,10 +76,7 @@ samples_test = {'data':data_test, 'labels':[cs_uniq, vs_uniq], 'label_names':['c
 nums = cu.match_filename(r'pos_([0-9]+).pt', root_dir=root_dir)
 nums = [int(num) for num in nums]; idx = max(nums) + 1 if nums else 0
 file_name_data = 'pos_{}.pt'.format(idx)
-
-nums_test = cu.match_filename(r'pos_([0-9]+)_test.pt', root_dir=root_dir)
-nums_test = [int(num) for num in nums_test]; idx_test = max(nums_test) + 1 if nums_test else 0
-file_name_data_test = 'pos_{}_test.pt'.format(idx_test)
+file_name_data_test = 'pos_{}.pt'.format(idx + 1)
 
 torch.save(samples, os.path.join(root_dir, file_name_data))
 torch.save(samples_test, os.path.join(root_dir, file_name_data_test))

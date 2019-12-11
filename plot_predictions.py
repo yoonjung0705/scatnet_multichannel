@@ -29,8 +29,10 @@ root_dir_results = os.path.join(root_dir, 'results/')
 # provide file names and paths manually
 #file_names = ['tbd_13_scat_test.pt']
 #file_names_meta = ['tbd_12_scat_meta_rnn_0.pt']
-file_names = ['pos_0_test_scat_0.pt']
-file_names_meta = ['pos_0_scat_meta_rnn_1.pt']
+#file_names = ['pos_0_test_scat_0.pt']
+#file_names_meta = ['pos_0_scat_meta_rnn_1.pt']
+file_names = ['pos_1_scat_0.pt'] # example file name
+file_names_meta = ['pos_0_scat_2_meta_rnn_1.pt'] # example file name
 
 # OR, provide file names and paths using regular expression
 #file_paths_meta = glob.glob(os.path.join(root_dir, 'tbd_0_scat_meta_rnn_*.pt'))
@@ -58,7 +60,7 @@ if isinstance(file_names, str):
 
 '''sanity check'''
 
-'''
+
 # check number of files match with number of meta files
 assert(len(file_names) == len(file_names_meta))
 
@@ -81,7 +83,7 @@ assert(file_names_meta_is_scat == file_names_is_scat), "The training and test da
 # the source of data for files in file_names are all identical, we only need to compare the first element of file_names_meta_common and
 # first element of file_names_common
 assert(file_names_meta_common[0] != file_names_common[0]), "Training and testing cannot be done on same data"
-'''
+
 
 figs = []; axs = [] 
 for idx_file in range(n_files):
