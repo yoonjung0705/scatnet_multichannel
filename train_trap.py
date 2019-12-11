@@ -73,16 +73,16 @@ data = np.stack(datas, axis=0) # shaped (n_conditions, n_data, 1, data_len)
 samples_train = {'data':data[:, idx['train'], :, :], 'label_names':['k'], 'labels':[np.array(labels)]}
 samples_test = {'data':data[:, idx['test'], :, :], 'label_names':['k'], 'labels':[np.array(labels)]}
         
-torch.save(samples_train, os.path.join(root_dir, 'obd_exp.pt'))
-torch.save(samples_test, os.path.join(root_dir, 'obd_exp_test.pt'))
+torch.save(samples_train, os.path.join(root_dir, 'obd_exp_0.pt'))
+torch.save(samples_test, os.path.join(root_dir, 'obd_exp_1.pt'))
 
 # create scat transformed versions
 for avg_len in avg_lens:
     for n_filter_octave in n_filter_octaves:
         try:
             print("scat transforming data_len:{} with parameters avg_len:{}, n_filter_octave:{}".format(data_len, avg_len, n_filter_octave))
-            file_name_scat = scu.scat_transform('obd_exp.pt', avg_len, log_transform=False, n_filter_octave=n_filter_octave, save_file=True, root_dir=root_dir)
-            file_name_test_scat = scu.scat_transform('obd_exp_test.pt', avg_len, log_transform=False, n_filter_octave=n_filter_octave, save_file=True, root_dir=root_dir)
+            file_name_scat = scu.scat_transform('obd_exp_0.pt', avg_len, log_transform=False, n_filter_octave=n_filter_octave, save_file=True, root_dir=root_dir)
+            file_name_test_scat = scu.scat_transform('obd_exp_1.pt', avg_len, log_transform=False, n_filter_octave=n_filter_octave, save_file=True, root_dir=root_dir)
             file_names_scat.append(file_name_scat)
         except:
             pass

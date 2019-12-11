@@ -202,7 +202,7 @@ def train_nn(file_name, n_nodes_hidden, n_epochs_max=2000, train_ratio=0.8, batc
     _init_meta(file_name=file_name_meta, root_dir=root_dir, n_nodes=n_nodes,
         n_epochs_max=n_epochs_max, train_ratio=train_ratio, batch_size=batch_size,
         n_workers=n_workers, index=index, device=device,
-        loss_mean=[{'train':[], 'val':[]} for _ in range(n_labels)],
+        rmse=[{'train':[], 'val':[]} for _ in range(n_labels)],
         epoch=[[] for _ in range(n_labels)], weights=[[] for _ in range(n_labels)],
         elapsed=[[] for _ in range(n_labels)], labels=samples['labels'],
         label_names=samples['label_names'])
@@ -258,7 +258,7 @@ def _train_nn(dataset, index, n_nodes_hidden, n_epochs_max, batch_size, device, 
     for epoch in range(n_epochs_max):
         try:
             loss_sum = {}
-            loss_mean = {}
+            rmse = {}
             for phase in ['train', 'val']:
                 net.train(phase == 'train')
                 loss_sum[phase] = 0.
@@ -271,19 +271,19 @@ def _train_nn(dataset, index, n_nodes_hidden, n_epochs_max, batch_size, device, 
                         loss.backward()
                         optimizer.step()
                     loss_sum[phase] += loss.data.item()
-                loss_mean[phase] = loss_sum[phase] / n_data[phase] # MSE loss per data point
+                rmse[phase] = np.sqrt(loss_sum[phase] / n_data[phase]) # RMSE loss per data point
             if epoch % 10 == 0:
                 time_curr = time.time()
                 elapsed = time_curr - time_start
-                loss_msg = ("{} out of {} epochs, mean_loss_train:{:.15f}, mean_loss_val:{:.15f}, elapsed seconds:{:.2f}"
-                    .format(epoch, n_epochs_max, loss_mean['train'], loss_mean['val'], elapsed))
+                loss_msg = ("{} out of {} epochs, rmse_train:{:.15f}, rmse_val:{:.15f}, elapsed seconds:{:.2f}"
+                    .format(epoch, n_epochs_max, rmse['train'], rmse['val'], elapsed))
                 print(loss_msg)
                 meta = torch.load(file_path)
                 meta['epoch'][idx_label].append(epoch)
                 meta['elapsed'][idx_label].append(elapsed)
                 meta['weights'][idx_label].append(net.state_dict())
                 for phase in ['train', 'val']:
-                    meta['loss_mean'][idx_label][phase].append(loss_mean[phase])
+                    meta['rmse'][idx_label][phase].append(rmse[phase])
                 torch.save(meta, file_path)
         except KeyboardInterrupt:
             break
@@ -345,7 +345,7 @@ def train_rnn(file_name, hidden_size, n_layers=1, bidirectional=False, n_epochs_
         hidden_size=hidden_size, n_layers=n_layers, bidirectional=bidirectional,
         n_epochs_max=n_epochs_max, train_ratio=train_ratio, batch_size=batch_size,
         n_workers=n_workers, index=index, device=device,
-        loss_mean=[{'train':[], 'val':[]} for _ in range(n_labels)],
+        rmse=[{'train':[], 'val':[]} for _ in range(n_labels)],
         epoch=[[] for _ in range(n_labels)], weights=[[] for _ in range(n_labels)],
         elapsed=[[] for _ in range(n_labels)], labels=samples['labels'],
         label_names=samples['label_names'])
@@ -407,7 +407,7 @@ def _train_rnn(dataset, index, hidden_size, n_layers, bidirectional, n_epochs_ma
     for epoch in range(n_epochs_max):
         try:
             loss_sum = {}
-            loss_mean = {}
+            rmse = {}
             for phase in ['train', 'val']:
                 rnn.train(phase == 'train')
                 loss_sum[phase] = 0.
@@ -422,19 +422,19 @@ def _train_rnn(dataset, index, hidden_size, n_layers, bidirectional, n_epochs_ma
                         loss.backward()
                         optimizer.step()
                     loss_sum[phase] += loss.data.item()
-                loss_mean[phase] = loss_sum[phase] / n_data[phase] # MSE loss per data point
+                rmse[phase] = np.sqrt(loss_sum[phase] / n_data[phase]) # RMSE loss per data point
             if epoch % 10 == 0:
                 time_curr = time.time()
                 elapsed = time_curr - time_start
-                loss_msg = ("{} out of {} epochs, mean_loss_train:{:.15f}, mean_loss_val:{:.15f}, elapsed seconds:{:.2f}"
-                    .format(epoch, n_epochs_max, loss_mean['train'], loss_mean['val'], elapsed))
+                loss_msg = ("{} out of {} epochs, rmse_train:{:.15f}, rmse_val:{:.15f}, elapsed seconds:{:.2f}"
+                    .format(epoch, n_epochs_max, rmse['train'], rmse['val'], elapsed))
                 print(loss_msg)
                 meta = torch.load(file_path)
                 meta['epoch'][idx_label].append(epoch)
                 meta['elapsed'][idx_label].append(elapsed)
                 meta['weights'][idx_label].append(rnn.state_dict())
                 for phase in ['train', 'val']:
-                    meta['loss_mean'][idx_label][phase].append(loss_mean[phase])
+                    meta['rmse'][idx_label][phase].append(rmse[phase])
                 torch.save(meta, file_path)
         except KeyboardInterrupt:
             break

@@ -9,7 +9,7 @@ from datetime import datetime
 
 import common_utils as cu
 
-ROOT_DIR = './data/'
+ROOT_DIR = './data/simulations/'
 
 def sim_brownian(data_len, diff_coefs, dt, n_data=1, save_file=False, root_dir=ROOT_DIR, dtype='float32'):
     '''
@@ -56,7 +56,7 @@ def sim_brownian(data_len, diff_coefs, dt, n_data=1, save_file=False, root_dir=R
     if not save_file:
         return processes
 
-    nums = cu.match_filename(r'brw_([0-9]+).pt', root_dir=ROOT_DIR)
+    nums = cu.match_filename(r'brw_([0-9]+).pt', root_dir=root_dir)
     nums = [int(num) for num in nums]
     idx = max(nums) + 1 if nums else 0
 
@@ -111,7 +111,7 @@ def sim_poisson(data_len, lams, dt, n_data=1, save_file=False, root_dir=ROOT_DIR
     if not save_file:
         return processes
 
-    nums = cu.match_filename(r'psn_([0-9]+).pt', root_dir=ROOT_DIR)
+    nums = cu.match_filename(r'psn_([0-9]+).pt', root_dir=root_dir)
     nums = [int(num) for num in nums]
     idx = max(nums) + 1 if nums else 0
 
@@ -191,7 +191,7 @@ def sim_one_bead(data_len, diff_coefs, ks, dt, n_data=1, n_steps_initial=10000,
     if not save_file:
         return processes
 
-    nums = cu.match_filename(r'obd_([0-9]+).pt', root_dir=ROOT_DIR)
+    nums = cu.match_filename(r'obd_([0-9]+).pt', root_dir=root_dir)
     nums = [int(num) for num in nums]
     idx = max(nums) + 1 if nums else 0
 
@@ -275,7 +275,7 @@ def sim_two_beads(data_len, k_ratios, diff_coef_ratios, dt, n_data=1, n_steps_in
     if not save_file:
         return processes
 
-    nums = cu.match_filename(r'tbd_([0-9]+).pt', root_dir=ROOT_DIR)
+    nums = cu.match_filename(r'tbd_([0-9]+).pt', root_dir=root_dir)
     nums = [int(num) for num in nums]
     idx = max(nums) + 1 if nums else 0
 

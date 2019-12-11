@@ -39,7 +39,7 @@ for idx_file in range(n_files):
     fig.suptitle(file_name)
 
     for idx_label in range(n_labels):
-        loss = meta['loss_mean'][idx_label]
+        loss = meta['rmse'][idx_label]
         epoch = meta['epoch'][idx_label]
 
         # ignore the first iteration's loss to better visualize the trend
@@ -47,7 +47,7 @@ for idx_file in range(n_files):
         ax[idx_label].plot(epoch[1:], loss['val'][1:], label='validation')
         ax[idx_label].set_title(meta['label_names'][idx_label].replace('_', ' '), fontsize=fontsize_title)
         ax[idx_label].set_xlabel('Epochs', fontsize=fontsize_label)
-        ax[idx_label].set_ylabel('Average Loss', fontsize=fontsize_label)
+        ax[idx_label].set_ylabel('RMSE', fontsize=fontsize_label)
         ax[idx_label].legend()
     
     figs.append(fig)

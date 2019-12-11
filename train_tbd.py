@@ -9,14 +9,14 @@ from itertools import product
 
 '''custom libraries'''
 import common_utils as cu
-ROOT_DIR = './data/'
+ROOT_DIR = './data/simulations/two_beads/'
 
 # common inputs
 data_len = 2**9
 avg_lens = [2**4, 2**5, 2**6, 2**7]
 n_filter_octaves = list(product([1,2,4,8], [1,2,4,8]))
 # [(1,1), (1,2), (1,4), (2,1), (2,2), (2,4), (4,1), (4,2), (4,4)]
-dt = 0.001
+dt = 0.0001
 #n_datas = [50, 100, 200]
 n_datas = [100]
 n_data_test = 300
@@ -49,6 +49,7 @@ k_ratios_test = np.arange(1,12,1)
 diff_coef_ratios_test = [3.]
 
 # simulate two beads
+print("simulating data for training")
 for n_data in n_datas:
     file_name_data = siu.sim_two_beads(data_len, k_ratios, diff_coef_ratios, dt, n_data, n_steps_initial=10000, save_file=True, root_dir=root_dir)
     file_names_data.append(file_name_data)
@@ -64,10 +65,6 @@ for n_data in n_datas:
 # simulate data for testing performance
 print("simulating data for evaluation")
 file_name_test_data = siu.sim_two_beads(data_len, k_ratios_test, diff_coef_ratios_test, dt, n_data_test, n_steps_initial=10000, save_file=True, root_dir=root_dir)
-#nums = cu.match_filename(r'tbd_([0-9]+).pt', root_dir=root_dir)
-#nums = [int(num) for num in nums]; idx = max(nums) + 1 if nums else 0
-#file_name_test_data = 'tbd_{}_test.pt'.format(idx)
-#os.rename(os.path.join(root_dir, file_name_test_data_orig), os.path.join(root_dir, file_name_test_data))
 for avg_len in avg_lens:
     for n_filter_octave in n_filter_octaves:
         try:

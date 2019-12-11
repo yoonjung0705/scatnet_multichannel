@@ -81,7 +81,8 @@ file_name_data_test = 'pos_{}.pt'.format(idx + 1)
 torch.save(samples, os.path.join(root_dir, file_name_data))
 torch.save(samples_test, os.path.join(root_dir, file_name_data_test))
 
-# create scat transformed versions
+'''
+# create scat transformed versions for both training and test data
 for avg_len in avg_lens:
     for n_filter_octave in n_filter_octaves:
         try:
@@ -109,7 +110,7 @@ for file_name_scat in file_names_scat:
                         n_workers=n_workers, root_dir=root_dir, lr=lr, betas=betas)
                 except:
                     pass
-
+'''
 
 # train RNNs for raw data
 for hidden_size in hidden_sizes:
