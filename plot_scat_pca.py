@@ -17,7 +17,7 @@ avg_len = 2**8
 n_data = 200
 dt = 0.001
 n_filter_octave = [1,1]
-sim_type = 'tbd' # 'brw', 'psn', 'obd', 'tbd'
+sim_type = 'brw' # 'brw', 'psn', 'obd', 'tbd'
 
 n_decim = 3 # precision for external parameters
 scat = scu.ScatNet(data_len, avg_len, n_filter_octave=n_filter_octave)
@@ -135,7 +135,7 @@ X = pca.transform(X)
 fig,ax = plt.subplots()
 for label in labels_uniq:
     X_label = X[label==labels, :]
-    ax.scatter(X_label[:, 0], X_label[:, 1], 4, label=label)
+    ax.scatter(X_label[:, 0], X_label[:, 1], s=6, label=label)
 
 ax.legend()
 ax.set_xlabel('PC1')

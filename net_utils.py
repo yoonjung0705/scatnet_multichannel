@@ -354,8 +354,8 @@ def train_rnn(file_name, hidden_size, n_layers=1, bidirectional=False, n_epochs_
     labels = np.array(list(product(*labels)), dtype='float32').swapaxes(0, 1)
     # following is shaped (n_labels, n_data_total)
     labels = np.tile(labels[:, :, np.newaxis], [1, 1, n_samples_total]).reshape([n_labels, n_data_total])
-    for idx_label in range(n_labels):
-    #for idx_label in [0]:
+    #for idx_label in range(n_labels):
+    for idx_label in [1]:
         dataset = TimeSeriesDataset(data, labels[idx_label], transform=ToTensor())
         # train the neural network for the given idx_label
         print("Beginning training of {}:".format(samples['label_names'][idx_label]))
