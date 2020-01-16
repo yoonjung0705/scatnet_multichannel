@@ -87,7 +87,6 @@ def sim_poisson(data_len, lams, dt, n_data=1, save_file=False, root_dir=ROOT_DIR
     the singleton dimension is for the number of channels. returned if save_file is False
     - (file_name): string type file name of the simulated data. returned if save_file is True
 
-
     REVIEW: confirm this method of using fixed time step generates identical statistics to that of Gielespie algorithm
     FIXME: confirm dimensions are not mixed up
     '''
@@ -121,7 +120,7 @@ def sim_poisson(data_len, lams, dt, n_data=1, save_file=False, root_dir=ROOT_DIR
     torch.save(data, file_path)
     return file_name
 
-def sim_one_bead(data_len, diff_coefs, ks, dt, n_data=1, n_steps_initial=10000,
+def sim_one_bead(data_len, ks, diff_coefs, dt, n_data=1, n_steps_initial=10000,
     save_file=False, root_dir=ROOT_DIR, dtype='float32'):
     '''
     returns ensemble of one bead simulation trajectories. as there is only one heat bath, this is a passive trajectory
@@ -129,8 +128,8 @@ def sim_one_bead(data_len, diff_coefs, ks, dt, n_data=1, n_steps_initial=10000,
     inputs:
     -------
     - data_len: int, length of each process
-    - diff_coef: numeric or list or ndarray, diffusion coefficient
     - k: numeric or list or ndarray, spring constant
+    - diff_coef: numeric or list or ndarray, diffusion coefficient
     - dt: time step between data points
     - n_data: number of processes in ensemble
     - n_steps_initial: number of steps to take in Langevin equation for simulating initial positions
@@ -148,16 +147,15 @@ def sim_one_bead(data_len, diff_coefs, ks, dt, n_data=1, n_steps_initial=10000,
 
     FIXME: check the code to see if the dimensions are not mixed up, check if actual simulation part is not mixed up with initial condition simulation
     '''
+    if isinstance(ks, (int, float)):
+        ks = [ks]
     if isinstance(diff_coefs, (int, float)):
         diff_coefs = [diff_coefs]
 
-    if isinstance(ks, (int, float)):
-        ks = [ks]
-
-    diff_coefs = np.array(diff_coefs, dtype='float32')
     ks = np.array(ks, dtype='float32')
-    n_diff_coefs = len(diff_coefs)
+    diff_coefs = np.array(diff_coefs, dtype='float32')
     n_ks = len(ks)
+    n_diff_coefs = len(diff_coefs)
 
     file_size_est = data_len * n_diff_coefs * n_ks * n_data * np.dtype(dtype).itemsize
     file_size_est_gb = file_size_est / 1.e9
@@ -229,17 +227,15 @@ def sim_two_beads(data_len, k_ratios, diff_coef_ratios, dt, n_data=1, n_steps_in
 
     FIXME: check the code to see if the dimensions are not mixed up, check if actual simulation part is not mixed up with initial condition simulation
     '''
-
+    if isinstance(k_ratios, (int, float)):
+        k_ratios = [k_ratios]
     if isinstance(diff_coef_ratios, (int, float)):
         diff_coef_ratios = [diff_coef_ratios]
 
-    if isinstance(k_ratios, (int, float)):
-        k_ratios = [k_ratios]
-
-    diff_coef_ratios = np.array(diff_coef_ratios, dtype='float32')
     k_ratios = np.array(k_ratios, dtype='float32')
-    n_diff_coef_ratios = len(diff_coef_ratios)
+    diff_coef_ratios = np.array(diff_coef_ratios, dtype='float32')
     n_k_ratios = len(k_ratios)
+    n_diff_coef_ratios = len(diff_coef_ratios)
 
     file_size_est = data_len * n_diff_coef_ratios * n_k_ratios * n_data * 2 * np.dtype(dtype).itemsize
     file_size_est_gb = file_size_est / 1.e9

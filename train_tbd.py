@@ -51,7 +51,7 @@ diff_coef_ratios_test = [3.]
 # simulate two beads
 print("simulating data for training")
 for n_data in n_datas:
-    file_name_data = siu.sim_two_beads(data_len, k_ratios, diff_coef_ratios, dt, n_data, n_steps_initial=10000, save_file=True, root_dir=root_dir)
+    file_name_data = siu.sim_two_beads(data_len, k_ratios=k_ratios, diff_coef_ratios=diff_coef_ratios, dt=dt, n_data=n_data, n_steps_initial=10000, save_file=True, root_dir=root_dir)
     file_names_data.append(file_name_data)
     for avg_len in avg_lens:
         for n_filter_octave in n_filter_octaves:
@@ -64,7 +64,7 @@ for n_data in n_datas:
 
 # simulate data for testing performance
 print("simulating data for evaluation")
-file_name_test_data = siu.sim_two_beads(data_len, k_ratios_test, diff_coef_ratios_test, dt, n_data_test, n_steps_initial=10000, save_file=True, root_dir=root_dir)
+file_name_test_data = siu.sim_two_beads(data_len, k_ratios=k_ratios_test, diff_coef_ratios=diff_coef_ratios_test, dt=dt, n_data=n_data_test, n_steps_initial=10000, save_file=True, root_dir=root_dir)
 for avg_len in avg_lens:
     for n_filter_octave in n_filter_octaves:
         try:

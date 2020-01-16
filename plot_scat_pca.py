@@ -66,7 +66,7 @@ elif sim_type == 'psn':
 elif sim_type == 'obd':
     diff_coefs_obd = np.arange(3,6,1)
     ks_obd = np.arange(2,4,1)
-    traj_obd = siu.sim_one_bead(data_len, diff_coefs=diff_coefs_obd, ks=ks_obd, dt=dt, n_data=n_data)
+    traj_obd = siu.sim_one_bead(data_len, ks=ks_obd, diff_coefs=diff_coefs_obd, dt=dt, n_data=n_data)
     scat_obd = scu.ScatNet(data_len, avg_len, n_filter_octave=n_filter_octave)
     traj_obd = traj_obd.reshape(-1, 1, traj_obd.shape[-1])
     S_obd = scat.transform(traj_obd)
@@ -96,7 +96,7 @@ elif sim_type == 'obd':
 elif sim_type == 'tbd':
     diff_coef_ratios = np.arange(3,9,2)
     k_ratios = np.arange(2,6,2)
-    traj_tbd = siu.sim_two_beads(data_len, diff_coef_ratios, k_ratios, dt, n_data=n_data) 
+    traj_tbd = siu.sim_two_beads(data_len, k_ratios=k_ratios, diff_coef_ratios=diff_coef_ratios, dt=dt, n_data=n_data) 
     traj_tbd = traj_tbd.reshape(-1,2,traj_tbd.shape[-1])
     scat_tbd = scu.ScatNet(data_len, avg_len, n_filter_octave = n_filter_octave) 
     S_tbd = scat.transform(traj_tbd)
