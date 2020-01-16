@@ -203,7 +203,7 @@ def train_nn(file_name, n_nodes_hidden, n_epochs_max=2000, train_ratio=0.8, batc
         n_epochs_max=n_epochs_max, train_ratio=train_ratio, batch_size=batch_size,
         n_workers=n_workers, index=index, device=device,
         rmse=[{'train':[], 'val':[]} for _ in range(n_labels)],
-        epoch=[[] for _ in range(n_labels)], weights=[[] for _ in range(n_labels)],
+        epoch=[[] for _ in range(n_labels)], weights=[None for _ in range(n_labels)],
         elapsed=[[] for _ in range(n_labels)], labels=samples['labels'],
         label_names=samples['label_names'])
     # following is shaped (n_labels, n_conditions)
@@ -215,7 +215,7 @@ def train_nn(file_name, n_nodes_hidden, n_epochs_max=2000, train_ratio=0.8, batc
         # train the neural network for the given idx_label
         print("Beginning training of {}:".format(samples['label_names'][idx_label]))
         _train_nn(dataset, index, n_nodes_hidden=n_nodes_hidden[idx_label], n_epochs_max=n_epochs_max,
-            batch_size=batch_size,device=device, n_workers=n_workers, idx_label=idx_label,
+            batch_size=batch_size, device=device, n_workers=n_workers, idx_label=idx_label,
             file_name=file_name_meta, root_dir=root_dir)
 
 def _train_nn(dataset, index, n_nodes_hidden, n_epochs_max, batch_size, device, n_workers,
@@ -281,7 +281,7 @@ def _train_nn(dataset, index, n_nodes_hidden, n_epochs_max, batch_size, device, 
                 meta = torch.load(file_path)
                 meta['epoch'][idx_label].append(epoch)
                 meta['elapsed'][idx_label].append(elapsed)
-                meta['weights'][idx_label].append(net.state_dict())
+                meta['weights'][idx_label] = net.state_dict()
                 for phase in ['train', 'val']:
                     meta['rmse'][idx_label][phase].append(rmse[phase])
                 torch.save(meta, file_path)
@@ -346,7 +346,7 @@ def train_rnn(file_name, hidden_size, n_layers=1, bidirectional=False, n_epochs_
         n_epochs_max=n_epochs_max, train_ratio=train_ratio, batch_size=batch_size,
         n_workers=n_workers, index=index, device=device,
         rmse=[{'train':[], 'val':[]} for _ in range(n_labels)],
-        epoch=[[] for _ in range(n_labels)], weights=[[] for _ in range(n_labels)],
+        epoch=[[] for _ in range(n_labels)], weights=[None for _ in range(n_labels)],
         elapsed=[[] for _ in range(n_labels)], labels=samples['labels'],
         label_names=samples['label_names'])
 
@@ -431,7 +431,7 @@ def _train_rnn(dataset, index, hidden_size, n_layers, bidirectional, n_epochs_ma
                 meta = torch.load(file_path)
                 meta['epoch'][idx_label].append(epoch)
                 meta['elapsed'][idx_label].append(elapsed)
-                meta['weights'][idx_label].append(rnn.state_dict())
+                meta['weights'][idx_label] = rnn.state_dict()
                 for phase in ['train', 'val']:
                     meta['rmse'][idx_label][phase].append(rmse[phase])
                 torch.save(meta, file_path)
