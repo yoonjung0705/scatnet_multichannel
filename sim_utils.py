@@ -9,7 +9,7 @@ from datetime import datetime
 
 import common_utils as cu
 
-ROOT_DIR = './data/simulations/'
+ROOT_DIR = './data/simulations/two_beads'
 
 def sim_brownian(data_len, diff_coefs, dt, n_data=1, save_file=False, root_dir=ROOT_DIR, dtype='float32'):
     '''
