@@ -192,6 +192,7 @@ def train_nn(file_name, n_nodes_hidden, classifier=False, n_epochs_max=2000, tra
     n_labels = len(label_names) # number of labels to predict
     assert(isinstance(n_nodes_hidden, list)), "Invalid format of nodes given. Should be type list"
     if not classifer:
+        if n_labels == 1 and not isinstance(n_nodes_hidden[0], list): n_nodes_hidden = [n_nodes_hidden]
         assert(all([isinstance(n_nodes_hidden_label, list) for n_nodes_hidden_label in n_nodes_hidden])),\
             "Invalid format of nodes given. Should provide list of {} lists".format(n_labels)
     index = _train_test_split(n_data_total, train_ratio); index['val'] = index.pop('test')
@@ -200,10 +201,15 @@ def train_nn(file_name, n_nodes_hidden, classifier=False, n_epochs_max=2000, tra
     # (n_scat_nodes) means 1 if data not transformed
     data = np.reshape(data, (n_data_total, -1)) 
 
-    n_nodes = [[data.shape[-1]] + n_nodes_hidden_label + [1] for n_nodes_hidden_label in n_nodes_hidden]
-
     labels = np.array(list(product(*labels)), dtype='float32') # shaped (n_conditions, n_labels)
     label_to_idx = {tuple(condition):idx_condition for condition, idx_condition in enumerate(labels)}
+
+    if classifier:
+        n_conditions = len(label_to_idx)
+        n_nodes = [data.shape[-1]] + n_nodes_hidden + [n_conditions]
+    else:
+        n_nodes = [[data.shape[-1]] + n_nodes_hidden_label + [1] for n_nodes_hidden_label in n_nodes_hidden]
+
 
     # initialize meta data and save it to a file
     meta = {'file_name':file_name_meta, 'root_dir':root_dir, 'n_nodes':n_nodes, 'classifier':classifier,
@@ -215,21 +221,23 @@ def train_nn(file_name, n_nodes_hidden, classifier=False, n_epochs_max=2000, tra
 
     if classifier: 
         meta['label_to_idx'] = label_to_idx
-        meta['rmse'] = [{'train':[], 'val':[]} for _ in range(n_labels)]
+        meta['loss'] = [{'train':[], 'val':[]} for _ in range(n_labels)]
+        meta['criterion'] = 'cross_entropy_sum'
         _init_meta(**meta)
-        labels = np.arange(len(label_to_idx)) # shaped (n_conditions,)
+        labels = np.arange(n_conditions) # shaped (n_conditions,)
         labels = np.repeat(labels, n_samples_total) # shaped (n_conditions * n_samples_total,)
         # which, for example, looks like [0,0,0,1,1,1,2,2,2,3,3,3,4,4,4] 
         # for n_samples_total being 3 and n_conditions being 5
 
         dataset = TimeSeriesDataset(data, labels, transform=ToTensor())
         # train the neural network for classification
-        print("Beginning training of {}:".format(', 'samples['label_names']))
+        print("Beginning training of {}:".format(', '.join(samples['label_names'])))
         _train_nn(dataset, index, n_nodes_hidden=n_nodes_hidden, classifier=classifier,
             n_epochs_max=n_epochs_max, batch_size=batch_size, device=device, n_workers=n_workers,
-            idx_label=0, file_name=file_name_meta, root_dir=root_dir)
+            file_name=file_name_meta, root_dir=root_dir)
     else:
-        meta['accuracy'] = [{'train':[], 'val':[]} for _ in range(n_labels)]
+        meta['loss'] = [{'train':[], 'val':[]} for _ in range(n_labels)]
+        meta['criterion'] = 'rmse'
         _init_meta(**meta)
         # following is shaped (n_labels, n_conditions)
         labels = labels.swapaxes(0, 1)
@@ -244,7 +252,7 @@ def train_nn(file_name, n_nodes_hidden, classifier=False, n_epochs_max=2000, tra
                 idx_label=idx_label, file_name=file_name_meta, root_dir=root_dir)
 
 def _train_nn(dataset, index, n_nodes_hidden, classifier, n_epochs_max, batch_size, device, n_workers,
-        idx_label, file_name, root_dir=ROOT_DIR, lr=0.001, betas=(0.9, 0.999)):
+        file_name, root_dir=ROOT_DIR, idx_label=None, lr=0.001, betas=(0.9, 0.999)):
     '''constructs and trains neural networks given the dataloader instance and network structure
 
     inputs
@@ -276,15 +284,22 @@ def _train_nn(dataset, index, n_nodes_hidden, classifier, n_epochs_max, batch_si
         batch_size=batch_size, num_workers=n_workers) for phase in ['train', 'val']}
     n_data = {phase:len(index[phase]) for phase in ['train', 'val']}
     n_features = dataset[0]['data'].shape[-1]
-    n_nodes = [n_features] + list(n_nodes_hidden) + [1]
+ 
+    if classifier:
+        n_conditions = len(label_to_idx)
+        n_nodes = [n_features] + list(n_nodes_hidden) + [n_conditions]
+    else:
+        n_nodes = [n_features] + list(n_nodes_hidden) + [1]
+
     net = Net(n_nodes=n_nodes).to(device)
     optimizer = optim.Adam(net.parameters(), lr=lr, betas=betas)
-    criterion = nn.MSELoss(reduction='sum')
+    criterion = nn.CrossEntropyLoss(reduction='sum') if classifier else nn.MSELoss(reduction='sum')
+    metric = 'cross_entropy_sum' if classifier else 'rmse'
     time_start = time.time()
     for epoch in range(n_epochs_max):
         try:
             loss_sum = {}
-            rmse = {}
+            loss_metric = {}
             for phase in ['train', 'val']:
                 net.train(phase == 'train')
                 loss_sum[phase] = 0.
@@ -297,19 +312,20 @@ def _train_nn(dataset, index, n_nodes_hidden, classifier, n_epochs_max, batch_si
                         loss.backward()
                         optimizer.step()
                     loss_sum[phase] += loss.data.item()
-                rmse[phase] = np.sqrt(loss_sum[phase] / n_data[phase]) # RMSE loss per data point
+                # classification: cross entropy sum, regression: RMSE loss per data point
+                loss_metric[phase] = loss_sum[phase] if classifier else np.sqrt(loss_sum[phase] / n_data[phase])
             if epoch % 10 == 0:
                 time_curr = time.time()
                 elapsed = time_curr - time_start
-                loss_msg = ("{} out of {} epochs, rmse_train:{:.15f}, rmse_val:{:.15f}, elapsed seconds:{:.2f}"
-                    .format(epoch, n_epochs_max, rmse['train'], rmse['val'], elapsed))
+                loss_msg = ("{} out of {} epochs, {}_train:{:.15f}, {}_val:{:.15f}, elapsed seconds:{:.2f}"
+                    .format(epoch, n_epochs_max, metric, loss_metric['train'], metric, loss_metric['val'], elapsed))
                 print(loss_msg)
                 meta = torch.load(file_path)
                 meta['epoch'][idx_label].append(epoch)
                 meta['elapsed'][idx_label].append(elapsed)
                 meta['weights'][idx_label] = net.state_dict()
                 for phase in ['train', 'val']:
-                    meta['rmse'][idx_label][phase].append(rmse[phase])
+                    meta['loss'][idx_label][phase].append(loss_metric[phase])
                 torch.save(meta, file_path)
         except KeyboardInterrupt:
             break
