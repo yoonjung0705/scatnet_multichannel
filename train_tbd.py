@@ -69,18 +69,30 @@ k_ratios_test = (k_ratios_test_high - k_ratios_test_low) * np.random.random(n_da
 diff_coef_ratios_test = (diff_coef_ratios_test_high - diff_coef_ratios_test_low) * np.random.random(n_data_test,) + diff_coef_ratios_test_low
 k_ratios_diff_coef_ratios_test = np.stack([k_ratios_test, diff_coef_ratios_test], axis=1)
 
+data_tests = []
+for k_ratio_test, diff_coef_ratio_test in k_ratios_diff_coef_ratios_test:
+    data_test = siu.sim_two_beads(data_len, k_ratios=k_ratio_test, diff_coef_ratios=diff_coef_ratio_test, dt=dt, n_data=1, n_steps_initial=10000, save_file=False)
+    data_tests.append(data_test)
+processes = np.concatenate(data_tests, axis=2) # shaped (1, 1, n_data_test, n_channels, data_len)
+samples = {'data':processes, 'labels':k_ratios_diff_coef_ratios_test, 'label_names':'k_ratios_diff_coef_ratios', 'dt':dt, 'n_steps_initial':10000}
+nums = cu.match_filename(r'tbd_([0-9]+).pt', root_dir=root_dir)
+nums = [int(num) for num in nums]
+idx = max(nums) + 1 if nums else 0
 
+file_name_test = 'tbd_{}.pt'.format(idx)
+file_path_test = os.path.join(root_dir, file_name_test)
+torch.save(samples, file_path_test)
 
-#### continue here
-
-file_name_test_data = siu.sim_two_beads(data_len, k_ratios=k_ratios_test, diff_coef_ratios=diff_coef_ratios_test, dt=dt, n_data=n_data_test, n_steps_initial=10000, save_file=True, root_dir=root_dir)
+# scat transforming test data
+file_names_scat_test = []
 for avg_len in avg_lens:
     for n_filter_octave in n_filter_octaves:
         try:
-            print("scat transforming n_data:{} with parameters avg_len:{}, n_filter_octave:{} for testing".format(n_data_test, avg_len, n_filter_octave))
-            file_name_test_scat = scu.scat_transform(file_name_test_data, avg_len, log_transform=False, n_filter_octave=n_filter_octave, save_file=True, root_dir=root_dir)
+            print("scat transforming n_data_test:{} with parameters avg_len:{}, n_filter_octave:{}".format(n_data_test, avg_len, n_filter_octave))
+            file_name_scat_test = scu.scat_transform(file_name_test, avg_len, log_transform=False, n_filter_octave=n_filter_octave, save_file=True, root_dir=root_dir)
+            file_names_scat_test.append(file_name_scat_test)
         except:
-            print("exception occurred during scat transformation for parameters avg_len:{}, n_filter_octave:{}".format(n_data, avg_len, n_filter_octave))
+            print("exception occurred during scat transformation for n_data_test:{} with parameters avg_len:{}, n_filter_octave:{}".format(n_data_test, avg_len, n_filter_octave))
 
 # train RNNs for scat transformed data
 for file_name_scat in file_names_scat:
