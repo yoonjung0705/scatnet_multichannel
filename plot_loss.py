@@ -1,15 +1,15 @@
-'''module that plots the training and validation loss as a function of number of epochs'''
+'''module that plots the training and validation loss as a function of number of epochs for one or multiple trained networks'''
 import os
 import torch
 import matplotlib.pyplot as plt
 import glob
 import scat_utils as scu
 
-#root_dir = './data/'
-root_dir = '/home/yoonjung/SeagateSSHD/scat_data/trial_0'
+root_dir = './data/simulations/two_beads'
 
 # provide file names and paths manually
-file_names = ['tbd_0_meta_rnn_0.pt' ,'tbd_1_meta_rnn_0.pt', 'tbd_2_meta_rnn_0.pt']
+file_names = ['tbd_0_scat_0_meta_rnn_0.pt']
+#file_names = ['tbd_0_meta_rnn_0.pt' ,'tbd_1_meta_rnn_0.pt', 'tbd_2_meta_rnn_0.pt']
 file_paths = [os.path.join(root_dir, file_name) for file_name in file_names]
 
 # provide file names and paths using regular expression
@@ -39,7 +39,7 @@ for idx_file in range(n_files):
     fig.suptitle(file_name)
 
     for idx_label in range(n_labels):
-        loss = meta['rmse'][idx_label]
+        loss = meta['loss'][idx_label]
         epoch = meta['epoch'][idx_label]
 
         # ignore the first iteration's loss to better visualize the trend
@@ -47,7 +47,7 @@ for idx_file in range(n_files):
         ax[idx_label].plot(epoch[1:], loss['val'][1:], label='validation')
         ax[idx_label].set_title(meta['label_names'][idx_label].replace('_', ' '), fontsize=fontsize_title)
         ax[idx_label].set_xlabel('Epochs', fontsize=fontsize_label)
-        ax[idx_label].set_ylabel('RMSE', fontsize=fontsize_label)
+        ax[idx_label].set_ylabel(meta['criterion'], fontsize=fontsize_label)
         ax[idx_label].legend()
     
     figs.append(fig)

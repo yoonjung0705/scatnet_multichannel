@@ -145,6 +145,6 @@ for file_name_data in file_names_data:
                         n_epochs_max=n_epochs_max, train_ratio=train_ratio, batch_size=batch_size,
                         n_workers=n_workers, root_dir=root_dir, lr=lr, betas=betas)
                 except:
-                    pass
+                    print("exception for file_name_data:{}, hidden_size:{}, n_layers:{}, bidirectional:{}".format(file_name_data, hidden_size, n_layers, bidirectional))
 '''
 

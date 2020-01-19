@@ -85,7 +85,7 @@ for avg_len in avg_lens:
             file_name_test_scat = scu.scat_transform('obd_exp_1.pt', avg_len, log_transform=False, n_filter_octave=n_filter_octave, save_file=True, root_dir=root_dir)
             file_names_scat.append(file_name_scat)
         except:
-            pass
+            print("exception occurred during scat transformation for data_len:{} with parameters avg_len:{}, n_filter_octave:{}".format(data_len, avg_len, n_filter_octave))
 
 # train RNNs for scat transformed data
 for file_name_scat in file_names_scat:
@@ -98,12 +98,12 @@ for file_name_scat in file_names_scat:
                 try:
                     print("training rnn for {}, avg_len:{}, n_filter_octave:{}, hidden_size:{}, n_layers:{}, bidirectional:{}"\
                         .format(file_name_scat, avg_len, n_filter_octave, hidden_size, n_layers, bidirectional))
-                    nu.train_rnn(file_name_scat, [hidden_size], n_layers, bidirectional,
+                    nu.train_rnn(file_name_scat, [hidden_size], n_layers, bidirectional, classifer=False,
                         n_epochs_max=n_epochs_max, train_ratio=train_ratio, batch_size=batch_size,
                         n_workers=n_workers, root_dir=root_dir, lr=lr, betas=betas)
                 except:
-                    pass
-
+                    print("exception occurred during training rnn for {}, avg_len:{}, n_filter_octave:{}, hidden_size:{}, n_layers:{}, bidirectional:{}"
+                        .format(file_name_scat, avg_len, n_filter_octave, hidden_size, n_layers, bidirectional))
 
 '''
 # train RNNs for raw data
@@ -113,10 +113,11 @@ for file_name_data in file_names_data:
             for bidirectional in bidirectionals:
                 try:
                     print("training rnn for {}, hidden_size:{}, n_layers:{}, bidirectional:{}".format(file_name_data, hidden_size, n_layers, bidirectional))
-                    nu.train_rnn(file_name_data, [hidden_size, hidden_size], n_layers, bidirectional,
+                    nu.train_rnn(file_name_data, [hidden_size, hidden_size], n_layers, bidirectional, classifier=False,
                         n_epochs_max=n_epochs_max, train_ratio=train_ratio, batch_size=batch_size,
                         n_workers=n_workers, root_dir=root_dir, lr=lr, betas=betas)
                 except:
-                    pass
+                    print("exception occurred during training rnn for {}, hidden_size:{}, n_layers:{}, bidirectional:{}"\
+                        .format(file_name_data, hidden_size, n_layers, bidirectional))
 '''
 

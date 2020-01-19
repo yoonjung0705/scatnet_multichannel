@@ -155,7 +155,7 @@ def train_nn(file_name, n_nodes_hidden, classifier=False, n_epochs_max=2000, tra
     ------
     file_name: string type name of file
     n_nodes_hidden: list type, where values are nodes (list of nodes) in the hidden layers
-        for classification (regression). For regression, the number of lists should match
+        for classification (regression). For regression of multiple labels, the number of lists should match
         with the number of labels to predict
     classifier: boolean indicating whether it's a classifier or regressor.
     n_epochs_max: int, maximum number of epochs to run. 
@@ -193,6 +193,8 @@ def train_nn(file_name, n_nodes_hidden, classifier=False, n_epochs_max=2000, tra
     assert(isinstance(n_nodes_hidden, list)), "Invalid format of nodes given. Should be type list"
     if not classifer:
         if n_labels == 1 and not isinstance(n_nodes_hidden[0], list): n_nodes_hidden = [n_nodes_hidden]
+        assert(len(n_nodes_hidden) == n_labels), "Invalid format of nodes given.\
+                Should be n_labels number of lists"
         assert(all([isinstance(n_nodes_hidden_label, list) for n_nodes_hidden_label in n_nodes_hidden])),\
             "Invalid format of nodes given. Should provide list of {} lists".format(n_labels)
     index = _train_test_split(n_data_total, train_ratio); index['val'] = index.pop('test')
@@ -202,7 +204,7 @@ def train_nn(file_name, n_nodes_hidden, classifier=False, n_epochs_max=2000, tra
     data = np.reshape(data, (n_data_total, -1)) 
 
     labels = np.array(list(product(*labels)), dtype='float32') # shaped (n_conditions, n_labels)
-    label_to_idx = {tuple(condition):idx_condition for condition, idx_condition in enumerate(labels)}
+    label_to_idx = {tuple(condition):idx_condition for idx_condition, condition in enumerate(labels)}
 
     if classifier:
         n_conditions = len(label_to_idx)
@@ -214,15 +216,12 @@ def train_nn(file_name, n_nodes_hidden, classifier=False, n_epochs_max=2000, tra
     # initialize meta data and save it to a file
     meta = {'file_name':file_name_meta, 'root_dir':root_dir, 'n_nodes':n_nodes, 'classifier':classifier,
         'n_epochs_max':n_epochs_max, 'train_ratio':train_ratio, 'batch_size':batch_size,
-        'n_workers':n_workers, 'index':index, 'device':device,
-        'epoch':[[] for _ in range(n_labels)], 'weights':[None for _ in range(n_labels)],
-        'elapsed':[[] for _ in range(n_labels)], 'labels':samples['labels'],
+        'n_workers':n_workers, 'index':index, 'device':device, 'labels':samples['labels'],
         'label_names':samples['label_names']}
 
-    if classifier: 
-        meta['label_to_idx'] = label_to_idx
-        meta['loss'] = [{'train':[], 'val':[]} for _ in range(n_labels)]
-        meta['criterion'] = 'cross_entropy_sum'
+    if classifier:
+        meta.update({'epoch':[], 'weights':None, 'elapsed':[], 'loss':{'train':[], 'val':[]},
+            'criterion':'cross_entropy_sum', 'label_to_idx':label_to_idx})
         _init_meta(**meta)
         labels = np.arange(n_conditions) # shaped (n_conditions,)
         labels = np.repeat(labels, n_samples_total) # shaped (n_conditions * n_samples_total,)
@@ -235,9 +234,10 @@ def train_nn(file_name, n_nodes_hidden, classifier=False, n_epochs_max=2000, tra
         _train_nn(dataset, index, n_nodes_hidden=n_nodes_hidden, classifier=classifier,
             n_epochs_max=n_epochs_max, batch_size=batch_size, device=device, n_workers=n_workers,
             file_name=file_name_meta, root_dir=root_dir)
-    else:
-        meta['loss'] = [{'train':[], 'val':[]} for _ in range(n_labels)]
-        meta['criterion'] = 'rmse'
+    else:        
+        meta.update({'epoch':[[] for _ in range(n_labels)], 'weights':[None for _ in range(n_labels)],
+            'elapsed':[[] for _ in range(n_labels)], 'loss':[{'train':[], 'val':[]}
+                for _ in range(n_labels)], 'criterion':'rmse'})
         _init_meta(**meta)
         # following is shaped (n_labels, n_conditions)
         labels = labels.swapaxes(0, 1)
@@ -266,9 +266,9 @@ def _train_nn(dataset, index, n_nodes_hidden, classifier, n_epochs_max, batch_si
     batch_size - batch size for training
     device - whether to run on gpu or cpu
     n_workers - int indicating number of workers when creating DataLoader instance
-    idx_label - int representing which neural network to train
     file_name - name of file that contains the empty meta data
     root_dir - root directory of the meta data file
+    idx_label - int representing which neural network to train
     lr - float type learning rate
     betas - tuple of floats indicating betas arguments in Adam optimizer
 
@@ -321,11 +321,19 @@ def _train_nn(dataset, index, n_nodes_hidden, classifier, n_epochs_max, batch_si
                     .format(epoch, n_epochs_max, metric, loss_metric['train'], metric, loss_metric['val'], elapsed))
                 print(loss_msg)
                 meta = torch.load(file_path)
-                meta['epoch'][idx_label].append(epoch)
-                meta['elapsed'][idx_label].append(elapsed)
-                meta['weights'][idx_label] = net.state_dict()
-                for phase in ['train', 'val']:
-                    meta['loss'][idx_label][phase].append(loss_metric[phase])
+
+                if classifier:
+                    meta['epoch'].append(epoch)
+                    meta['elapsed'].append(elapsed)
+                    meta['weights'] = net.state_dict()
+                    for phase in ['train', 'val']:
+                        meta['loss'][phase].append(loss_metric[phase])
+                else:
+                    meta['epoch'][idx_label].append(epoch)
+                    meta['elapsed'][idx_label].append(elapsed)
+                    meta['weights'][idx_label] = net.state_dict()
+                    for phase in ['train', 'val']:
+                        meta['loss'][idx_label][phase].append(loss_metric[phase])
                 torch.save(meta, file_path)
         except KeyboardInterrupt:
             break
@@ -374,8 +382,15 @@ def train_rnn(file_name, hidden_size, n_layers=1, bidirectional=False, classifie
     n_samples_total = data.shape[-n_none_param_dims]
     n_data_total = np.prod(data.shape[:-(n_none_param_dims - 1)])
     n_labels = len(label_names) # number of labels to predict
-    assert(isinstance(hidden_size, list)),\
-        "Invalid format of hidden state sizes given. Should provide list of size {}".format(n_labels)
+    if classifier:
+        assert(isinstance(hidden_size, int)), "Invalid format of hidden_size given. Should be type int"
+    else:
+        if n_labels == 1 and isinstance(hidden_size, int): hidden_size = [hidden_size]
+        assert(len(hidden_size) == n_labels), "Invalid format of hidden state sizes given.\
+            Should have length n_labels"
+        assert(all([isinstance(hidden_size_label, int) for hidden_size_label in hidden_size])),\
+            "Invalid format of hidden_size given. Should be list with int type elements"
+
     index = _train_test_split(n_data_total, train_ratio); index['val'] = index.pop('test')
 
     # reshape data. output is shaped (n_data_total, n_channels * (n_scat_nodes), data_len).
@@ -383,37 +398,52 @@ def train_rnn(file_name, hidden_size, n_layers=1, bidirectional=False, classifie
     data = np.reshape(data, (n_data_total, -1, data.shape[-1]))
     input_size = data.shape[-2]
 
+    labels = np.array(list(product(*labels)), dtype='float32') # shaped (n_conditions, n_labels)
+    label_to_idx = {tuple(condition):idx_condition for idx_condition, condition in enumerate(labels)}
+
     # initialize meta data and save it to a file
     meta = {'file_name':file_name_meta, 'root_dir':root_dir, 'input_size':input_size,
         'hidden_size':hidden_size, 'n_layers':n_layers, 'bidirectional':bidirectional,
         'classifier':classifier, 'n_epochs_max':n_epochs_max, 'train_ratio':train_ratio,
         'batch_size':batch_size, 'n_workers':n_workers, 'index':index, 'device':device,
-        'epoch':[[] for _ in range(n_labels)], 'weights':[None for _ in range(n_labels)],
-        'elapsed':[[] for _ in range(n_labels)], 'labels':samples['labels'],
-        'label_names':samples['label_names']}
-
+        'labels':samples['labels'], 'label_names':samples['label_names']}
+    
     if classifier:
-        meta['rmse'] = [{'train':[], 'val':[]} for _ in range(n_labels)]
-    else:
-        meta['accuracy'] = [{'train':[], 'val':[]} for _ in range(n_labels)]
+        meta.update({'epoch':[], 'weights':None, 'elapsed':[], 'loss':{'train':[], 'val':[]},
+            'criterion':'cross_entropy_sum', 'label_to_idx':label_to_idx})
+        _init_meta(**meta)
+        labels = np.arange(n_conditions) # shaped (n_conditions,)
+        labels = np.repeat(labels, n_samples_total) # shaped (n_conditions * n_samples_total,)
+        # which, for example, looks like [0,0,0,1,1,1,2,2,2,3,3,3,4,4,4] 
+        # for n_samples_total being 3 and n_conditions being 5
 
-    _init_meta(**meta)
-
-    # following is shaped (n_labels, n_conditions)
-    labels = np.array(list(product(*labels)), dtype='float32').swapaxes(0, 1)
-    # following is shaped (n_labels, n_data_total)
-    labels = np.tile(labels[:, :, np.newaxis], [1, 1, n_samples_total]).reshape([n_labels, n_data_total])
-    for idx_label in range(n_labels):
-        dataset = TimeSeriesDataset(data, labels[idx_label], transform=ToTensor())
-        # train the neural network for the given idx_label
-        print("Beginning training of {}:".format(samples['label_names'][idx_label]))
-        _train_rnn(dataset, index, hidden_size=hidden_size[idx_label], n_layers=n_layers,
+        dataset = TimeSeriesDataset(data, labels, transform=ToTensor())
+        # train the neural network for classification
+        print("Beginning training of {}:".format(', '.join(samples['label_names'])))
+        _train_rnn(dataset, index, hidden_size=hidden_size, n_layers=n_layers,
             bidirectional=bidirectional, classifier=classifier, n_epochs_max=n_epochs_max,
-            batch_size=batch_size, device=device, n_workers=n_workers, idx_label=idx_label,
+            batch_size=batch_size, device=device, n_workers=n_workers,
             file_name=file_name_meta, root_dir=root_dir, lr=lr, betas=betas)
-  
-def _train_rnn(dataset, index, hidden_size, n_layers, bidirectional, n_epochs_max, batch_size,
-        device, n_workers, idx_label, file_name, root_dir=ROOT_DIR, lr=0.001, betas=(0.9, 0.999)):
+    else:
+        meta.update({'epoch':[[] for _ in range(n_labels)], 'weights':[None for _ in range(n_labels)],
+            'elapsed':[[] for _ in range(n_labels)], 'loss':[{'train':[], 'val':[]}
+                for _ in range(n_labels)], 'criterion':'rmse'})
+        _init_meta(**meta)
+        # following is shaped (n_labels, n_conditions)
+        labels = labels.swapaxes(0, 1)
+        # following is shaped (n_labels, n_data_total)
+        labels = np.tile(labels[:, :, np.newaxis], [1, 1, n_samples_total]).reshape([n_labels, n_data_total])
+        for idx_label in range(n_labels):
+            dataset = TimeSeriesDataset(data, labels[idx_label], transform=ToTensor())
+            # train the rnn for the given idx_label
+            print("Beginning training of {}:".format(samples['label_names'][idx_label]))
+            _train_rnn(dataset, index, hidden_size=hidden_size[idx_label], n_layers=n_layers,
+                bidirectional=bidirectional, classifier=classifier, n_epochs_max=n_epochs_max,
+                batch_size=batch_size, device=device, n_workers=n_workers, idx_label=idx_label,
+                file_name=file_name_meta, root_dir=root_dir, lr=lr, betas=betas)
+
+def _train_rnn(dataset, index, hidden_size, n_layers, bidirectional, classifier, n_epochs_max, batch_size,
+        device, n_workers, file_name, root_dir=ROOT_DIR, idx_label=None, lr=0.001, betas=(0.9, 0.999)):
     '''constructs and trains neural networks given the dataloader instance and network structure
 
     inputs
@@ -424,13 +454,14 @@ def _train_rnn(dataset, index, hidden_size, n_layers, bidirectional, n_epochs_ma
     hidden_size - size of hidden state
     n_layers - number of recurrent layers
     bidirectional - if True, becomes a bidirectional LSTM
+    classifier: boolean indicating whether it's a classifier or regressor.
     n_epochs_max - maximum number of epochs to run. can be terminated by KeyboardInterrupt
     batch_size - batch size for training
     device - whether to run on gpu or cpu
     n_workers - int indicating number of workers when creating DataLoader instance
-    idx_label - int representing which neural network to train
     file_name - name of file that contains the empty meta data
     root_dir - root directory of the meta data file
+    idx_label - int representing which neural network to train
     lr - float type learning rate
     betas - tuple of floats indicating betas arguments in Adam optimizer
 
@@ -450,12 +481,13 @@ def _train_rnn(dataset, index, hidden_size, n_layers, bidirectional, n_epochs_ma
     rnn = RNN(input_size, hidden_size=hidden_size, output_size=1, n_layers=n_layers,
         bidirectional=bidirectional).to(device)
     optimizer = optim.Adam(rnn.parameters(), lr=lr, betas=betas)
-    criterion = nn.MSELoss(reduction='sum')
+    criterion = nn.CrossEntropyLoss(reduction='sum') if classifier else nn.MSELoss(reduction='sum')
+    metric = 'cross_entropy_sum' if classifier else 'rmse'
     time_start = time.time()
     for epoch in range(n_epochs_max):
         try:
             loss_sum = {}
-            rmse = {}
+            loss_metric = {}
             for phase in ['train', 'val']:
                 rnn.train(phase == 'train')
                 loss_sum[phase] = 0.
@@ -470,19 +502,27 @@ def _train_rnn(dataset, index, hidden_size, n_layers, bidirectional, n_epochs_ma
                         loss.backward()
                         optimizer.step()
                     loss_sum[phase] += loss.data.item()
-                rmse[phase] = np.sqrt(loss_sum[phase] / n_data[phase]) # RMSE loss per data point
+                # classification: cross entropy sum, regression: RMSE loss per data point
+                loss_metric[phase] = loss_sum[phase] if classifier else np.sqrt(loss_sum[phase] / n_data[phase])
             if epoch % 10 == 0:
                 time_curr = time.time()
                 elapsed = time_curr - time_start
-                loss_msg = ("{} out of {} epochs, rmse_train:{:.15f}, rmse_val:{:.15f}, elapsed seconds:{:.2f}"
-                    .format(epoch, n_epochs_max, rmse['train'], rmse['val'], elapsed))
+                loss_msg = ("{} out of {} epochs, {}_train:{:.15f}, {}_val:{:.15f}, elapsed seconds:{:.2f}"
+                    .format(epoch, n_epochs_max, metric, loss_metric['train'], metric, loss_metric['val'], elapsed))
                 print(loss_msg)
                 meta = torch.load(file_path)
-                meta['epoch'][idx_label].append(epoch)
-                meta['elapsed'][idx_label].append(elapsed)
-                meta['weights'][idx_label] = rnn.state_dict()
-                for phase in ['train', 'val']:
-                    meta['rmse'][idx_label][phase].append(rmse[phase])
+                if classifier:
+                    meta['epoch'].append(epoch)
+                    meta['elapsed'].append(elapsed)
+                    meta['weights'] = rnn.state_dict()
+                    for phase in ['train', 'val']:
+                        meta['loss'][phase].append(loss_metric[phase])
+                else:
+                    meta['epoch'][idx_label].append(epoch)
+                    meta['elapsed'][idx_label].append(elapsed)
+                    meta['weights'][idx_label] = rnn.state_dict()
+                    for phase in ['train', 'val']:
+                        meta['loss'][idx_label][phase].append(loss_metric[phase])
                 torch.save(meta, file_path)
         except KeyboardInterrupt:
             break
