@@ -1,4 +1,4 @@
-'''module that processes and trains the optical trap active bath experiment data'''
+'''module that processes and trains a classifier for the optical trap active bath experiment data'''
 import os
 import numpy as np
 import pandas as pd
@@ -28,7 +28,8 @@ file_paths_data = glob.glob(os.path.join(root_dir, 'ad57_*.txt'))
 
 # scat transform inputs
 avg_lens = [2**5, 2**7, 2**9]
-n_filter_octaves = list(product([1,4], [1,4]))
+n_filter_octaves = [(1, 1)]
+#n_filter_octaves = list(product([1,4], [1,4]))
 # [(1,1), (1,2), (1,4), (2,1), (2,2), (2,4), (4,1), (4,2), (4,4)]
 file_names_scat = []
 
@@ -124,16 +125,14 @@ for file_name_scat in file_names_scat:
         for n_layers in n_layerss:
             for bidirectional in bidirectionals:
                 try:
-                    print("training rnn for {}, avg_len:{}, n_filter_octave:{}, hidden_size:{}, n_layers:{}, bidirectional:{}"\
+                    print("training rnn for {}, avg_len:{}, n_filter_octave:{}, hidden_size:{}, n_layers:{}, bidirectional:{}"
                         .format(file_name_scat, avg_len, n_filter_octave, hidden_size, n_layers, bidirectional))
-                    nu.train_rnn(file_name_scat, [hidden_size, hidden_size], n_layers, bidirectional,
+                    nu.train_rnn(file_name_scat, hidden_size, n_layers, bidirectional, classifier=True,
                         n_epochs_max=n_epochs_max, train_ratio=train_ratio, batch_size=batch_size,
                         n_workers=n_workers, root_dir=root_dir, lr=lr, betas=betas)
                 except:
                     print("exception for file_name_scat:{}, hidden_size:{}, n_layers:{}, bidirectional:{}".format(file_name_scat, hidden_size, n_layers, bidirectional))
 
-
-'''
 # train RNNs for raw data
 for file_name_data in file_names_data:
     for hidden_size in hidden_sizes:
@@ -146,5 +145,5 @@ for file_name_data in file_names_data:
                         n_workers=n_workers, root_dir=root_dir, lr=lr, betas=betas)
                 except:
                     print("exception for file_name_data:{}, hidden_size:{}, n_layers:{}, bidirectional:{}".format(file_name_data, hidden_size, n_layers, bidirectional))
-'''
+
 

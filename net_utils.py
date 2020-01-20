@@ -203,25 +203,19 @@ def train_nn(file_name, n_nodes_hidden, classifier=False, n_epochs_max=2000, tra
     # (n_scat_nodes) means 1 if data not transformed
     data = np.reshape(data, (n_data_total, -1)) 
 
-    labels = np.array(list(product(*labels)), dtype='float32') # shaped (n_conditions, n_labels)
-    label_to_idx = {tuple(condition):idx_condition for idx_condition, condition in enumerate(labels)}
-
-    if classifier:
-        n_conditions = len(label_to_idx)
-        n_nodes = [data.shape[-1]] + n_nodes_hidden + [n_conditions]
-    else:
-        n_nodes = [[data.shape[-1]] + n_nodes_hidden_label + [1] for n_nodes_hidden_label in n_nodes_hidden]
-
-
     # initialize meta data and save it to a file
     meta = {'file_name':file_name_meta, 'root_dir':root_dir, 'n_nodes':n_nodes, 'classifier':classifier,
         'n_epochs_max':n_epochs_max, 'train_ratio':train_ratio, 'batch_size':batch_size,
         'n_workers':n_workers, 'index':index, 'device':device, 'labels':samples['labels'],
         'label_names':samples['label_names']}
 
+    labels = np.array(list(product(*labels)), dtype='float32') # shaped (n_conditions, n_labels)
     if classifier:
+        label_to_idx = {tuple(condition):idx_condition for idx_condition, condition in enumerate(labels)}
+        n_conditions = len(label_to_idx)
+        n_nodes = [data.shape[-1]] + n_nodes_hidden + [n_conditions]
         meta.update({'epoch':[], 'weights':None, 'elapsed':[], 'loss':{'train':[], 'val':[]},
-            'criterion':'cross_entropy_sum', 'label_to_idx':label_to_idx})
+            'criterion':'cross_entropy_sum', 'label_to_idx':label_to_idx, 'n_nodes':n_nodes})
         _init_meta(**meta)
         labels = np.arange(n_conditions) # shaped (n_conditions,)
         labels = np.repeat(labels, n_samples_total) # shaped (n_conditions * n_samples_total,)
@@ -235,6 +229,7 @@ def train_nn(file_name, n_nodes_hidden, classifier=False, n_epochs_max=2000, tra
             n_epochs_max=n_epochs_max, batch_size=batch_size, device=device, n_workers=n_workers,
             file_name=file_name_meta, root_dir=root_dir)
     else:        
+        n_nodes = [[data.shape[-1]] + n_nodes_hidden_label + [1] for n_nodes_hidden_label in n_nodes_hidden]
         meta.update({'epoch':[[] for _ in range(n_labels)], 'weights':[None for _ in range(n_labels)],
             'elapsed':[[] for _ in range(n_labels)], 'loss':[{'train':[], 'val':[]}
                 for _ in range(n_labels)], 'criterion':'rmse'})
@@ -284,12 +279,9 @@ def _train_nn(dataset, index, n_nodes_hidden, classifier, n_epochs_max, batch_si
         batch_size=batch_size, num_workers=n_workers) for phase in ['train', 'val']}
     n_data = {phase:len(index[phase]) for phase in ['train', 'val']}
     n_features = dataset[0]['data'].shape[-1]
- 
-    if classifier:
-        n_conditions = len(label_to_idx)
-        n_nodes = [n_features] + list(n_nodes_hidden) + [n_conditions]
-    else:
-        n_nodes = [n_features] + list(n_nodes_hidden) + [1]
+    meta = torch.load(file_path)
+    output_size = len(meta['label_to_idx']) if classifier else 1
+    n_nodes = [n_features] + list(n_nodes_hidden) + [output_size]
 
     net = Net(n_nodes=n_nodes).to(device)
     optimizer = optim.Adam(net.parameters(), lr=lr, betas=betas)
@@ -305,7 +297,12 @@ def _train_nn(dataset, index, n_nodes_hidden, classifier, n_epochs_max, batch_si
                 loss_sum[phase] = 0.
                 for batch in dataloader[phase]:
                     batch_data, batch_labels = batch['data'].to(device), batch['labels'].to(device)
-                    output = net(batch_data)[:, 0] # output of net is shaped (batch_size, 1). drop dummy axis
+                    output = net(batch_data)
+                    # for regression, output of nn is shaped (batch_size, 1). drop dummy axis
+                    if classifier:
+                        batch_labels = batch_labels.type(torch.LongTensor)
+                    else:
+                        output = output[:, 0]
                     loss = criterion(output, batch_labels)
                     optimizer.zero_grad()
                     if phase == 'train':
@@ -398,17 +395,17 @@ def train_rnn(file_name, hidden_size, n_layers=1, bidirectional=False, classifie
     data = np.reshape(data, (n_data_total, -1, data.shape[-1]))
     input_size = data.shape[-2]
 
-    labels = np.array(list(product(*labels)), dtype='float32') # shaped (n_conditions, n_labels)
-    label_to_idx = {tuple(condition):idx_condition for idx_condition, condition in enumerate(labels)}
-
     # initialize meta data and save it to a file
     meta = {'file_name':file_name_meta, 'root_dir':root_dir, 'input_size':input_size,
         'hidden_size':hidden_size, 'n_layers':n_layers, 'bidirectional':bidirectional,
         'classifier':classifier, 'n_epochs_max':n_epochs_max, 'train_ratio':train_ratio,
         'batch_size':batch_size, 'n_workers':n_workers, 'index':index, 'device':device,
         'labels':samples['labels'], 'label_names':samples['label_names']}
-    
+
+    labels = np.array(list(product(*labels)), dtype='float32') # shaped (n_conditions, n_labels)
     if classifier:
+        label_to_idx = {tuple(condition):idx_condition for idx_condition, condition in enumerate(labels)}
+        n_conditions = len(label_to_idx)
         meta.update({'epoch':[], 'weights':None, 'elapsed':[], 'loss':{'train':[], 'val':[]},
             'criterion':'cross_entropy_sum', 'label_to_idx':label_to_idx})
         _init_meta(**meta)
@@ -478,7 +475,9 @@ def _train_rnn(dataset, index, hidden_size, n_layers, bidirectional, classifier,
     n_data = {phase:len(index[phase]) for phase in ['train', 'val']}
 
     input_size = dataset[0]['data'].shape[-2]
-    rnn = RNN(input_size, hidden_size=hidden_size, output_size=1, n_layers=n_layers,
+    meta = torch.load(file_path)
+    output_size = len(meta['label_to_idx']) if classifier else 1
+    rnn = RNN(input_size, hidden_size=hidden_size, output_size=output_size, n_layers=n_layers,
         bidirectional=bidirectional).to(device)
     optimizer = optim.Adam(rnn.parameters(), lr=lr, betas=betas)
     criterion = nn.CrossEntropyLoss(reduction='sum') if classifier else nn.MSELoss(reduction='sum')
@@ -495,7 +494,12 @@ def _train_rnn(dataset, index, hidden_size, n_layers, bidirectional, classifier,
                     # permute s.t. shape is (data_len, n_data_total, n_channels * (n_scat_nodes))
                     batch_data = batch['data'].permute([2, 0, 1]).to(device)
                     batch_labels = batch['labels'].to(device)
-                    output = rnn(batch_data)[:, 0] # output of rnn is shaped (batch_size, 1). drop dummy axis
+                    output = rnn(batch_data)
+                    # for regression, output of rnn is shaped (batch_size, 1). drop dummy axis
+                    if classifier:
+                        batch_labels = batch_labels.type(torch.LongTensor)
+                    else:
+                        output = output[:, 0]
                     loss = criterion(output, batch_labels)
                     optimizer.zero_grad()
                     if phase == 'train':
