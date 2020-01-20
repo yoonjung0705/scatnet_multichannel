@@ -296,13 +296,14 @@ def _train_nn(dataset, index, n_nodes_hidden, classifier, n_epochs_max, batch_si
                 net.train(phase == 'train')
                 loss_sum[phase] = 0.
                 for batch in dataloader[phase]:
-                    batch_data, batch_labels = batch['data'].to(device), batch['labels'].to(device)
+                    batch_data, batch_labels = batch['data'].to(device), batch['labels']
                     output = net(batch_data)
                     # for regression, output of nn is shaped (batch_size, 1). drop dummy axis
                     if classifier:
                         batch_labels = batch_labels.type(torch.LongTensor)
                     else:
                         output = output[:, 0]
+                    batch_labels = batch_labels.to(device)
                     loss = criterion(output, batch_labels)
                     optimizer.zero_grad()
                     if phase == 'train':
@@ -493,13 +494,14 @@ def _train_rnn(dataset, index, hidden_size, n_layers, bidirectional, classifier,
                 for batch in dataloader[phase]:
                     # permute s.t. shape is (data_len, n_data_total, n_channels * (n_scat_nodes))
                     batch_data = batch['data'].permute([2, 0, 1]).to(device)
-                    batch_labels = batch['labels'].to(device)
+                    batch_labels = batch['labels']
                     output = rnn(batch_data)
                     # for regression, output of rnn is shaped (batch_size, 1). drop dummy axis
                     if classifier:
                         batch_labels = batch_labels.type(torch.LongTensor)
                     else:
                         output = output[:, 0]
+                    batch_labels = batch_labels.to(device)
                     loss = criterion(output, batch_labels)
                     optimizer.zero_grad()
                     if phase == 'train':
