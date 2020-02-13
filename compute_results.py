@@ -26,8 +26,11 @@ root_dir_results = os.path.join(root_dir, 'results')
 #file_names = ['tbd_1_scat_0.pt']
 #file_names_meta = ['tbd_0_scat_0_meta_rnn_0.pt']
 
-file_names = ['data_test_scat_3.pt']
-file_names_meta = ['data_scat_3_meta_rnn_0.pt']
+#file_names = ['data_test_scat_0.pt']
+file_names = ['data_test.pt']
+#file_names_meta = ['data_scat_0_meta_rnn_0.pt', 'data_scat_0_meta_rnn_1.pt', 'data_scat_0_meta_rnn_2.pt', 'data_scat_0_meta_rnn_3.pt']
+file_names_meta = ['data_meta_rnn_2.pt']
+file_names = file_names * len(file_names_meta)
 
 # OR, provide file names and paths using regular expression
 #file_paths_meta = glob.glob(os.path.join(root_dir, 'tbd_0_scat_meta_rnn_*.pt'))
