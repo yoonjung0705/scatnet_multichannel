@@ -7,9 +7,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 #from torch.autograd import Variable
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, Subset
 from torch.utils.data.sampler import SubsetRandomSampler
+from torch.utils.data.distributed import DistributedSampler
 import time
+import horovod.torch as hvd
 import common_utils as cu
 import scat_utils as scu
 
@@ -367,11 +369,9 @@ def train_rnn(file_name, hidden_size, n_layers=1, bidirectional=False, classifie
     file_path = os.path.join(root_dir, file_name + '.pt')
     transformed = 'scat' in file_name
     samples = torch.load(file_path)
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     nums = cu.match_filename(r'{}_meta_rnn_([0-9]+).pt'.format(file_name), root_dir=root_dir)
     nums = [int(num) for num in nums]; idx = max(nums) + 1 if nums else 0
     file_name_meta = '{}_meta_rnn_{}.pt'.format(file_name, idx)
-
     # data shape: (n_param_1, n_param_2,..., n_param_N, n_samples_total, n_channels, (n_nodes), data_len)
     data, labels, label_names = samples['data'], samples['labels'], samples['label_names']
     # the number of dimensions that do not correspond to the batch dimension is 4 if scat transformed.
@@ -400,7 +400,7 @@ def train_rnn(file_name, hidden_size, n_layers=1, bidirectional=False, classifie
     meta = {'file_name':file_name_meta, 'root_dir':root_dir, 'input_size':input_size,
         'hidden_size':hidden_size, 'n_layers':n_layers, 'bidirectional':bidirectional,
         'classifier':classifier, 'n_epochs_max':n_epochs_max, 'train_ratio':train_ratio,
-        'batch_size':batch_size, 'n_workers':n_workers, 'index':index, 'device':device,
+        'batch_size':batch_size, 'n_workers':n_workers, 'index':index,
         'labels':samples['labels'], 'label_names':samples['label_names']}
 
     labels = np.array(list(product(*labels)), dtype='float32') # shaped (n_conditions, n_labels)
@@ -420,7 +420,7 @@ def train_rnn(file_name, hidden_size, n_layers=1, bidirectional=False, classifie
         print("Beginning training of {}:".format(', '.join(samples['label_names'])))
         _train_rnn(dataset, index, hidden_size=hidden_size, n_layers=n_layers,
             bidirectional=bidirectional, classifier=classifier, n_epochs_max=n_epochs_max,
-            batch_size=batch_size, device=device, n_workers=n_workers,
+            batch_size=batch_size, n_workers=n_workers,
             file_name=file_name_meta, root_dir=root_dir, lr=lr, betas=betas)
     else:
         meta.update({'epoch':[[] for _ in range(n_labels)], 'weights':[None for _ in range(n_labels)],
@@ -437,11 +437,11 @@ def train_rnn(file_name, hidden_size, n_layers=1, bidirectional=False, classifie
             print("Beginning training of {}:".format(samples['label_names'][idx_label]))
             _train_rnn(dataset, index, hidden_size=hidden_size[idx_label], n_layers=n_layers,
                 bidirectional=bidirectional, classifier=classifier, n_epochs_max=n_epochs_max,
-                batch_size=batch_size, device=device, n_workers=n_workers, idx_label=idx_label,
+                batch_size=batch_size, n_workers=n_workers, idx_label=idx_label,
                 file_name=file_name_meta, root_dir=root_dir, lr=lr, betas=betas)
 
 def _train_rnn(dataset, index, hidden_size, n_layers, bidirectional, classifier, n_epochs_max, batch_size,
-        device, n_workers, file_name, root_dir=ROOT_DIR, idx_label=None, lr=0.001, betas=(0.9, 0.999)):
+        n_workers, file_name, root_dir=ROOT_DIR, idx_label=None, lr=0.001, betas=(0.9, 0.999)):
     '''constructs and trains neural networks given the dataloader instance and network structure
 
     inputs
@@ -455,7 +455,6 @@ def _train_rnn(dataset, index, hidden_size, n_layers, bidirectional, classifier,
     classifier: boolean indicating whether it's a classifier or regressor.
     n_epochs_max - maximum number of epochs to run. can be terminated by KeyboardInterrupt
     batch_size - batch size for training
-    device - whether to run on gpu or cpu
     n_workers - int indicating number of workers when creating DataLoader instance
     file_name - name of file that contains the empty meta data
     root_dir - root directory of the meta data file
@@ -471,7 +470,11 @@ def _train_rnn(dataset, index, hidden_size, n_layers, bidirectional, classifier,
     file_path = os.path.join(root_dir, file_name + '.pt')
     assert(len(dataset) == (len(index['train']) + len(index['val']))),\
         "Size mismatch between dataset and index"
-    dataloader = {phase:DataLoader(dataset, sampler=SubsetRandomSampler(index[phase]),
+    hvd.init() # initialize horovod
+    torch.cuda.set_device(hvd.local_rank()) # pin GPU to local rank
+    # Partition dataset among workers using DistributedSampler
+    sampler = {phase:DistributedSampler(Subset(dataset, index[phase]), num_replicas=hvd.size(), rank=hvd.rank()) for phase in ['train', 'val']}
+    dataloader = {phase:DataLoader(dataset, sampler=sampler[phase],
         batch_size=batch_size, num_workers=n_workers) for phase in ['train', 'val']}
     n_data = {phase:len(index[phase]) for phase in ['train', 'val']}
 
@@ -479,9 +482,14 @@ def _train_rnn(dataset, index, hidden_size, n_layers, bidirectional, classifier,
     meta = torch.load(file_path)
     output_size = len(meta['label_to_idx']) if classifier else 1
     rnn = RNN(input_size, hidden_size=hidden_size, output_size=output_size, n_layers=n_layers,
-        bidirectional=bidirectional).to(device)
+        bidirectional=bidirectional).cuda()
     optimizer = optim.Adam(rnn.parameters(), lr=lr, betas=betas)
+    # Add Horovod Distributed Optimizer
+    optimizer = hvd.DistributedOptimizer(optimizer, named_parameters=rnn.named_parameters())
+    # Broadcast parameters from rank 0 to all other processes.
+    hvd.broadcast_parameters(rnn.state_dict(), root_rank=0)
     criterion = nn.CrossEntropyLoss(reduction='sum') if classifier else nn.MSELoss(reduction='sum')
+    criterion = criterion.cuda()
     metric = 'cross_entropy_sum' if classifier else 'rmse'
     time_start = time.time()
     for epoch in range(n_epochs_max):
