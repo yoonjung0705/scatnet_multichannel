@@ -1,5 +1,4 @@
 '''module that processes data prior to training'''
-
 import os
 import numpy as np
 import pandas as pd
@@ -16,6 +15,32 @@ import common_utils as cu
 ROOT_DIR = './data/experiment/trap_bead_active_bath'
 file_name_data = 'data.pt'
 file_name_data_test = 'data_test.pt'
+
+def train_val_split_exp(n_data, train_ratio):
+    '''
+    splits the experimental data into files for training and validation
+
+    inputs
+    ------
+    n_data: int type number of data
+    train_val_ratio: list-like with float elements indicating ratio for training and validation data.
+        sum should be between 0 and 1
+
+    outputs
+    -------
+    index: dict with keys train and test while values being lists of indices
+    '''
+    assert(len(train_val_ratio) == 2), "Split ratio should be given as a length 2 list like input"
+    for ratio in train_val_ratio:
+        assert(ratio > 0 and ratio < 1), "Invalid train_val_ratio given. Elements should be between 0 and 1"
+    assert(sum(train_val_ratio) > 0 and sum(train_val_ratio) < 1), "Invalid train_val_ratio given.\
+        Not enough data to be assigned for test purposes"
+    idx_train = np.random.choice(n_data, int(n_data * train_val_ratio[0]), replace=False)
+    idx_val_test = np.array(list(set(range(n_data)) - set(idx_train)))
+    idx_val = np.random.choice(idx_val_test, int(n_data * train_val_ratio[1]), replace=False)
+    idx_test = np.array(list(set(idx_val_test) - set(idx_val)))
+    index = {'train':idx_train, 'val':idx_val, 'test':idx_test}
+    return index
 
 # common inputs
 data_len = 2**11
