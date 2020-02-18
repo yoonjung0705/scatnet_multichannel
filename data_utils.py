@@ -1,4 +1,5 @@
-'''module that processes and trains a regressor for the optical trap active bath experiment data'''
+'''module that processes data prior to training'''
+
 import os
 import numpy as np
 import pandas as pd
@@ -13,6 +14,8 @@ from itertools import product
 '''custom libraries'''
 import common_utils as cu
 ROOT_DIR = './data/experiment/trap_bead_active_bath'
+file_name_data = 'data.pt'
+file_name_data_test = 'data_test.pt'
 
 # common inputs
 data_len = 2**11
@@ -27,13 +30,15 @@ test_ratio = 1 - (train_ratio + val_ratio)
 file_paths_data = glob.glob(os.path.join(root_dir, 'ad57_*.txt'))
 
 # scat transform inputs
-avg_lens = [2**5, 2**7, 2**9]
-n_filter_octaves = list(product([1,4], [1,4]))
+#avg_lens = [2**8]
+avg_lens = [2**5, 2**7, 2**8, 2**9]
+n_filter_octaves = [(1, 1)]
+#n_filter_octaves = list(product([1,4], [1,4]))
 # [(1,1), (1,2), (1,4), (2,1), (2,2), (2,4), (4,1), (4,2), (4,4)]
 file_names_scat = []
 
 # training inputs
-n_epochs_max = 1000
+n_epochs_max = 2000
 batch_size = 100
 n_workers = 4
 
@@ -42,6 +47,7 @@ n_workers = 4
 
 # RNN inputs
 hidden_sizes = [10, 50, 200, 500]
+#hidden_sizes = [10, 50, 200, 500]
 n_layerss = [2]
 bidirectionals = [True]
 lr = 0.001
@@ -101,8 +107,8 @@ data_test = np.stack(datas_test, axis=0).reshape([len(cs_uniq), len(leds_uniq), 
 samples = {'data':data, 'labels':[cs_uniq, leds_uniq], 'label_names':['c', 'led'], 'bacteria':'ad57', 'sample_rate':10000., 'laser_ma':150}
 samples_test = {'data':data_test, 'labels':[cs_uniq, leds_uniq], 'label_names':['c', 'led'], 'bacteria':'ad57', 'sample_rate':10000., 'laser_ma':150}
 
-torch.save(samples, os.path.join(root_dir, 'data.pt'))
-torch.save(samples_test, os.path.join(root_dir, 'data_test.pt'))
+torch.save(samples, os.path.join(root_dir, file_name_data))
+torch.save(samples_test, os.path.join(root_dir, file_name_data_test))
 
 # create scat transformed versions
 for avg_len in avg_lens:
@@ -115,36 +121,4 @@ for avg_len in avg_lens:
         except:
             print("exception for avg_len:{}, n_filter_octave:{}".format(avg_len, n_filter_octave))
 
-# train RNNs for scat transformed data
-for file_name_scat in file_names_scat:
-    meta = torch.load(os.path.join(root_dir, file_name_scat))
-    avg_len = meta['avg_len']
-    n_filter_octave = meta['n_filter_octave']
-    for hidden_size in hidden_sizes:
-        for n_layers in n_layerss:
-            for bidirectional in bidirectionals:
-                try:
-                    print("training rnn for {}, avg_len:{}, n_filter_octave:{}, hidden_size:{}, n_layers:{}, bidirectional:{}"\
-                        .format(file_name_scat, avg_len, n_filter_octave, hidden_size, n_layers, bidirectional))
-                    nu.train_rnn(file_name_scat, [hidden_size, hidden_size], n_layers, bidirectional,
-                        n_epochs_max=n_epochs_max, train_ratio=train_ratio, batch_size=batch_size,
-                        n_workers=n_workers, root_dir=root_dir, lr=lr, betas=betas)
-                except:
-                    print("exception for file_name_scat:{}, hidden_size:{}, n_layers:{}, bidirectional:{}".format(file_name_scat, hidden_size, n_layers, bidirectional))
-
-
-'''
-# train RNNs for raw data
-for file_name_data in file_names_data:
-    for hidden_size in hidden_sizes:
-        for n_layers in n_layerss:
-            for bidirectional in bidirectionals:
-                try:
-                    print("training rnn for {}, hidden_size:{}, n_layers:{}, bidirectional:{}".format(file_name_data, hidden_size, n_layers, bidirectional))
-                    nu.train_rnn(file_name_data, [hidden_size, hidden_size], n_layers, bidirectional,
-                        n_epochs_max=n_epochs_max, train_ratio=train_ratio, batch_size=batch_size,
-                        n_workers=n_workers, root_dir=root_dir, lr=lr, betas=betas)
-                except:
-                    print("exception for file_name_data:{}, hidden_size:{}, n_layers:{}, bidirectional:{}".format(file_name_data, hidden_size, n_layers, bidirectional))
-'''
 

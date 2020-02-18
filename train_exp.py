@@ -13,6 +13,8 @@ from itertools import product
 '''custom libraries'''
 import common_utils as cu
 ROOT_DIR = './data/experiment/trap_bead_active_bath'
+file_name_data = 'data.pt'
+file_name_data_test = 'data_test.pt'
 
 # common inputs
 data_len = 2**11
@@ -104,8 +106,6 @@ data_test = np.stack(datas_test, axis=0).reshape([len(cs_uniq), len(leds_uniq), 
 samples = {'data':data, 'labels':[cs_uniq, leds_uniq], 'label_names':['c', 'led'], 'bacteria':'ad57', 'sample_rate':10000., 'laser_ma':150}
 samples_test = {'data':data_test, 'labels':[cs_uniq, leds_uniq], 'label_names':['c', 'led'], 'bacteria':'ad57', 'sample_rate':10000., 'laser_ma':150}
 
-file_name_data = 'data.pt'
-file_name_data_test = 'data_test.pt'
 torch.save(samples, os.path.join(root_dir, file_name_data))
 torch.save(samples_test, os.path.join(root_dir, file_name_data_test))
 
