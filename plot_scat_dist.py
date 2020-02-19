@@ -11,7 +11,7 @@ from scipy import interpolate
 import scat_utils as scu
 import sim_utils as siu
 
-#plt.style.use('dark_background')
+plt.style.use('dark_background')
 fontsize_title = 18
 fontsize_label = 14
 data_len = 2**12
@@ -19,12 +19,13 @@ avg_len = 2**8
 disp_len = 2**7
 dt = 0.001
 n_data = 10
-eps = 0.015
+eps = 0.02
 
 padded_len = np.ceil(data_len * (1 + eps * n_data))
 t = np.arange(0, data_len) * dt
 t_padded = np.arange(0, padded_len) * dt
-a_padded = np.sin(10 * t_padded) + np.sin(30 * t_padded) + np.sin(50 * t_padded)
+#a_padded = np.sin(10 * t_padded) + np.sin(30 * t_padded) + np.sin(50 * t_padded)
+a_padded = np.random.randn(len(t_padded),).cumsum()
 
 f = interpolate.interp1d(t_padded, a_padded)
 scat = scu.ScatNet(data_len=data_len, avg_len=avg_len)
@@ -37,7 +38,7 @@ fig1, ax1 = plt.subplots()
 ax1.plot(data[:, :disp_len].swapaxes(0,1))
 ax1.set_title('Dilated time series', fontsize=fontsize_title)
 ax1.set_xlabel('Time', fontsize=fontsize_label)
-ax1.set_ylabel('Amplitude', fontsize=fontsize_label)
+ax1.set_ylabel('Position', fontsize=fontsize_label)
 
 dilation = 1 + eps * np.arange(n_data)
 S = scat.transform(data[:, np.newaxis, :])
@@ -46,7 +47,8 @@ S = scu.stack_scat(S) # (n_data, 1, n_nodes, data_scat_len)
 # subtract undilated signal's scat transform result for each scat transform result using broadcasting
 diff_scat = S - S[0:1]
 diff_data = data - data[0:1]
-diff_fourier = np.fft.fft(diff_data, axis=-1) # since fft is a linear operator, Uf1 - Uf2 = U(f1 - f2)
+#diff_fourier = np.fft.fft(diff_data, axis=-1) # since fft is a linear operator, Uf1 - Uf2 = U(f1 - f2)
+diff_fourier = np.abs(np.fft.fft(data, axis=-1)) - np.abs(np.fft.fft(data[0:1], axis=-1)) 
 
 # compute the distance which is the sum of the absolute values of the difference, followed by the square root
 dist_scat = np.sqrt((np.abs(diff_scat)**2).reshape([n_data, -1]).sum(axis=-1))
