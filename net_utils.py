@@ -11,6 +11,8 @@ from torch.utils.data import Dataset, DataLoader, Subset
 from torch.utils.data.sampler import SubsetRandomSampler
 from torch.utils.data.distributed import DistributedSampler
 import time
+from apex import amp
+
 import common_utils as cu
 import scat_utils as scu
 
@@ -536,9 +538,9 @@ def _train_rnn(dataset, index, hidden_size, n_layers, bidirectional, classifier,
         except KeyboardInterrupt:
             break
 
-def _train_rnn_hvd(dataset, index, hidden_size, n_layers, bidirectional, classifier, n_epochs_max, batch_size,
+def _train_rnn_cluster(dataset, index, hidden_size, n_layers, bidirectional, classifier, n_epochs_max, batch_size,
         n_workers, file_name, root_dir=ROOT_DIR, idx_label=None, lr=0.001, betas=(0.9, 0.999)):
-    '''constructs and trains neural networks given the dataloader instance and network structure
+    '''constructs and trains neural networks given the dataloader instance and network structure for a cluster
 
     inputs
     ------
@@ -589,6 +591,9 @@ def _train_rnn_hvd(dataset, index, hidden_size, n_layers, bidirectional, classif
     optimizer = hvd.DistributedOptimizer(optimizer, named_parameters=rnn.named_parameters())
     # Broadcast parameters from rank 0 to all other processes.
     hvd.broadcast_parameters(rnn.state_dict(), root_rank=0)
+    hvd.broadcast_optimizer_state(optimizer, root_rank=0)
+    # apex
+    rnn, optimizer = amp.initialize(rnn, optimizer, opt_level="02")
 
     criterion = nn.CrossEntropyLoss(reduction='sum') if classifier else nn.MSELoss(reduction='sum')
     criterion = criterion.cuda()
@@ -615,8 +620,11 @@ def _train_rnn_hvd(dataset, index, hidden_size, n_layers, bidirectional, classif
                     loss = criterion(output, batch_labels)
                     optimizer.zero_grad()
                     if phase == 'train':
-                        loss.backward()
-                        optimizer.step()
+                        with amp.scale_loss(loss, optimizer) as scaled_loss:
+                            scaled_loss.backward()
+                            optimizer.synchronize()
+                        with optimizer.skip_synchronize():
+                            optimizer.step()
                     loss_sum[phase] += loss.data.item()
                 # classification: cross entropy sum, regression: RMSE loss per data point
                 loss_metric[phase] = loss_sum[phase] if classifier else np.sqrt(loss_sum[phase] / n_data[phase])
