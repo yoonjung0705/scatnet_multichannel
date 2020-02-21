@@ -27,12 +27,12 @@ root_dir = './data/simulations/active_passive_sim'
 root_dir_results = os.path.join(root_dir, 'results/')
 
 # provide file names and paths manually
-#file_names = ['tbd_13_scat_test.pt']
-#file_names_meta = ['tbd_12_scat_meta_rnn_0.pt']
+file_names = ['tbd_13_scat_test.pt']
+file_names_meta = ['tbd_12_scat_meta_rnn_0.pt']
 #file_names = ['pos_0_test_scat_0.pt']
 #file_names_meta = ['pos_0_scat_meta_rnn_1.pt']
-file_names = ['pos_1_scat_0.pt'] # example file name
-file_names_meta = ['pos_0_scat_2_meta_rnn_1.pt'] # example file name
+#file_names = ['pos_1_scat_0.pt'] # example file name
+#file_names_meta = ['pos_0_scat_2_meta_rnn_1.pt'] # example file name
 
 # OR, provide file names and paths using regular expression
 #file_paths_meta = glob.glob(os.path.join(root_dir, 'tbd_0_scat_meta_rnn_*.pt'))

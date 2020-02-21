@@ -9,7 +9,9 @@ import matplotlib.pyplot as plt
 from sklearn import decomposition
 from mpl_toolkits.mplot3d import Axes3D
 
-#plt.style.use('dark_background')
+plt.style.use('dark_background')
+fontsize_title = 18
+fontsize_label = 14
 
 # scatnet parameters
 data_len = 2**11
@@ -36,7 +38,7 @@ if sim_type == 'brw':
 
     diff_coefs_brw_str = np.round(diff_coefs_brw, n_decim).astype(str)
     labels_brw = np.repeat(diff_coefs_brw_str[:, np.newaxis], n_data, axis=-1)
-    labels_brw = np.char.add('brw_D', labels_brw)
+    labels_brw = np.char.add('D=', labels_brw)
     labels_brw = labels_brw.flatten()
 
     X = S_brw_log_mean
@@ -56,7 +58,7 @@ elif sim_type == 'psn':
 
     lams_psn_str = np.round(lams_psn, n_decim).astype(str)
     labels_psn = np.repeat(lams_psn_str[:, np.newaxis], n_data, axis=-1)
-    labels_psn = np.char.add('psn_lam', labels_psn)
+    labels_psn = np.char.add(r'\lambda=', labels_psn)
     labels_psn = labels_psn.flatten()
 
     X = S_psn_log_mean
@@ -138,8 +140,9 @@ for label in labels_uniq:
     ax.scatter(X_label[:, 0], X_label[:, 1], s=6, label=label)
 
 ax.legend()
-ax.set_xlabel('PC1')
-ax.set_ylabel('PC2')
+ax.set_title('PCA after scattering transform', fontsize=fontsize_title)
+ax.set_xlabel('PC1', fontsize=fontsize_label)
+ax.set_ylabel('PC2', fontsize=fontsize_label)
 
 plt.show()
 
