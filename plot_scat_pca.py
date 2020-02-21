@@ -19,7 +19,7 @@ avg_len = 2**8
 n_data = 200
 dt = 0.001
 n_filter_octave = [1,1]
-sim_type = 'brw' # 'brw', 'psn', 'obd', 'tbd'
+sim_type = 'tbd' # 'brw', 'psn', 'obd', 'tbd'
 
 n_decim = 3 # precision for external parameters
 scat = scu.ScatNet(data_len, avg_len, n_filter_octave=n_filter_octave)
@@ -58,7 +58,7 @@ elif sim_type == 'psn':
 
     lams_psn_str = np.round(lams_psn, n_decim).astype(str)
     labels_psn = np.repeat(lams_psn_str[:, np.newaxis], n_data, axis=-1)
-    labels_psn = np.char.add(r'\lambda=', labels_psn)
+    labels_psn = np.char.add('lambda=', labels_psn)
     labels_psn = labels_psn.flatten()
 
     X = S_psn_log_mean
@@ -81,14 +81,14 @@ elif sim_type == 'obd':
 
     diff_coefs_obd_str = np.round(diff_coefs_obd_mesh, n_decim).astype(str)
     labels_diff_coefs_obd = np.repeat(np.expand_dims(diff_coefs_obd_str, axis=-1), n_data, axis=-1)
-    labels_diff_coefs_obd = np.char.add('_D', labels_diff_coefs_obd)
+    labels_diff_coefs_obd = np.char.add('D=', labels_diff_coefs_obd)
 
     ks_obd_str = np.round(ks_obd_mesh, n_decim).astype(str)
     labels_ks_obd = np.repeat(np.expand_dims(ks_obd_str, axis=-1), n_data, axis=-1)
-    labels_ks_obd = np.char.add('_k', labels_ks_obd)
+    labels_ks_obd = np.char.add(', k=', labels_ks_obd)
 
     labels_obd = np.char.add(labels_diff_coefs_obd, labels_ks_obd)
-    labels_obd = np.char.add('obd', labels_obd)
+    #labels_obd = np.char.add('obd', labels_obd)
     labels_obd = labels_obd.flatten()
 
     X = S_obd_log_mean
@@ -111,14 +111,14 @@ elif sim_type == 'tbd':
 
     diff_coef_ratios_str = np.round(diff_coef_ratios_mesh, n_decim).astype(str)
     labels_diff_coef_ratios = np.repeat(np.expand_dims(diff_coef_ratios_str, axis=-1), n_data, axis=-1)
-    labels_diff_coef_ratios = np.char.add('_D', labels_diff_coef_ratios)
+    labels_diff_coef_ratios = np.char.add('D=', labels_diff_coef_ratios)
 
     k_ratios_str = np.round(k_ratios_mesh, n_decim).astype(str)
     labels_k_ratios = np.repeat(np.expand_dims(k_ratios_str, axis=-1), n_data, axis=-1)
-    labels_k_ratios = np.char.add('_k', labels_k_ratios)
+    labels_k_ratios = np.char.add(', k=', labels_k_ratios)
 
     labels_tbd = np.char.add(labels_diff_coef_ratios, labels_k_ratios)
-    labels_tbd = np.char.add('obd', labels_tbd)
+    #labels_tbd = np.char.add('obd', labels_tbd)
     labels_tbd = labels_tbd.flatten()
 
     X = S_tbd_log_mean
