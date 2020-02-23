@@ -20,11 +20,13 @@ from apex import amp
 import common_utils as cu
 import scat_utils as scu
 
-ROOT_DIR = './data/simulations/two_beads/'
-file_name = 'tbd_0.pt'
+#ROOT_DIR = './data/simulations/two_beads/'
+#file_name = 'tbd_0.pt'
 
 # Training settings
 parser = argparse.ArgumentParser(description='RNN training') # FIXME: change description, read up on argparse
+parser.add_argument('--file', type=str, metavar='S',
+                    help='file path of data to train LSTM')
 parser.add_argument('--hidden-size', type=int, metavar='N',
                     help='hidden size in LSTM')
 parser.add_argument('--num-layers', type=int, metavar='N',
@@ -450,4 +452,21 @@ def train_rnn_hvd(file_name, hidden_size, n_layers=1, bidirectional=False, class
                 bidirectional=bidirectional, classifier=classifier, n_epochs_max=n_epochs_max,
                 batch_size=batch_size, n_workers=n_workers, device=device, idx_label=idx_label,
                 file_name=file_name_meta, root_dir=root_dir, lr=lr, betas=betas)
+
+
+'''code that was in train_tbd.py'''
+# might be useful for writing the bash script
+# train RNNs for raw data
+for file_name_data in file_names_data:
+    for hidden_size in hidden_sizes:
+        for n_layers in n_layerss:
+            for bidirectional in bidirectionals:
+                try:
+                    print("training rnn for {}, hidden_size:{}, n_layers:{}, bidirectional:{}".format(file_name_data, hidden_size, n_layers, bidirectional))
+                    nu.train_rnn(file_name_data, [hidden_size, hidden_size], n_layers, bidirectional, classifier=False,
+                        n_epochs_max=n_epochs_max, train_ratio=train_ratio, batch_size=batch_size,
+                        n_workers=n_workers, root_dir=root_dir)
+                except:
+                    print("exception occurred for {}, hidden_size:{}, n_layers:{}, bidirectional:{}"\
+                        .format(file_name_data, hidden_size, n_layers, bidirectional))
 

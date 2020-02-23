@@ -1,3 +1,5 @@
+'''module that simulates stochastic trajectories'''
+# FIXME: check *_sample() functions to ensure simulations are correct
 import os
 import warnings
 import numpy as np
