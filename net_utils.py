@@ -339,7 +339,7 @@ def _train_nn(dataset, index, n_nodes_hidden, classifier, n_epochs_max, batch_si
         except KeyboardInterrupt:
             break
 
-def train_rnn(file_name, hidden_size, n_layers=1, bidirectional=False, classifier=False, n_epochs_max=2000,
+def train_rnn(file_name, hidden_size, n_layers=1, bidirectional=False, classifier=False, label_idx=None, n_epochs_max=2000,
         train_ratio=0.8, batch_size=100, n_workers=4, root_dir=ROOT_DIR, lr=0.001, betas=(0.9, 0.999)):
     '''
     trains the recurrent neural network given a file that contains data.
@@ -352,6 +352,7 @@ def train_rnn(file_name, hidden_size, n_layers=1, bidirectional=False, classifie
     n_layers: number of recurrent layers
     bidirectional: if True, becomes a bidirectional LSTM
     classifier: boolean indicating whether it's a classifier or regressor.
+    label_idx: int indicating index of parameter to infer. should be given when classifer is False
     n_epochs_max: maximum number of epochs to run. 
         can terminate with ctrl + c to move on to next neural network training.
     train_ratio: float indicating ratio for training data. should be between 0 and 1
@@ -383,8 +384,10 @@ def train_rnn(file_name, hidden_size, n_layers=1, bidirectional=False, classifie
     n_data_total = np.prod(data.shape[:-(n_none_param_dims - 1)])
     n_labels = len(label_names) # number of labels to predict
     if classifier:
+        assert(label_idx is None), "Invalid label_idx input: should not be given for training classifier"
         assert(isinstance(hidden_size, int)), "Invalid format of hidden_size given. Should be type int"
     else:
+        assert(isinstance(label_idx, int)), "Invalid label_idx input: int type label_idx required for training regressor"
         if n_labels == 1 and isinstance(hidden_size, int): hidden_size = [hidden_size]
         assert(len(hidden_size) == n_labels), "Invalid format of hidden state sizes given.\
             Should have length n_labels"
