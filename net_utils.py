@@ -149,7 +149,7 @@ def _init_meta(file_name, root_dir=ROOT_DIR, **kwargs):
     meta = {key:value for key, value in kwargs.items()}
     torch.save(meta, file_path)
 
-def train_nn(file_name, n_nodes_hidden, classifier=False, n_epochs_max=2000, train_ratio=0.8, batch_size=100,
+def train_nn(file_name, n_nodes_hidden, classifier=False, n_epochs_max=2000, train_ratio=0.8, batch_size=128,
         n_workers=4, root_dir=ROOT_DIR, lr=0.001, betas=(0.9, 0.999)):
     '''
     trains the neural network given a file that contains data.
@@ -340,9 +340,10 @@ def _train_nn(dataset, index, n_nodes_hidden, classifier, n_epochs_max, batch_si
         except KeyboardInterrupt:
             break
 
-def train_rnn(file_name, hidden_size, n_layers=1, bidirectional=False, classifier=False, label_idx=None, n_epochs_max=2000,
-        train_ratio=0.8, batch_size=100, n_workers=4, root_dir=ROOT_DIR, lr=0.001, betas=(0.9, 0.999)):
+def train_rnn(file_name, hidden_size, n_layers=1, bidirectional=False, classifier=False, idx_label=None, n_epochs_max=2000,
+        train_ratio=0.8, batch_size=128, n_workers=4, root_dir=ROOT_DIR, lr=0.001, betas=(0.9, 0.999)):
     '''
+    NOTE: to be deprecated. classifier works but regressor has not been integrated yet
     trains the recurrent neural network given a file that contains data.
     this data can be either scat transformed or pure simulated data
 
@@ -353,7 +354,7 @@ def train_rnn(file_name, hidden_size, n_layers=1, bidirectional=False, classifie
     n_layers: number of recurrent layers
     bidirectional: if True, becomes a bidirectional LSTM
     classifier: boolean indicating whether it's a classifier or regressor.
-    label_idx: int indicating index of parameter to infer. should be given when classifer is False
+    idx_label: int indicating index of parameter to infer. should be given when classifer is False
     n_epochs_max: maximum number of epochs to run. 
         can terminate with ctrl + c to move on to next neural network training.
     train_ratio: float indicating ratio for training data. should be between 0 and 1
@@ -385,10 +386,11 @@ def train_rnn(file_name, hidden_size, n_layers=1, bidirectional=False, classifie
     n_data_total = np.prod(data.shape[:-(n_none_param_dims - 1)])
     n_labels = len(label_names) # number of labels to predict
     if classifier:
-        assert(label_idx is None), "Invalid label_idx input: should not be given for training classifier"
+        assert(idx_label is None), "Invalid idx_label input: should not be given for training classifier"
         assert(isinstance(hidden_size, int)), "Invalid format of hidden_size given. Should be type int"
     else:
-        assert(isinstance(label_idx, int)), "Invalid label_idx input: int type label_idx required for training regressor"
+        raise NotImplementedError("Training regressor for non-cluster version has not been implemented yet")
+        assert(isinstance(idx_label, int)), "Invalid idx_label input: int type idx_label required for training regressor"
         if n_labels == 1 and isinstance(hidden_size, int): hidden_size = [hidden_size]
         assert(len(hidden_size) == n_labels), "Invalid format of hidden state sizes given.\
             Should have length n_labels"
@@ -453,6 +455,8 @@ def _train_rnn(dataset, index, hidden_size, n_layers, bidirectional, classifier,
         device, n_workers, file_name, root_dir=ROOT_DIR, idx_label=None, lr=0.001, betas=(0.9, 0.999)):
     '''constructs and trains neural networks given the dataloader instance and network structure
 
+    NOTE: to be deprecated. classifier works but regressor has not been integrated yet
+
     inputs
     ------
     dataset - instance of dataset class inherited from Dataset class
@@ -476,6 +480,8 @@ def _train_rnn(dataset, index, hidden_size, n_layers, bidirectional, classifier,
     -------
     saves data into given file
     '''
+    if not classifier:
+        raise NotImplementedError("Training regressor for non-cluster version has not been implemented yet")
     file_name, _ = os.path.splitext(file_name)
     file_path = os.path.join(root_dir, file_name + '.pt')
     assert(len(dataset) == (len(index['train']) + len(index['val']))),\
@@ -543,7 +549,7 @@ def _train_rnn(dataset, index, hidden_size, n_layers, bidirectional, classifier,
             break
 
 def train_rnn_cluster(file_name, hidden_size, n_layers=1, bidirectional=False, classifier=False, idx_label=None, n_epochs_max=2000,
-        train_ratio=0.8, batch_size=100, n_workers=4, root_dir=ROOT_DIR, lr=0.001, betas=(0.9, 0.999),
+        train_ratio=0.8, batch_size=128, n_workers=4, root_dir=ROOT_DIR, lr=0.001, betas=(0.9, 0.999),
         opt_level="O0", seed=42, log_interval=10):
     '''
     trains the recurrent neural network given a file that contains data.
@@ -621,7 +627,7 @@ def train_rnn_cluster(file_name, hidden_size, n_layers=1, bidirectional=False, c
     input_size = data.shape[-2]
 
     # initialize meta data and save it to a file
-    meta = {'file_name':file_name + '.pt', 'root_dir':root_dir, 'input_size':input_size,
+    meta = {'file_name':file_name_meta, 'root_dir':root_dir, 'input_size':input_size,
         'hidden_size':hidden_size, 'n_layers':n_layers, 'bidirectional':bidirectional,
         'classifier':classifier, 'n_epochs_max':n_epochs_max, 'train_ratio':train_ratio,
         'batch_size':batch_size, 'n_workers':n_workers, 'index':index,
@@ -631,7 +637,6 @@ def train_rnn_cluster(file_name, hidden_size, n_layers=1, bidirectional=False, c
         'label_names':label_names if classifier else label_name}
     if classifier:
         labels = np.array(list(product(*labels)), dtype='float32') # shaped (n_conditions, n_labels)
-        if labels = np.array(list(product(*labels)), dtype='float32') # shaped (n_conditions, n_labels)
         label_to_idx = {tuple(condition):idx_condition for idx_condition, condition in enumerate(labels)}
         n_conditions = len(label_to_idx)
         meta.update({'label_to_idx':label_to_idx})
@@ -645,22 +650,22 @@ def train_rnn_cluster(file_name, hidden_size, n_layers=1, bidirectional=False, c
         dataset = TimeSeriesDataset(data, labels, transform=ToTensor())
         # train the neural network for classification
         if root_process: print("Training classifier for {}:".format(', '.join(samples['label_names'])))
-        _train_rnn(dataset, index, hidden_size=hidden_size, n_layers=n_layers,
+        _train_rnn_cluster(dataset, index, hidden_size=hidden_size, n_layers=n_layers,
             bidirectional=bidirectional, classifier=classifier, n_epochs_max=n_epochs_max,
             batch_size=batch_size, n_workers=n_workers,
             file_name=file_name_meta, root_dir=root_dir, lr=lr, betas=betas,
-            opt_level=opt_level, seed=seed, log_interval=log_inteval)
+            opt_level=opt_level, seed=seed, log_interval=log_interval)
     else:
         _init_meta(**meta)
         
         dataset = TimeSeriesDataset(data, label, transform=ToTensor())
         # train the rnn for the given idx_label
         if root_process: print("Training regressor for {}:".format(label_name))
-        _train_rnn(dataset, index, hidden_size=hidden_size, n_layers=n_layers,
+        _train_rnn_cluster(dataset, index, hidden_size=hidden_size, n_layers=n_layers,
             bidirectional=bidirectional, classifier=classifier, n_epochs_max=n_epochs_max,
             batch_size=batch_size, n_workers=n_workers,
             file_name=file_name_meta, root_dir=root_dir, lr=lr, betas=betas,
-            opt_level=opt_level, seed=seed, log_interval=log_inteval)
+            opt_level=opt_level, seed=seed, log_interval=log_interval)
 
 def _train_rnn_cluster(dataset, index, hidden_size, n_layers, bidirectional, classifier, n_epochs_max, batch_size,
         n_workers, file_name, root_dir=ROOT_DIR, lr=0.001, betas=(0.9, 0.999), 
@@ -693,7 +698,7 @@ def _train_rnn_cluster(dataset, index, hidden_size, n_layers, bidirectional, cla
     '''
     #hvd.init() # initialize horovod
     torch.manual_seed(seed) # FIXME: necessary here?
-    #torch.cuda.set_device(hvd.local_rank()) # pin GPU to local rank
+    torch.cuda.set_device(hvd.local_rank()) # pin GPU to local rank
     # limit # of CPU threads to be used per worker : FIXME: why do this?
     torch.set_num_threads(4)
     file_name, _ = os.path.splitext(file_name)
@@ -720,7 +725,7 @@ def _train_rnn_cluster(dataset, index, hidden_size, n_layers, bidirectional, cla
     hvd.broadcast_parameters(rnn.state_dict(), root_rank=0)
     hvd.broadcast_optimizer_state(optimizer, root_rank=0)
     # apex
-    opt_level: rnn, optimizer = amp.initialize(rnn, optimizer, opt_level=opt_level)
+    rnn, optimizer = amp.initialize(rnn, optimizer, opt_level=opt_level)
 
     criterion = nn.CrossEntropyLoss(reduction='sum') if classifier else nn.MSELoss(reduction='sum')
     criterion = criterion.cuda()
@@ -734,15 +739,14 @@ def _train_rnn_cluster(dataset, index, hidden_size, n_layers, bidirectional, cla
             loss_sum[phase] = 0.
             for batch in dataloader[phase]:
                 # permute s.t. shape is (data_len, n_data_total, n_channels * (n_scat_nodes))
-                batch_data = batch['data'].permute([2, 0, 1])
-                batch_labels = batch['labels']
+                batch_data = batch['data'].permute([2, 0, 1]).cuda()
+                batch_labels = batch['labels'].cuda()
                 output = rnn(batch_data)
                 # for regression, output of rnn is shaped (batch_size, 1). drop dummy axis
                 if classifier:
-                    batch_labels = batch_labels.type(torch.LongTensor)
+                    batch_labels = batch_labels.type(torch.cuda.LongTensor)
                 else:
                     output = output[:, 0]
-                batch_labels = batch_labels
                 loss = criterion(output, batch_labels)
                 optimizer.zero_grad()
                 if phase == 'train':
