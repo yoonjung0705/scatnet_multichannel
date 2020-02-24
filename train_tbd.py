@@ -12,42 +12,37 @@ import common_utils as cu
 ROOT_DIR = './data/simulations/two_beads/'
 
 # common inputs
-data_len = 2**8
-avg_lens = [2**6]
+data_len = 2**11
+avg_lens = [2**4, 2**6, 2**8]
 n_filter_octaves = [(1,1)]
 #n_filter_octaves = list(product([1,2,4,8], [1,2,4,8]))
 # [(1,1), (1,2), (1,4), (2,1), (2,2), (2,4), (4,1), (4,2), (4,4)]
-dt = 0.0001
+dt = 0.001
 #n_datas = [50, 100, 200]
 n_datas = [100]
-n_data_test = 50
+n_data_test = 300
 
 root_dir = ROOT_DIR
 file_names_data = []
 file_names_scat = []
 
-n_epochs_max = 1000
+n_epochs_max = 2000
 train_ratio = 0.8
-batch_size = 20
+batch_size = 128
 n_workers = 4
 
-# NN inputs
-#n_nodes_hiddens = [] # FIXME: add later
-
 # RNN inputs
-hidden_sizes = [20]
+hidden_sizes = [20, 50, 100, 200]
 n_layerss = [2]
 bidirectionals = [True]
 
-k_ratios = [1., 2., 3.]
-#k_ratios = np.arange(1,12,1)
-diff_coef_ratios = [1., 2., 3., 4.]
-#diff_coef_ratios = np.arange(3,8,1)
+k_ratios = [1., 2., 3., 4.]
+diff_coef_ratios = [4., 5., 6., 7.]
 
-k_ratios_test_low = 1.5
-k_ratios_test_high = 2.5
-diff_coef_ratios_test_low = 1.5
-diff_coef_ratios_test_high = 3.5
+k_ratios_test_low = 1.2
+k_ratios_test_high = 3.8
+diff_coef_ratios_test_low = 4.2
+diff_coef_ratios_test_high = 6.8
 
 # simulate two beads
 print("simulating data for training")
@@ -112,8 +107,6 @@ for file_name_scat in file_names_scat:
                     print("exception occurred during training rnn for {}, avg_len:{}, n_filter_octave:{}, hidden_size:{}, n_layers:{}, bidirectional:{}"
                         .format(file_name_scat, avg_len, n_filter_octave, hidden_size, n_layers, bidirectional))
 
-
-'''
 # train RNNs for raw data
 for file_name_data in file_names_data:
     for hidden_size in hidden_sizes:
@@ -127,4 +120,3 @@ for file_name_data in file_names_data:
                 except:
                     print("exception occurred during training rnn for {}, hidden_size:{}, n_layers:{}, bidirectional:{}"\
                         .format(file_name_data, hidden_size, n_layers, bidirectional))
-'''
