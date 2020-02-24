@@ -85,10 +85,8 @@ def sim_brownian_sample(data_len, diff_coefs, dt, n_data=1, save_file=False, roo
 
     outputs:
     --------
-    - (processes): ndarray shaped (1, n_data, 1, data_len) which is an ensemble of brownian trajectories
-    the 1st dimension is for the diff_coefs. For simulations with 2 parameters, 
-    there will be 2 leading singleton dimensions
-    the 3rd dimension is for the number of channels. returned if save_file is False
+    - (processes): ndarray shaped (n_data, 1, data_len) which is an ensemble of brownian trajectories
+    the 2nd dimension is for the number of channels. data returned if save_file is False
     - (file_name): string type file name of the simulated data. returned if save_file is True
 
     FIXME: check if dimensions are not mixed up
@@ -103,11 +101,11 @@ def sim_brownian_sample(data_len, diff_coefs, dt, n_data=1, save_file=False, roo
     for diff_coef_sample in diff_coef_samples:
         process = sim_brownian(data_len, diff_coefs=diff_coef_sample, dt=dt, n_data=1, save_file=False, dtype=dtype)
         concat_list.append(process)
-    processes = np.concatenate(concat_list, axis=1) # shaped (1, n_data, 1, data_len)
+    processes = np.concatenate(concat_list, axis=1)[0] # shaped (n_data, 1, data_len)
     if not save_file:
         return processes
 
-    samples = {'data':processes, 'labels':[diff_coef_samples], 'label_names':['diff_coefs'], 'dt':dt}
+    samples = {'data':processes, 'labels':diff_coef_samples, 'label_names':'diff_coefs', 'dt':dt}
     nums = cu.match_filename(r'brw_([0-9]+).pt', root_dir=root_dir)
     nums = [int(num) for num in nums]
     idx = max(nums) + 1 if nums else 0
@@ -136,7 +134,7 @@ def sim_poisson(data_len, lams, dt, n_data=1, save_file=False, root_dir=ROOT_DIR
     --------
     - (processes): ndarray shaped (n_lams, n_data, 1, data_len) which is an ensemble of poisson processes
     the singleton dimension is for the number of channels. returned if save_file is False
-    - (file_name): string type file name of the simulated data. returned if save_file is True
+    - (file_name): string type file name of the simulated data. data returned if save_file is True
 
     REVIEW: confirm this method of using fixed time step generates identical statistics to that of Gielespie algorithm
     FIXME: confirm dimensions are not mixed up
@@ -188,11 +186,9 @@ def sim_poisson_sample(data_len, lams, dt, n_data=1, save_file=False, root_dir=R
 
     outputs:
     --------
-    - (processes): ndarray shaped (1, n_data, 1, data_len) which is an ensemble of poisson processes
-    the 1st dimension is for the lambda values. For simulations with 2 parameters, 
-    there will be 2 leading singleton dimensions
-    the 3rd dimension is for the number of channels. returned if save_file is False
-    - (file_name): string type file name of the simulated data. returned if save_file is True
+    - (processes): ndarray shaped (n_data, 1, data_len) which is an ensemble of poisson processes
+    the 2nd dimension is for the number of channels. data returned if save_file is False
+    - (file_name): string type file name of the simulated data. data returned if save_file is True
 
     REVIEW: confirm this method of using fixed time step generates identical statistics to that of Gielespie algorithm
     FIXME: confirm dimensions are not mixed up
@@ -207,11 +203,11 @@ def sim_poisson_sample(data_len, lams, dt, n_data=1, save_file=False, root_dir=R
     for lam_sample in lam_samples:
         process = sim_poisson(data_len, lams=lam_sample, dt=dt, n_data=1, save_file=False, dtype=dtype)
         concat_list.append(process)
-    processes = np.concatenate(concat_list, axis=1) # shaped (1, n_data, 1, data_len)
+    processes = np.concatenate(concat_list, axis=1)[0] # shaped (n_data, 1, data_len)
     if not save_file:
         return processes
 
-    samples = {'data':processes, 'labels':[lam_samples], 'label_names':['lams'], 'dt':dt}
+    samples = {'data':processes, 'labels':lam_samples, 'label_names':'lams', 'dt':dt}
     nums = cu.match_filename(r'pos_([0-9]+).pt', root_dir=root_dir)
     nums = [int(num) for num in nums]
     idx = max(nums) + 1 if nums else 0
@@ -321,9 +317,8 @@ def sim_one_bead_sample(data_len, ks, diff_coefs, dt, n_data=1, n_steps_initial=
 
     outputs:
     --------
-    - (processes): ndarray shaped (1, 1, n_data, 1, data_len) which is an ensemble of one bead simulation trajectories
-    the first 2 dimensions are for the ks and diff_coefs values. 
-    the 4th dimension is for the number of channels. returned if save_file is False
+    - (processes): ndarray shaped (n_data, 1, data_len) which is an ensemble of one bead simulation trajectories
+    the 2nd dimension is for the number of channels. data returned if save_file is False
     - (file_name): string type file name of the simulated data. returned if save_file is True
 
     FIXME: check the code to see if the dimensions are not mixed up, check if actual simulation part is not mixed up with initial condition simulation
@@ -344,11 +339,11 @@ def sim_one_bead_sample(data_len, ks, diff_coefs, dt, n_data=1, n_steps_initial=
     for k_sample, diff_coef_sample in k_diff_coef_samples:
         process = sim_one_bead(data_len, ks=k_sample, diff_coefs=diff_coef_sample, dt=dt, n_data=1, n_steps_initial=n_steps_initial, save_file=False, dtype=dtype)
         concat_list.append(process)
-    processes = np.concatenate(concat_list, axis=2) # shaped (1, 1, n_data, 1, data_len)
+    processes = np.concatenate(concat_list, axis=2)[0, 0] # shaped (n_data, 1, data_len)
     if not save_file:
         return processes
 
-    samples = {'data':processes, 'labels':[k_diff_coef_samples], 'label_names':['k_diff_coefs'], 'dt':dt, 'n_steps_initial':n_steps_initial}
+    samples = {'data':processes, 'labels':k_diff_coef_samples, 'label_names':'k_diff_coefs', 'dt':dt, 'n_steps_initial':n_steps_initial}
     nums = cu.match_filename(r'obd_([0-9]+).pt', root_dir=root_dir)
     nums = [int(num) for num in nums]
     idx = max(nums) + 1 if nums else 0
@@ -378,10 +373,9 @@ def sim_two_beads(data_len, k_ratios, diff_coef_ratios, dt, n_data=1, n_steps_in
 
     outputs:
     --------
-    - (processes): ndarray shaped (n_ks, n_diff_coefs, n_data, 1, data_len) which is an ensemble of two bead simulation trajectories
-    the singleton dimension is for the number of channels. returned if save_file is False
-    - (file_name): string type file name of the simulated data. returned if save_file is True
-
+    - (processes): ndarray shaped (n_ks, n_diff_coefs, n_data, 2, data_len) which is an ensemble of two bead simulation trajectories
+    the dimension size 2 is for the number of channels. returned if save_file is False
+    - (file_name): string type file name of the simulated data. data returned if save_file is True
 
     FIXME: check the code to see if the dimensions are not mixed up, check if actual simulation part is not mixed up with initial condition simulation
     '''
@@ -460,10 +454,9 @@ def sim_two_beads_sample(data_len, k_ratios, diff_coef_ratios, dt, n_data=1, n_s
 
     outputs:
     --------
-    - (processes): ndarray shaped (1, 1, n_data, 1, data_len) which is an ensemble of two bead simulation trajectories
-    the first 2 dimensions are for the k_ratios and diff_coef_ratios values. 
-    the 4th dimension is for the number of channels. returned if save_file is False
-    - (file_name): string type file name of the simulated data. returned if save_file is True
+    - (processes): ndarray shaped (n_data, 2, data_len) which is an ensemble of two bead simulation trajectories
+    the 2nd dimension is for the number of channels. returned if save_file is False
+    - (file_name): string type file name of the simulated data. data returned if save_file is True
 
     FIXME: check the code to see if the dimensions are not mixed up, check if actual simulation part is not mixed up with initial condition simulation
     '''
@@ -483,11 +476,11 @@ def sim_two_beads_sample(data_len, k_ratios, diff_coef_ratios, dt, n_data=1, n_s
     for k_ratio_sample, diff_coef_ratio_sample in k_ratio_diff_coef_ratio_samples:
         process = sim_two_beads(data_len, k_ratios=k_ratio_sample, diff_coef_ratios=diff_coef_ratio_sample, dt=dt, n_data=1, n_steps_initial=n_steps_initial, save_file=False, dtype=dtype)
         concat_list.append(process)
-    processes = np.concatenate(concat_list, axis=2) # shaped (1, 1, n_data, 1, data_len)
+    processes = np.concatenate(concat_list, axis=2)[0, 0] # shaped (n_data, 1, data_len)
     if not save_file:
         return processes
 
-    samples = {'data':processes, 'labels':[k_ratio_diff_coef_ratio_samples], 'label_names':['k_ratio_diff_coef_ratios'], 'dt':dt, 'n_steps_initial':n_steps_initial}
+    samples = {'data':processes, 'labels':k_ratio_diff_coef_ratio_samples, 'label_names':'k_ratio_diff_coef_ratios', 'dt':dt, 'n_steps_initial':n_steps_initial}
     nums = cu.match_filename(r'tbd_([0-9]+).pt', root_dir=root_dir)
     nums = [int(num) for num in nums]
     idx = max(nums) + 1 if nums else 0
