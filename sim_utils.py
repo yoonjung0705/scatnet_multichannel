@@ -11,7 +11,7 @@ from datetime import datetime
 
 import common_utils as cu
 
-ROOT_DIR = './data/simulations/two_beads'
+ROOT_DIR = './data/simulations/'
 
 def sim_brownian(data_len, diff_coefs, dt, n_data=1, save_file=False, root_dir=ROOT_DIR, dtype='float32'):
     '''
@@ -114,7 +114,7 @@ def sim_brownian_sample(data_len, diff_coefs, dt, n_data=1, save_file=False, roo
 
     file_name = 'brw_{}.pt'.format(idx)
     file_path = os.path.join(root_dir, file_name)
-    torch.save(samples, file_path_test)
+    torch.save(samples, file_path)
     return file_name
 
 def sim_poisson(data_len, lams, dt, n_data=1, save_file=False, root_dir=ROOT_DIR, dtype='float32'):
@@ -218,7 +218,7 @@ def sim_poisson_sample(data_len, lams, dt, n_data=1, save_file=False, root_dir=R
 
     file_name = 'pos_{}.pt'.format(idx)
     file_path = os.path.join(root_dir, file_name)
-    torch.save(samples, file_path_test)
+    torch.save(samples, file_path)
     return file_name
 
 def sim_one_bead(data_len, ks, diff_coefs, dt, n_data=1, n_steps_initial=10000,
@@ -355,7 +355,7 @@ def sim_one_bead_sample(data_len, ks, diff_coefs, dt, n_data=1, n_steps_initial=
 
     file_name = 'obd_{}.pt'.format(idx)
     file_path = os.path.join(root_dir, file_name)
-    torch.save(samples, file_path_test)
+    torch.save(samples, file_path)
     return file_name
 
 def sim_two_beads(data_len, k_ratios, diff_coef_ratios, dt, n_data=1, n_steps_initial=10000,
@@ -494,7 +494,7 @@ def sim_two_beads_sample(data_len, k_ratios, diff_coef_ratios, dt, n_data=1, n_s
 
     file_name = 'tbd_{}.pt'.format(idx)
     file_path = os.path.join(root_dir, file_name)
-    torch.save(samples, file_path_test)
+    torch.save(samples, file_path)
     return file_name
 
 

@@ -18,7 +18,7 @@ import common_utils as cu
 import scat_utils as scu
 import net_utils as nu
 
-#root_dir = './data/simulations/two_beads'
+#root_dir = './data/simulations/'
 root_dir = './data/experiment/trap_bead_active_bath'
 root_dir_results = os.path.join(root_dir, 'results')
 

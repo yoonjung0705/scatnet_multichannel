@@ -11,6 +11,7 @@ from torch.utils.data import Dataset, DataLoader, Subset
 from torch.utils.data.sampler import SubsetRandomSampler
 from torch.utils.data.distributed import DistributedSampler
 import time
+import horovod.torch as hvd
 from apex import amp
 
 import common_utils as cu
@@ -559,7 +560,6 @@ def _train_rnn_cluster(dataset, index, hidden_size, n_layers, bidirectional, cla
     n_workers - int indicating number of workers when creating DataLoader instance
     file_name - name of file that contains the empty meta data
     root_dir - root directory of the meta data file
-    idx_label - int representing which neural network to train
     lr - float type learning rate
     betas - tuple of floats indicating betas arguments in Adam optimizer
 
@@ -569,7 +569,7 @@ def _train_rnn_cluster(dataset, index, hidden_size, n_layers, bidirectional, cla
     '''
     hvd.init() # initialize horovod
     torch.manual_seed(42) # FIXME: necessary here?
-    torch.cuda.set_device(hvd.local_rank()) # pin GPU to local rank # FIXME: shouldn't it be .rank() instead of .local_rank()?
+    torch.cuda.set_device(hvd.local_rank()) # pin GPU to local rank
     # limit # of CPU threads to be used per worker : FIXME: why do this?
     torch.set_num_threads(4)
     file_name, _ = os.path.splitext(file_name)
@@ -654,8 +654,8 @@ def _train_rnn_cluster(dataset, index, hidden_size, n_layers, bidirectional, cla
         except KeyboardInterrupt:
             break
 
-""" 
-def train_rnn_hvd(file_name, hidden_size, n_layers=1, bidirectional=False, classifier=False, n_epochs_max=2000,
+
+def train_rnn_cluster(file_name, hidden_size, n_layers=1, bidirectional=False, classifier=False, idx_label=None, n_epochs_max=2000,
         train_ratio=0.8, batch_size=100, n_workers=4, root_dir=ROOT_DIR, lr=0.001, betas=(0.9, 0.999)):
     '''
     trains the recurrent neural network given a file that contains data.
@@ -668,6 +668,7 @@ def train_rnn_hvd(file_name, hidden_size, n_layers=1, bidirectional=False, class
     n_layers: number of recurrent layers
     bidirectional: if True, becomes a bidirectional LSTM
     classifier: boolean indicating whether it's a classifier or regressor.
+    idx_label - int representing which neural network to train. should be given only when classifier is False
     n_epochs_max: maximum number of epochs to run. 
         can terminate with ctrl + c to move on to next neural network training.
     train_ratio: float indicating ratio for training data. should be between 0 and 1
@@ -682,10 +683,16 @@ def train_rnn_hvd(file_name, hidden_size, n_layers=1, bidirectional=False, class
     -------
     None: saves weights and meta data into file
     '''
-    import horovod.torch as hvd
+    # TODO: figure out whether in sim_utils.py shape of output should be (1,1,...) or (1,...) for *_sample() functions
+    # when you have 2 parameters. Then, fix the script here accordingly
+    # NOTE: regression means you train on data whose parameters are sampled continuously and test also for data whose parameters are sampled continuously, whereas
+    # classifier means you train on data on the grid and test on the grid.
+    # pass the dataset as an argument to _train_rnn() not with the index but the dataset being a dictionary with keys 'train' and 'val'
+    # TODO: make train_rnn() and train_rnn_cluster() into a single function since now that my local machine has horovod too and there's no problem when importing it.
+    
     hvd.init()
     torch.cuda.set_device(hvd.local_rank())
-    device = hvd.local_rank()
+    #device = hvd.local_rank()
     root_process = hvd.local_rank() == 0
 
     file_name, _ = os.path.splitext(file_name)
@@ -705,14 +712,7 @@ def train_rnn_hvd(file_name, hidden_size, n_layers=1, bidirectional=False, class
     n_labels = len(label_names) # number of labels to predict
     # FIXME: only assert for process 0 or if cluster is False
     if root_process:
-        if classifier:
-            assert(isinstance(hidden_size, int)), "Invalid format of hidden_size given. Should be type int"
-        else:
-            if n_labels == 1 and isinstance(hidden_size, int): hidden_size = [hidden_size]
-            assert(len(hidden_size) == n_labels), "Invalid format of hidden state sizes given.\
-                Should have length n_labels"
-            assert(all([isinstance(hidden_size_label, int) for hidden_size_label in hidden_size])),\
-                "Invalid format of hidden_size given. Should be list with int type elements"
+        assert(isinstance(hidden_size, int)), "Invalid format of hidden_size given. Should be type int"
 
     index = _train_test_split(n_data_total, train_ratio); index['val'] = index.pop('test')
 
@@ -726,11 +726,12 @@ def train_rnn_hvd(file_name, hidden_size, n_layers=1, bidirectional=False, class
         meta = {'file_name':file_name_meta, 'root_dir':root_dir, 'input_size':input_size,
             'hidden_size':hidden_size, 'n_layers':n_layers, 'bidirectional':bidirectional,
             'classifier':classifier, 'n_epochs_max':n_epochs_max, 'train_ratio':train_ratio,
-            'batch_size':batch_size, 'n_workers':n_workers, 'index':index, 'device':device,
+            'batch_size':batch_size, 'n_workers':n_workers, 'index':index,
             'labels':samples['labels'], 'label_names':samples['label_names']}
 
     labels = np.array(list(product(*labels)), dtype='float32') # shaped (n_conditions, n_labels)
     if classifier:
+        if labels = np.array(list(product(*labels)), dtype='float32') # shaped (n_conditions, n_labels)
         label_to_idx = {tuple(condition):idx_condition for idx_condition, condition in enumerate(labels)}
         n_conditions = len(label_to_idx)
 
@@ -768,5 +769,4 @@ def train_rnn_hvd(file_name, hidden_size, n_layers=1, bidirectional=False, class
                 bidirectional=bidirectional, classifier=classifier, n_epochs_max=n_epochs_max,
                 batch_size=batch_size, n_workers=n_workers, device=device, idx_label=idx_label,
                 file_name=file_name_meta, root_dir=root_dir, lr=lr, betas=betas)
-"""
 

@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import glob
 import scat_utils as scu
 
-root_dir = './data/simulations/two_beads'
+root_dir = './data/simulations/'
 
 # provide file names and paths manually
 file_names = ['tbd_0_scat_0_meta_rnn_0.pt']

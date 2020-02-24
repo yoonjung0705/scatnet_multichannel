@@ -20,7 +20,7 @@ from apex import amp
 import common_utils as cu
 import scat_utils as scu
 
-#ROOT_DIR = './data/simulations/two_beads/'
+#ROOT_DIR = './data/simulations/'
 #file_name = 'tbd_0.pt'
 
 # Training settings
