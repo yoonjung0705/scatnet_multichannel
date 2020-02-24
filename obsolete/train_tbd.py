@@ -1,4 +1,4 @@
-'''module that simulates the two beads data and trains the LSTM and scat-transform + LSTM model'''
+'''module that trains the LSTM and scat-transform + LSTM model given the simulated files'''
 import os
 import numpy as np
 import scat_utils as scu
@@ -11,6 +11,7 @@ from itertools import product
 import common_utils as cu
 ROOT_DIR = './data/simulations/two_beads/'
 
+<<<<<<< HEAD
 # common inputs
 data_len = 2**11
 avg_lens = [2**4, 2**6, 2**8]
@@ -22,12 +23,16 @@ dt = 0.001
 n_datas = [100]
 n_data_test = 300
 
+=======
+'''common inputs'''
+>>>>>>> 18a8402a9b721b66ed28bcee5beabe6256a96076
 root_dir = ROOT_DIR
-file_names_data = []
-file_names_scat = []
+file_names_data = ['tbd_0.pt', 'tbd_1.pt']
+#file_names_scat = []
 
 n_epochs_max = 2000
 train_ratio = 0.8
+<<<<<<< HEAD
 batch_size = 128
 n_workers = 4
 
@@ -89,6 +94,17 @@ for avg_len in avg_lens:
         except:
             print("exception occurred during scat transformation for n_data_test:{} with parameters avg_len:{}, n_filter_octave:{}".format(n_data_test, avg_len, n_filter_octave))
 
+=======
+batch_size = 64
+n_workers = 4
+
+# RNN inputs
+hidden_sizes = [20, 50, 100]
+n_layerss = [2, 3]
+bidirectionals = [True]
+
+'''
+>>>>>>> 18a8402a9b721b66ed28bcee5beabe6256a96076
 # train RNNs for scat transformed data
 for file_name_scat in file_names_scat:
     meta = torch.load(os.path.join(root_dir, file_name_scat))
@@ -104,7 +120,7 @@ for file_name_scat in file_names_scat:
                         n_epochs_max=n_epochs_max, train_ratio=train_ratio, batch_size=batch_size,
                         n_workers=n_workers, root_dir=root_dir)
                 except:
-                    print("exception occurred during training rnn for {}, avg_len:{}, n_filter_octave:{}, hidden_size:{}, n_layers:{}, bidirectional:{}"
+                    print("exception occurred for {}, avg_len:{}, n_filter_octave:{}, hidden_size:{}, n_layers:{}, bidirectional:{}"
                         .format(file_name_scat, avg_len, n_filter_octave, hidden_size, n_layers, bidirectional))
 
 # train RNNs for raw data
@@ -118,5 +134,9 @@ for file_name_data in file_names_data:
                         n_epochs_max=n_epochs_max, train_ratio=train_ratio, batch_size=batch_size,
                         n_workers=n_workers, root_dir=root_dir)
                 except:
-                    print("exception occurred during training rnn for {}, hidden_size:{}, n_layers:{}, bidirectional:{}"\
+                    print("exception occurred for {}, hidden_size:{}, n_layers:{}, bidirectional:{}"\
                         .format(file_name_data, hidden_size, n_layers, bidirectional))
+<<<<<<< HEAD
+=======
+
+>>>>>>> 18a8402a9b721b66ed28bcee5beabe6256a96076
