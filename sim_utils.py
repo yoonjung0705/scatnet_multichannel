@@ -104,8 +104,8 @@ def sim_brownian_sample(data_len, diff_coefs, dt, n_data=1, save_file=False, roo
     processes = np.concatenate(concat_list, axis=1)[0] # shaped (n_data, 1, data_len)
     if not save_file:
         return processes
-
-    samples = {'data':processes, 'labels':diff_coef_samples, 'label_names':'diff_coefs', 'dt':dt}
+    # append singleton dimension to diff_coef_samples to show it has one parameter
+    samples = {'data':processes, 'labels':[diff_coef_samples], 'label_names':['diff_coefs'], 'dt':dt}
     nums = cu.match_filename(r'brw_([0-9]+).pt', root_dir=root_dir)
     nums = [int(num) for num in nums]
     idx = max(nums) + 1 if nums else 0
@@ -207,7 +207,8 @@ def sim_poisson_sample(data_len, lams, dt, n_data=1, save_file=False, root_dir=R
     if not save_file:
         return processes
 
-    samples = {'data':processes, 'labels':lam_samples, 'label_names':'lams', 'dt':dt}
+    # append singleton dimension to lam_samples to show it has one parameter
+    samples = {'data':processes, 'labels':[lam_samples], 'label_names':['lams'], 'dt':dt}
     nums = cu.match_filename(r'pos_([0-9]+).pt', root_dir=root_dir)
     nums = [int(num) for num in nums]
     idx = max(nums) + 1 if nums else 0
@@ -343,7 +344,7 @@ def sim_one_bead_sample(data_len, ks, diff_coefs, dt, n_data=1, n_steps_initial=
     if not save_file:
         return processes
 
-    samples = {'data':processes, 'labels':k_diff_coef_samples, 'label_names':'k_diff_coefs', 'dt':dt, 'n_steps_initial':n_steps_initial}
+    samples = {'data':processes, 'labels':[k_samples, diff_coef_samples], 'label_names':['ks', 'diff_coefs'], 'dt':dt, 'n_steps_initial':n_steps_initial}
     nums = cu.match_filename(r'obd_([0-9]+).pt', root_dir=root_dir)
     nums = [int(num) for num in nums]
     idx = max(nums) + 1 if nums else 0
@@ -480,7 +481,7 @@ def sim_two_beads_sample(data_len, k_ratios, diff_coef_ratios, dt, n_data=1, n_s
     if not save_file:
         return processes
 
-    samples = {'data':processes, 'labels':k_ratio_diff_coef_ratio_samples, 'label_names':'k_ratio_diff_coef_ratios', 'dt':dt, 'n_steps_initial':n_steps_initial}
+    samples = {'data':processes, 'labels':[k_ratio_samples, diff_coef_ratio_samples], 'label_names':['k_ratios', 'diff_coef_ratios'], 'dt':dt, 'n_steps_initial':n_steps_initial}
     nums = cu.match_filename(r'tbd_([0-9]+).pt', root_dir=root_dir)
     nums = [int(num) for num in nums]
     idx = max(nums) + 1 if nums else 0
