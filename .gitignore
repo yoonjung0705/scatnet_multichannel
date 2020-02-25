@@ -3,4 +3,4 @@ data
 *.pyc
 *.pyo
 *.pt
-
+log/*

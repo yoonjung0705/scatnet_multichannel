@@ -22,10 +22,10 @@ import scat_utils as scu
 import net_utils as nu
 
 # regression training example:
-# python train_rnn.py --file ./data/simulations/tbd_0.pt --hidden-size 200 --n-layers 2 --bidirectional --idx-label 0 --epochs 2000 --train-ratio 0.8 --batch-size 128 --n-workers 4 --lr 0.001 --betas 0.9 0.999
+# python train_rnn.py --file ./data/simulations/tbd_0.pt --hidden-size 200 --n-layers 2 --bidirectional --idx-label 0 --epochs 2000 --train-ratio 0.8 --batch-size 128 --n-workers 4 --lr 0.001 --betas 0.9 0.999 --opt-level "O2" --seed 42 --log-interval 10
 
 # classifier training example
-# python train_rnn.py --file ./data/simulations/tbd_1.pt --hidden-size 200 --n-layers 2 --bidirectional --classifier --epochs 2000 --train-ratio 0.8 --batch-size 128 --n-workers 4 --lr 0.001 --betas 0.9 0.999
+# python train_rnn.py --file ./data/simulations/tbd_1.pt --hidden-size 200 --n-layers 2 --bidirectional --classifier --epochs 2000 --train-ratio 0.8 --batch-size 128 --n-workers 4 --lr 0.001 --betas 0.9 0.999 --opt-level "O2" --seed 42 --log-interval 10
 
 # most of the arguments can be skipped to use their default values. 
 # TODO: create a bash script that iterates over
