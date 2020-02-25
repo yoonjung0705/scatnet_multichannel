@@ -21,11 +21,15 @@ import common_utils as cu
 import scat_utils as scu
 import net_utils as nu
 
-# regression training example:
-# python train_rnn.py --file ./data/simulations/tbd_0.pt --hidden-size 200 --n-layers 2 --bidirectional --idx-label 0 --epochs 2000 --train-ratio 0.8 --batch-size 128 --n-workers 4 --lr 0.001 --betas 0.9 0.999 --opt-level "O2" --seed 42 --log-interval 10
+#regression training example:
+#python train_rnn.py --file-name tbd_0.pt --root-dir /nobackup/users/yoonjung/repos/scatnet_multichannel/data/simulations/ \
+#    --hidden-size 200 --n-layers 2 --bidirectional --idx-label 0 --epochs 2000 --train-ratio 0.8 --batch-size 128 --n-workers 4 \
+#    --lr 0.001 --betas 0.9 0.999 --opt-level "O2" --seed 42 --log-interval 10
 
-# classifier training example
-# python train_rnn.py --file ./data/simulations/tbd_1.pt --hidden-size 200 --n-layers 2 --bidirectional --classifier --epochs 2000 --train-ratio 0.8 --batch-size 128 --n-workers 4 --lr 0.001 --betas 0.9 0.999 --opt-level "O2" --seed 42 --log-interval 10
+#classifier training example
+#python train_rnn.py --file-name tbd_1.pt --root-dir /nobackup/users/yoonjung/repos/scatnet_multichannel/data/simulations/ \
+#    --hidden-size 200 --n-layers 2 --bidirectional --classifier --epochs 2000 --train-ratio 0.8 --batch-size 128 --n-workers 4 \
+#    --lr 0.001 --betas 0.9 0.999 --opt-level "O2" --seed 42 --log-interval 10
 
 # most of the arguments can be skipped to use their default values. 
 # TODO: create a bash script that iterates over
@@ -33,8 +37,10 @@ import net_utils as nu
 
 # Training settings
 parser = argparse.ArgumentParser(description='RNN training') # TODO: change description, read up on argparse
-parser.add_argument('--file', type=str, metavar='S',
-                    help='file path of data to train LSTM')
+parser.add_argument('--file-name', type=str, metavar='S',
+                    help='file name of data to train LSTM')
+parser.add_argument('--root-dir', type=str, metavar='S',
+                    help='root directory of data in absolute path')
 parser.add_argument('--hidden-size', type=int, metavar='N',
                     help='hidden size in LSTM')
 parser.add_argument('--n-layers', type=int, metavar='N',
@@ -65,9 +71,6 @@ parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                     help='how many batches to wait before logging training status (default: 10)')
 
 args = parser.parse_args()
-file_path = args.file
-args.file_name = os.path.basename(file_path)
-args.root_dir = os.path.dirname(file_path)
 if args.classifier: args.idx_label = None
 args.betas = tuple(np.array(args.betas, dtype=float))
 

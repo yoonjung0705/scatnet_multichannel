@@ -4,3 +4,6 @@ data
 *.pyo
 *.pt
 log/*
+launch.sh
+setup.sh
+rnn.lsf

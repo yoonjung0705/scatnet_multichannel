@@ -17,7 +17,7 @@ from apex import amp
 import common_utils as cu
 import scat_utils as scu
 
-ROOT_DIR = './data/'
+ROOT_DIR = './data/simulations/'
 
 class Net(nn.Module):
     def __init__(self, n_nodes):

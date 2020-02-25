@@ -58,9 +58,14 @@ chmod +x launch.sh
 # (change only the script name and options after python command)
 # wget https://raw.githubusercontent.com/horovod/horovod/master/examples/pytorch_mnist.py  
 #
+# NOTE: root directory should be given in absolute path format
+
 ddlrun --mpiarg "-x EGO_TOP" "-x HOROVOD_FUSION_THRESHOLD=16777216" -v \
   ./launch.sh python \
-  $HOME2/repos/scatnet_multichannel/train_rnn.py --file ./data/simulations/tbd_0.pt --hidden-size 200 --n-layers 2 --bidirectional --idx-label 0 --epochs 2000 --train-ratio 0.8 --batch-size 256 --n-workers 4 --lr 0.001 --betas 0.9 0.999 --opt-level "O2" --seed 42 --log-interval 10
+  $HOME2/repos/scatnet_multichannel/train_rnn.py --file-name <FILE_NAME> --root-dir <ROOT_DIR> \
+  --hidden-size <HIDDEN_SIZE> --n-layers <N_LAYERS> --bidirectional <CLASSIFIER> \
+  --idx-label <IDX_LABEL> --epochs 2000 --train-ratio 0.8 --batch-size <BATCH_SIZE> --n-workers 4 \
+  --lr 0.001 --betas 0.9 0.999 --opt-level "O2" --seed 42 --log-interval 10
 
 #
 # EoF
