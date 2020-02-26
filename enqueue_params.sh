@@ -23,7 +23,7 @@ SEED=42
 LOG_INTERVAL=10
 
 README="testing tbd_0.pt for all parameters"
-echo "${README}" >> params_readme.txt
+printf "$(date)\t${README}\n" >> params_readme.txt
 
 for FILE_NAME in ${FILE_NAMES[@]}
 do
