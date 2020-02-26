@@ -7,3 +7,5 @@ log/*
 launch.sh
 setup.sh
 rnn.lsf
+params.csv
+params_readme.txt
