@@ -1,24 +1,46 @@
 #!/usr/bin/sh
-# submits jobs to the cluster using list of hyperparameters in the params.csv file.
+# submits jobs to the cluster using list of hyperparameters in the params.csv file. In detail, it does the following:
+# - updates the status of the jobs by removing lines that were successfully completed (status DONE).
+# - go through line by line, submit job if it’s not a failed job until the number of submitted jobs becomes N_JOBS_MAX_NORMAL. update the job id and submission count
+# - go through line by line, submit job if it’s a failed job until the number of submitted jobs becomes N_JOBS_MAX_FAILED. update the job id and submission count
+# 
 # two queues exist: the cluster queue and the parameters queue. 
 # for job submission to the cluster I term it enqueue for the cluster, 
 # and adding new sets of hyperparameters to params.csv I term it enqueue for the parameters.
-# using crontab, the queue status on the cluster is checked to see if additional jobs can be submitted
+# cron job is used to run enqueue_cluster.sh periodically
 
 SCATNET_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel"
 cd ${SCATNET_DIR}
 
 # job count
-N_JOBS_MAX=4
+N_JOBS_MAX_NORMAL=4
+N_JOBS_MAX_FAILED=1
+#JOBID_RUN=$(bjobs -a | grep "RUN" | cut -d' ' -f1 | awk 'BEGIN { ORS = "," } { print }' | rev | cut -c 2- | rev )
+#JOBID_EXIT=$(bjobs -a | grep "EXIT" | cut -d' ' -f1 | awk 'BEGIN { ORS = "," } { print }' | rev | cut -c 2- | rev )
+#JOBID_DONE=$(bjobs -a | grep "DONE" | cut -d' ' -f1 | awk 'BEGIN { ORS = "," } { print }' | rev | cut -c 2- | rev )
+
+JOBID_RUN=$(bjobs -a | grep "RUN" | cut -d' ' -f1 | awk 'BEGIN { ORS = "," } { print }')
+JOBID_EXIT=$(bjobs -a | grep "EXIT" | cut -d' ' -f1 | awk 'BEGIN { ORS = "," } { print }')
+JOBID_DONE=$(bjobs -a | grep "DONE" | cut -d' ' -f1 | awk 'BEGIN { ORS = "," } { print }')
+
 # the "No unfinished jobs" is an error message and therefore does not count in wc -l
 # FIXME: however there's a header row when there are jobs. So if N_JOBS_SUBMITTED becomes -1, set it to 0
 N_JOBS_SUBMITTED=$(expr $(bjobs 2>/dev/null | wc -l) - 1) 
 FILE_NAME_PARAMS="params.csv"
 SLEEP_TIME=0
-while [[ "${N_JOBS_SUBMITTED}" -lt "${N_JOBS_MAX}" ]] && [ -s "${FILE_NAME_PARAMS}" ]
-do
+
+# remove jobs that are done
+#JOB_DONE_REGEX=$(echo $JOBID_DONE | sed 's/,/|^/g' | cut -c 2-)
+JOB_DONE_REGEX=$(echo $JOBID_DONE | rev | cut -c 2- | rev | sed 's/,/|^/g' | cut -c 2-)
+grep -E "$JOB_DONE_REGEX" ${FILE_NAME_PARAMS} > ${FILE_NAME_PARAMS}
+
+
+
+
     # read parameters 1 line at a time
-    head -n 1 "${FILE_NAME_PARAMS}" | while IFS=, read \
+while [[ "${N_JOBS_SUBMITTED_NORMAL}" -lt "${N_JOBS_MAX_NORMAL}" ]] && cat ${FILE_NAME_PARAMS} | IFS=, read \
+        JOBID \
+        SUBMIT_COUNT \
         FILE_NAME \
         ROOT_DIR \
         HIDDEN_SIZE \

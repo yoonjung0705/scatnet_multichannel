@@ -1,10 +1,11 @@
 #!/bin/sh
 # submits set of hyperparameters to file params.csv and adds description in params_readme.txt
+# the two leading fields in each line are the job id, number of times the job was submitted
+# these two fields get updated when running enqueue_cluster.sh
+
 # two queues exist: the cluster queue and the parameters queue. 
 # for job submission to the cluster I term it enqueue for the cluster, 
 # and adding new sets of hyperparameters to params.csv I term it enqueue for the parameters.
-# using crontab, the queue status on the cluster is checked to see if additional jobs can be submitted
-
 FILE_NAMES=("tbd_0_scat_2.pt")
 ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/simulations" # should be given in absolute path format
 HIDDEN_SIZES=(20 50 100 200)
@@ -33,7 +34,7 @@ do
         do
             for N_LAYERS in ${N_LAYERSS[@]}
             do
-                PARAMS=""
+                PARAMS=",0,"
                 PARAMS+="${FILE_NAME},"
                 PARAMS+="${ROOT_DIR},"
                 PARAMS+="${HIDDEN_SIZE},"
