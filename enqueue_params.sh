@@ -6,7 +6,7 @@
 # two queues exist: the cluster queue and the parameters queue. 
 # for job submission to the cluster I term it enqueue for the cluster, 
 # and adding new sets of hyperparameters to params.csv I term it enqueue for the parameters.
-FILE_NAMES=("tbd_0_scat_2.pt")
+FILE_NAMES=("tbd_1.pt" "tbd_2.pt" "tbd_3.pt" "tbd_4.pt" "tbd_5.pt")
 ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/simulations" # should be given in absolute path format
 HIDDEN_SIZES=(20 50 100 200)
 N_LAYERSS=(2 3)
@@ -15,7 +15,7 @@ CLASSIFIER="" # CLASSIFIER="--classifier"
 IDX_LABELS=(0 1) # set to (0) if classifier to avoid training the same classifier twice
 EPOCHS=2000
 TRAIN_RATIO=0.8
-BATCH_SIZE=64 # 256
+BATCH_SIZE=128 # 256
 N_WORKERS=4
 LR=0.001
 BETAS="0.9 0.999"

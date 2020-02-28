@@ -16,23 +16,25 @@ cd ${SCATNET_DIR}
 N_JOBS_MAX_NORMAL=4
 N_JOBS_MAX_FAILED=1
 SUBMIT_COUNT_MAX=3
-#JOBID_RUN=$(bjobs -a | grep "RUN" | cut -d' ' -f1 | awk 'BEGIN { ORS = "," } { print }' | rev | cut -c 2- | rev )
-#JOBID_EXIT=$(bjobs -a | grep "EXIT" | cut -d' ' -f1 | awk 'BEGIN { ORS = "," } { print }' | rev | cut -c 2- | rev )
-#JOBID_DONE=$(bjobs -a | grep "DONE" | cut -d' ' -f1 | awk 'BEGIN { ORS = "," } { print }' | rev | cut -c 2- | rev )
+BATCH_SIZE_FAILED=32 # use a smaller batch size for previously failed jobs
 
-JOBID_RUN=$(bjobs -a | grep "RUN" | cut -d' ' -f1 | awk 'BEGIN { ORS = "," } { print }')
-JOBID_EXIT=$(bjobs -a | grep "EXIT" | cut -d' ' -f1 | awk 'BEGIN { ORS = "," } { print }')
-JOBID_DONE=$(bjobs -a | grep "DONE" | cut -d' ' -f1 | awk 'BEGIN { ORS = "," } { print }')
+JOBID_DONE=$(bjobs -a 2> /dev/null | grep "DONE" | cut -d' ' -f1 | awk 'BEGIN { ORS = "," } { print }')
+JOBID_EXIT=$(bjobs -a 2> /dev/null | grep "EXIT" | cut -d' ' -f1 | awk 'BEGIN { ORS = "," } { print }')
 
 # the "No unfinished jobs" is an error message and therefore does not count in wc -l
 N_JOBS_SUBMITTED=$(expr $(bjobs 2>/dev/null | wc -l) - 1)
-N_JOBS_SUBMITTED=$( N_JOBS_SUBMITTED > 0 ? N_JOBS_SUBMITTED : 0 )
+N_JOBS_SUBMITTED=$(( N_JOBS_SUBMITTED > 0 ? N_JOBS_SUBMITTED : 0 ))
 FILE_NAME_PARAMS="params.csv"
 
 # remove jobs that are done
-#JOB_DONE_REGEX=$(echo $JOBID_DONE | sed 's/,/|^/g' | cut -c 2-)
-JOB_DONE_REGEX=$(echo $JOBID_DONE | rev | cut -c 2- | rev | sed 's/,/|^/g' | cut -c 2-)
-grep -E "$JOB_DONE_REGEX" ${FILE_NAME_PARAMS} > ${FILE_NAME_PARAMS}
+JOB_DONE_REGEX="^$(echo $JOBID_DONE | rev | cut -c 2- | rev | sed 's/,/|^/g')"
+JOB_EXIT_REGEX=$(echo $JOBID_EXIT | rev | cut -c 2- | rev | sed 's/,/|/g')
+
+if [ ! -z $JOB_DONE_REGEX ]
+then
+    grep -vE "$JOB_DONE_REGEX" ${FILE_NAME_PARAMS} > tmp_file
+    mv tmp_file ${FILE_NAME_PARAMS}    
+fi
 
 # initialize line count variable for submitting jobs that have never entered the cluster
 LINE_COUNT=0
@@ -59,6 +61,7 @@ cat ${FILE_NAME_PARAMS} | while [[ "${N_JOBS_SUBMITTED}" -lt "${N_JOBS_MAX_NORMA
         LOG_INTERVAL
     do
         LINE_COUNT=`expr ${LINE_COUNT} + 1`
+        #echo "LINE_COUNT is $LINE_COUNT"
 
         if [[ $SUBMIT_COUNT -eq 0 ]]
         then
@@ -83,20 +86,28 @@ cat ${FILE_NAME_PARAMS} | while [[ "${N_JOBS_SUBMITTED}" -lt "${N_JOBS_MAX_NORMA
                 > rnn.lsf
 
             # submit the job and get new job id
-            JOBID_NEW=$(bsub < rnn.lsf > grep -o "<[0-9].*>" | cut -c 2- | rev | cut -c 2- | rev)
+            JOBID_NEW=$(bsub < rnn.lsf | grep -o "[0-9]\+")
             SUBMIT_COUNT_NEW=`expr ${SUBMIT_COUNT} + 1`
-            awk 'BEGIN { FS=","; OFS="," } NR==line_count { $2=submit_count };1' line_count=${LINE_COUNT} mytext=${SUBMIT_COUNT} ${FILE_NAME_PARAMS} > ${FILE_NAME_PARAMS}
+            # update the jobid and the submission count in the params.csv file
+            awk 'BEGIN { FS=","; OFS="," } NR==line_count { $1=jobid_new; $2=submit_count_new };1' \
+                line_count=${LINE_COUNT} jobid_new=${JOBID_NEW} submit_count_new=${SUBMIT_COUNT_NEW} \
+                ${FILE_NAME_PARAMS} > tmp_file
+            mv tmp_file ${FILE_NAME_PARAMS}
             N_JOBS_SUBMITTED=`expr ${N_JOBS_SUBMITTED} + 1` 
         fi
     done
 
+
+
+
 # update number of jobs submitted
 N_JOBS_SUBMITTED=$(expr $(bjobs 2>/dev/null | wc -l) - 1)
-N_JOBS_SUBMITTED=$( N_JOBS_SUBMITTED > 0 ? N_JOBS_SUBMITTED : 0 )
+N_JOBS_SUBMITTED=$(( N_JOBS_SUBMITTED > 0 ? N_JOBS_SUBMITTED : 0 ))
 
 # initialize line count variable for submitting jobs that have failed before
 LINE_COUNT=0
-# read parameters 1 line at a time. If the number of times the job has been submitted is more than 1, submit the job and get the id
+# read parameters 1 line at a time. If the number of times the job has been submitted is more than 1, 
+# and if the job is a recently failed one, submit the job and get the id
 # then, replace the jobid and submit count and update the file
 cat ${FILE_NAME_PARAMS} | while [[ "${N_JOBS_SUBMITTED}" -lt "${N_JOBS_MAX_FAILED}" ]] && [ -s ${FILE_NAME_PARAMS} ] && IFS=, read \
         JOBID \
@@ -120,7 +131,7 @@ cat ${FILE_NAME_PARAMS} | while [[ "${N_JOBS_SUBMITTED}" -lt "${N_JOBS_MAX_FAILE
     do
         LINE_COUNT=`expr ${LINE_COUNT} + 1`
 
-        if [[ $SUBMIT_COUNT -lt $SUBMIT_COUNT_MAX ]] && [[ $SUBMIT_COUNT -ge 1 ]]
+        if $(echo "$JOBID" | grep -qEw "$JOB_EXIT_REGEX") && [[ $SUBMIT_COUNT -lt $SUBMIT_COUNT_MAX ]] && [[ $SUBMIT_COUNT -ge 1 ]]
         then
             # text substitution using the template
             cat rnn_template.lsf | sed \
@@ -133,7 +144,7 @@ cat ${FILE_NAME_PARAMS} | while [[ "${N_JOBS_SUBMITTED}" -lt "${N_JOBS_MAX_FAILE
                 -e "s/<IDX_LABEL>/${IDX_LABEL}/g" \
                 -e "s/<EPOCHS>/${EPOCHS}/g" \
                 -e "s/<TRAIN_RATIO>/${TRAIN_RATIO}/g" \
-                -e "s/<BATCH_SIZE>/${BATCH_SIZE}/g" \
+                -e "s/<BATCH_SIZE>/${BATCH_SIZE_FAILED}/g" \
                 -e "s/<N_WORKERS>/${N_WORKERS}/g" \
                 -e "s/<LR>/${LR}/g" \
                 -e "s/<BETAS>/${BETAS}/g" \
@@ -143,12 +154,14 @@ cat ${FILE_NAME_PARAMS} | while [[ "${N_JOBS_SUBMITTED}" -lt "${N_JOBS_MAX_FAILE
                 > rnn.lsf
 
             # submit the job and get new job id
-            JOBID_NEW=$(bsub < rnn.lsf > grep -o "<[0-9].*>" | cut -c 2- | rev | cut -c 2- | rev)
+            JOBID_NEW=$(bsub < rnn.lsf | grep -o "[0-9]\+")
             SUBMIT_COUNT_NEW=`expr ${SUBMIT_COUNT} + 1`
-            awk 'BEGIN { FS=","; OFS="," } NR==line_count { $2=submit_count };1' line_count=${LINE_COUNT} mytext=${SUBMIT_COUNT} ${FILE_NAME_PARAMS} > ${FILE_NAME_PARAMS}
+            # update the jobid and the submission count in the params.csv file
+            awk 'BEGIN { FS=","; OFS="," } NR==line_count { $1=jobid_new; $2=submit_count_new };1' \
+                line_count=${LINE_COUNT} jobid_new=${JOBID_NEW} submit_count_new=${SUBMIT_COUNT_NEW} \
+                ${FILE_NAME_PARAMS} > tmp_file
+            mv tmp_file ${FILE_NAME_PARAMS}
             N_JOBS_SUBMITTED=`expr ${N_JOBS_SUBMITTED} + 1` 
         fi
     done
-
-
 
