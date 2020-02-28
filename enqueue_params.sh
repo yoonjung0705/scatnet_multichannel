@@ -5,7 +5,7 @@
 # and adding new sets of hyperparameters to params.csv I term it enqueue for the parameters.
 # using crontab, the queue status on the cluster is checked to see if additional jobs can be submitted
 
-FILE_NAMES=("tbd_0.pt")
+FILE_NAMES=("tbd_0_scat_2.pt")
 ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/simulations" # should be given in absolute path format
 HIDDEN_SIZES=(20 50 100 200)
 N_LAYERSS=(2 3)
@@ -14,7 +14,7 @@ CLASSIFIER="" # CLASSIFIER="--classifier"
 IDX_LABELS=(0 1) # set to (0) if classifier to avoid training the same classifier twice
 EPOCHS=2000
 TRAIN_RATIO=0.8
-BATCH_SIZE=128 # 256
+BATCH_SIZE=64 # 256
 N_WORKERS=4
 LR=0.001
 BETAS="0.9 0.999"
@@ -22,7 +22,7 @@ OPT_LEVEL="O2"
 SEED=42
 LOG_INTERVAL=10
 
-README="testing tbd_0.pt for all parameters"
+README="testing tbd_0_scat_2.pt for all parameters"
 printf "$(date)\t${README}\n" >> params_readme.txt
 
 for FILE_NAME in ${FILE_NAMES[@]}

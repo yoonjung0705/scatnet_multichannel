@@ -9,8 +9,10 @@ SCATNET_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel"
 cd ${SCATNET_DIR}
 
 # job count
-N_JOBS_MAX=10
-N_JOBS_SUBMITTED=$(expr $(bjobs | wc -l) - 1)
+N_JOBS_MAX=4
+# the "No unfinished jobs" is an error message and therefore does not count in wc -l
+# FIXME: however there's a header row when there are jobs. So if N_JOBS_SUBMITTED becomes -1, set it to 0
+N_JOBS_SUBMITTED=$(expr $(bjobs 2>/dev/null | wc -l) - 1) 
 FILE_NAME_PARAMS="params.csv"
 SLEEP_TIME=0
 while [[ "${N_JOBS_SUBMITTED}" -lt "${N_JOBS_MAX}" ]] && [ -s "${FILE_NAME_PARAMS}" ]
