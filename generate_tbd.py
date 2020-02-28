@@ -9,7 +9,7 @@ from itertools import product
 
 '''custom libraries'''
 import common_utils as cu
-ROOT_DIR = './data/simulations/two_beads/'
+ROOT_DIR = './data/simulations/'
 
 # common inputs
 data_len = 2**8
