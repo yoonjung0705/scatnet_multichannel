@@ -6,7 +6,7 @@
 # two queues exist: the cluster queue and the parameters queue. 
 # for job submission to the cluster I term it enqueue for the cluster, 
 # and adding new sets of hyperparameters to params.csv I term it enqueue for the parameters.
-FILE_NAMES=("tbd_1.pt" "tbd_2.pt" "tbd_3.pt" "tbd_4.pt" "tbd_5.pt")
+FILE_NAMES=("tbd_0.pt" "tbd_1.pt" "tbd_2.pt" "tbd_3.pt" "tbd_4.pt")
 ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/simulations" # should be given in absolute path format
 HIDDEN_SIZES=(20 50 100 200)
 N_LAYERSS=(2 3)
@@ -23,7 +23,7 @@ OPT_LEVEL="O2"
 SEED=42
 LOG_INTERVAL=10
 
-README="testing tbd_0_scat_2.pt for all parameters"
+README="testing tbd_0,1,2,3,4.pt for all parameters"
 printf "$(date)\t${README}\n" >> params_readme.txt
 
 for FILE_NAME in ${FILE_NAMES[@]}

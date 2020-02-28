@@ -13,7 +13,7 @@ SCATNET_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel"
 cd ${SCATNET_DIR}
 
 # job count
-N_JOBS_MAX_NORMAL=4
+N_JOBS_MAX_NORMAL=8
 N_JOBS_MAX_FAILED=1
 SUBMIT_COUNT_MAX=3
 BATCH_SIZE_FAILED=32 # use a smaller batch size for previously failed jobs
@@ -27,14 +27,16 @@ N_JOBS_SUBMITTED=$(( N_JOBS_SUBMITTED > 0 ? N_JOBS_SUBMITTED : 0 ))
 FILE_NAME_PARAMS="params.csv"
 
 # remove jobs that are done
-JOB_DONE_REGEX="^$(echo $JOBID_DONE | rev | cut -c 2- | rev | sed 's/,/|^/g')"
+JOB_DONE_REGEX="$(echo $JOBID_DONE | rev | cut -c 2- | rev | sed 's/,/|^/g')"
 JOB_EXIT_REGEX=$(echo $JOBID_EXIT | rev | cut -c 2- | rev | sed 's/,/|/g')
 
 if [ ! -z $JOB_DONE_REGEX ]
 then
-    grep -vE "$JOB_DONE_REGEX" ${FILE_NAME_PARAMS} > tmp_file
-    mv tmp_file ${FILE_NAME_PARAMS}    
+    grep -vE "^$JOB_DONE_REGEX" ${FILE_NAME_PARAMS} > tmp_file
+    mv tmp_file ${FILE_NAME_PARAMS}
 fi
+
+
 
 # initialize line count variable for submitting jobs that have never entered the cluster
 LINE_COUNT=0
@@ -61,8 +63,6 @@ cat ${FILE_NAME_PARAMS} | while [[ "${N_JOBS_SUBMITTED}" -lt "${N_JOBS_MAX_NORMA
         LOG_INTERVAL
     do
         LINE_COUNT=`expr ${LINE_COUNT} + 1`
-        #echo "LINE_COUNT is $LINE_COUNT"
-
         if [[ $SUBMIT_COUNT -eq 0 ]]
         then
             # text substitution using the template
@@ -96,9 +96,6 @@ cat ${FILE_NAME_PARAMS} | while [[ "${N_JOBS_SUBMITTED}" -lt "${N_JOBS_MAX_NORMA
             N_JOBS_SUBMITTED=`expr ${N_JOBS_SUBMITTED} + 1` 
         fi
     done
-
-
-
 
 # update number of jobs submitted
 N_JOBS_SUBMITTED=$(expr $(bjobs 2>/dev/null | wc -l) - 1)
@@ -164,4 +161,5 @@ cat ${FILE_NAME_PARAMS} | while [[ "${N_JOBS_SUBMITTED}" -lt "${N_JOBS_MAX_FAILE
             N_JOBS_SUBMITTED=`expr ${N_JOBS_SUBMITTED} + 1` 
         fi
     done
+
 
