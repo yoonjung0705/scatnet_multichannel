@@ -609,14 +609,20 @@ def train_rnn_cluster(file_name, hidden_size, n_layers=1, bidirectional=False, c
         assert(isinstance(hidden_size, int)), "Invalid format of hidden_size given. Should be type int"
 
     if classifier:
-        nums = cu.match_filename(r'{}_meta_rnn_([0-9]+).pt'.format(file_name), root_dir=root_dir) # FIXME
-        nums = [int(num) for num in nums]; idx = max(nums) + 1 if nums else 0
+        idx = 0
+        if root_process:
+            nums = cu.match_filename(r'{}_meta_rnn_([0-9]+).pt'.format(file_name), root_dir=root_dir) # FIXME
+            nums = [int(num) for num in nums]; idx = max(nums) + 1 if nums else 0
+        idx = hvd.broadcast(torch.tensor(idx), root_rank=0, name='idx_file_meta').item()
         file_name_meta = '{}_meta_rnn_{}.pt'.format(file_name, idx)
     else:
         label = labels[idx_label]
         label_name = label_names[idx_label]
-        nums = cu.match_filename(r'{}_meta_rnn_([0-9]+)_{}.pt'.format(file_name, label_name), root_dir=root_dir)
-        nums = [int(num) for num in nums]; idx = max(nums) + 1 if nums else 0
+        idx = 0
+        if root_process:
+            nums = cu.match_filename(r'{}_meta_rnn_([0-9]+)_{}.pt'.format(file_name, label_name), root_dir=root_dir)
+            nums = [int(num) for num in nums]; idx = max(nums) + 1 if nums else 0
+        idx = hvd.broadcast(torch.tensor(idx), root_rank=0, name='idx_file_meta').item()
         file_name_meta = '{}_meta_rnn_{}_{}.pt'.format(file_name, idx, label_name)
 
     index = _train_test_split(n_data_total, train_ratio); index['val'] = index.pop('test')
@@ -640,7 +646,7 @@ def train_rnn_cluster(file_name, hidden_size, n_layers=1, bidirectional=False, c
         label_to_idx = {tuple(condition):idx_condition for idx_condition, condition in enumerate(labels)}
         n_conditions = len(label_to_idx)
         meta.update({'label_to_idx':label_to_idx})
-        _init_meta(**meta)
+        _init_meta(**meta) # done for all processes to ensure data gets loaded after initializing file
 
         labels = np.arange(n_conditions) # shaped (n_conditions,)
         labels = np.repeat(labels, n_samples_total) # shaped (n_conditions * n_samples_total,)
@@ -656,7 +662,7 @@ def train_rnn_cluster(file_name, hidden_size, n_layers=1, bidirectional=False, c
             file_name=file_name_meta, root_dir=root_dir, lr=lr, betas=betas,
             opt_level=opt_level, seed=seed, log_interval=log_interval)
     else:
-        _init_meta(**meta)
+        _init_meta(**meta) # done for all processes to ensure data gets loaded after initializing file
         
         dataset = TimeSeriesDataset(data, label, transform=ToTensor())
         # train the rnn for the given idx_label
