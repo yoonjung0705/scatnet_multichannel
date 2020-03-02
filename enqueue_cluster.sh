@@ -18,6 +18,7 @@ N_JOBS_MAX_FAILED=1
 SUBMIT_COUNT_MAX=3
 BATCH_SIZE_FAILED=32 # use a smaller batch size for previously failed jobs
 
+# get jobids. output example: 41422,41423,
 JOBID_DONE=$(bjobs -a 2> /dev/null | grep "DONE" | cut -d' ' -f1 | awk 'BEGIN { ORS = "," } { print }')
 JOBID_EXIT=$(bjobs -a 2> /dev/null | grep "EXIT" | cut -d' ' -f1 | awk 'BEGIN { ORS = "," } { print }')
 
@@ -26,13 +27,15 @@ N_JOBS_SUBMITTED=$(expr $(bjobs 2>/dev/null | wc -l) - 1)
 N_JOBS_SUBMITTED=$(( N_JOBS_SUBMITTED > 0 ? N_JOBS_SUBMITTED : 0 ))
 FILE_NAME_PARAMS="params.csv"
 
-# remove jobs that are done
-JOB_DONE_REGEX="$(echo $JOBID_DONE | rev | cut -c 2- | rev | sed 's/,/|^/g')"
-JOB_EXIT_REGEX=$(echo $JOBID_EXIT | rev | cut -c 2- | rev | sed 's/,/|/g')
+# get regular expression for grep. 
+# output example for jobs done: ^41422|^41423
+# output example for jobs exit: 41422|41423
+JOB_DONE_REGEX="^$(echo $JOBID_DONE | rev | cut -c 2- | rev | sed 's/,/|^/g')" # TODO: confirm output is correct
+JOB_EXIT_REGEX="$(echo $JOBID_EXIT | rev | cut -c 2- | rev | sed 's/,/|/g')"
 
 if [ ! -z $JOB_DONE_REGEX ]
 then
-    grep -vE "^$JOB_DONE_REGEX" ${FILE_NAME_PARAMS} > tmp_file
+    grep -vE "$JOB_DONE_REGEX" ${FILE_NAME_PARAMS} > tmp_file
     mv tmp_file ${FILE_NAME_PARAMS}
 fi
 
