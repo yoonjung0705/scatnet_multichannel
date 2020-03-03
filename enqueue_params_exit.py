@@ -1,8 +1,14 @@
 '''finds the jobs that exited with failure and appends them to params.csv as new jobs'''
-ROOT_DIR='./data/simulations'
+'''standard imports'''
+import os
+import torch
+import re
+import glob
+
+ROOT_DIR='/nobackup/users/yoonjung/repos/scatnet_multichannel/data/simulations'
 file_name_params = 'params.csv'
 file_name_regex = 'tbd_*_meta_rnn_*_k_ratios.pt'
-file_name_data_regex = r'tbd_[0-9]+_meta_rnn_.*_k_ratios.pt'
+file_name_data_regex = r'(tbd_[0-9]+)_meta_rnn_.*_k_ratios.pt'
 root_dir=ROOT_DIR
 epochs_len = 200 # threshold for determining whether the training failed or not
 # epochs_len does not mean the 'n_epochs_max' value. 'epochs' is a list of the epoch number
@@ -36,14 +42,13 @@ for file_path in file_paths:
     file_name = os.path.basename(file_path)
     match = re.fullmatch(file_name_data_regex, file_name)
     if match is None: raise IOError("Invalid regular expression give: no match found for data file name")
-    file_name_data = match.group(1)
+    file_name_data = match.group(1) + '.pt'
     meta = torch.load(file_path)
     bidirectional = "--bidirectional" if meta['bidirectional'] else ""
     classifier = "--classifier" if meta['classifier'] else ""
     idx_label = 0 if label_names[0] in file_name else 1
-    if len(meta['epochs']) < epochs_len:
-        file_name = re.fullmatch(file_name_data_regex, file_
-        row = ',0,{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11},{12},{13},{14},{15}'.format(
+    if len(meta['epoch']) < epochs_len:
+        row = "\n,1,{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11},{12},{13},{14},{15}".format(
                 file_name_data,
                 root_dir,
                 meta['hidden_size'],
