@@ -9,6 +9,6 @@ setup.sh
 rnn.lsf
 params.csv
 params.log
-fail.log
+exit.log
 *.bak
 *.swp

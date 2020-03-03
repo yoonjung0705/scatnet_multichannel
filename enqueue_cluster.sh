@@ -1,9 +1,11 @@
 #!/usr/bin/sh
 # submits jobs to the cluster using list of hyperparameters in the params.csv file. In detail, it does the following:
-# - updates the status of the jobs by removing lines that were successfully completed (status DONE).
-# - go through line by line, submit job if it’s not a failed job until the number of submitted jobs becomes N_JOBS_MAX_NORMAL. update the job id and submission count
-# - go through line by line, submit job if it’s a failed job until the number of submitted jobs becomes N_JOBS_MAX_EXIT. update the job id and submission count
-# 
+# - updates the status of the jobs by removing lines that were successfully completed (status DONE) for
+# files params.csv and exit.log
+# - updates the status of the jobs by adding jobids that failed to exit.log
+# - goes through line by line in params.csv, submits job if it’s not a failed job until the number of submitted jobs becomes N_JOBS_MAX_NORMAL. update the job id and submission count in params.csv
+# - goes through line by line in params.csv, submits job if it’s a failed job until the number of submitted jobs becomes N_JOBS_MAX_EXIT. update the job id and submission count
+
 # two queues exist: the cluster queue and the parameters queue. 
 # for job submission to the cluster I term it enqueue for the cluster, 
 # and adding new sets of hyperparameters to params.csv I term it enqueue for the parameters.
@@ -13,9 +15,9 @@ SCATNET_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel"
 cd ${SCATNET_DIR}
 
 # job count
-N_JOBS_MAX_NORMAL=4
-N_JOBS_MAX_EXIT=1
-SUBMIT_COUNT_MAX=3
+N_JOBS_MAX_NORMAL=4  # max number of jobs allowed to run simutaneously for new jobs
+N_JOBS_MAX_EXIT=1 # max number of jobs allowed to run simutaneously for previously failed jobs
+SUBMIT_COUNT_MAX=3 # max number of times a job can be submitted to the cluster
 BATCH_SIZE_EXIT=32 # use a smaller batch size for previously failed jobs
 FILE_NAME_PARAMS="params.csv"
 FILE_NAME_EXIT="exit.log"
@@ -25,28 +27,22 @@ FILE_NAME_JOB_TEMPLATE="rnn_template.lsf"
 # get done jobids. output example: 41422,41423,
 JOBIDS_DONE=$(bjobs -a 2> /dev/null | grep "DONE" | cut -d' ' -f1 | awk 'BEGIN { ORS = "," } { print }')
 # get exit jobids. output example: 41422\n41423
-JOBIDS_EXIT_RECENT=$(bjobs -a 2> /dev/null | grep "EXIT" | cut -d' ' -f1
-# TODO: 
-# - get the exit jobids from bjobs -a - (A)
-# - get the exit jobids from exit.log - (B)
-# - for each jobid in jobid_done, see if it's in (B) and if so, remove it from (B)
-# - for each jobid in (A), see if it's in (B) and if not, append to (B)
-# - the JOBIDS_EXIT_REGEX should be defined from the exit.log file
-# - you don't have to define job exit regex with the "|" thing.
-# just check with grep directly: grep "$JOBID" -qw "exit.log"
-
-#JOBIDS_EXIT=$(bjobs -a 2> /dev/null | grep "EXIT" | cut -d' ' -f1 | awk 'BEGIN { ORS = "," } { print }')
-#JOBIDS_EXIT_CUM=$(cat exit.log | paste -sd,)
+JOBIDS_EXIT_RECENT=$(bjobs -a 2> /dev/null | grep "EXIT" | cut -d' ' -f1)
 
 # the "No unfinished jobs" is an error message and therefore does not count in wc -l
 N_JOBS_SUBMITTED=$(expr $(bjobs 2>/dev/null | wc -l) - 1)
 N_JOBS_SUBMITTED=$(( N_JOBS_SUBMITTED > 0 ? N_JOBS_SUBMITTED : 0 ))
 
-# get regular expression for grep. 
-# output example for jobs done: ^41422|^41423
-# output example for jobs exit: 41422|41423
+# get regular expression of finished jobs for grep. 
+# output example for jobs done: 41422|^41423
+# the ^ is not added at the beginning to check if JOBIDS_DONE_REGEX is an empty string
 JOBIDS_DONE_REGEX="$(echo $JOBIDS_DONE | rev | cut -c 2- | rev | sed 's/,/|^/g')"
-#JOBIDS_EXIT_REGEX="$(echo $JOBIDS_EXIT | rev | cut -c 2- | rev | sed 's/,/|/g')"
+
+# create exit.log file if it does not exist
+if [ ! -f ${FILE_NAME_EXIT} ]
+then
+    touch ${FILE_NAME_EXIT}
+fi
 
 # remove the finished jobs in the params.csv file 
 if [ ! -z $JOBIDS_DONE_REGEX ]
@@ -65,10 +61,10 @@ fi
 # add failed jobs in the exit.log file
 for JOBID_EXIT_RECENT in $JOBIDS_EXIT_RECENT
 do
-    if $(! grep -qw $JOBID_EXIT_RECENT ${FILE_NAME_EXIT})
+    if [[ "$JOBID_EXIT_RECENT" =~ ^[0-9]+$ ]] && $(! grep -qw $JOBID_EXIT_RECENT ${FILE_NAME_EXIT})
     then
         echo $JOBID_EXIT_RECENT >> ${FILE_NAME_EXIT}
-    done
+    fi
 done
 
 # initialize line count variable for submitting jobs that have never entered the cluster
@@ -134,15 +130,16 @@ cat ${FILE_NAME_PARAMS} | while [[ "${N_JOBS_SUBMITTED}" -lt "${N_JOBS_MAX_NORMA
 N_JOBS_SUBMITTED=$(expr $(bjobs 2>/dev/null | wc -l) - 1)
 N_JOBS_SUBMITTED=$(( N_JOBS_SUBMITTED > 0 ? N_JOBS_SUBMITTED : 0 ))
 
-echo "N_JOBS_SUBMITTED: $N_JOBS_SUBMITTED"
-echo "N_JOBS_MAX_EXIT: $N_JOBS_MAX_EXIT"
-echo "checking [ -s FILE_NAME_PARAMS ]"
-[ -s ${FILE_NAME_PARAMS} ]
-echo $?
+#echo "N_JOBS_SUBMITTED: $N_JOBS_SUBMITTED"
+#echo "N_JOBS_MAX_EXIT: $N_JOBS_MAX_EXIT"
+#echo "checking [ -s FILE_NAME_PARAMS ]"
+#[ -s ${FILE_NAME_PARAMS} ]
+#echo $?
+
 # initialize line count variable for submitting jobs that have failed before
 LINE_COUNT=0
 # read parameters 1 line at a time. If the number of times the job has been submitted is more than 1, 
-# and if the job is a recently failed one, submit the job and get the id
+# and if the job has been failed before, submit the job and get the id
 # then, replace the jobid and submit count and update the file
 cat ${FILE_NAME_PARAMS} | while [[ "${N_JOBS_SUBMITTED}" -lt "${N_JOBS_MAX_EXIT}" ]] && [ -s ${FILE_NAME_PARAMS} ] && IFS=, read \
         JOBID \
@@ -166,22 +163,21 @@ cat ${FILE_NAME_PARAMS} | while [[ "${N_JOBS_SUBMITTED}" -lt "${N_JOBS_MAX_EXIT}
     do
         LINE_COUNT=`expr ${LINE_COUNT} + 1`
 
-        echo "LINE_COUNT:$LINE_COUNT"
-        echo "JOBID:$JOBID"
-        echo "JOBIDS_EXIT_REGEX:$JOBIDS_EXIT_REGEX"
-        echo "SUBMIT_COUNT:$SUBMIT_COUNT"
-        echo "SUBMIT_COUNT_MAX:$SUBMIT_COUNT_MAX"
-        echo "checking echo JOBID | grep -qEw JOBIDS_EXIT_REGEX"
-        $(echo "$JOBID" | grep -qEw "$JOBIDS_EXIT_REGEX")
-        echo $?
-        echo "checking [[ SUBMIT_COUNT -lt SUBMIT_COUNT_MAX ]]"
-        [[ $SUBMIT_COUNT -lt $SUBMIT_COUNT_MAX ]]
-        echo $?
-        echo "checking [[ SUBMIT_COUNT -ge 1 ]]"
-        [[ $SUBMIT_COUNT -ge 1 ]]
-        echo $?
+        #echo "LINE_COUNT:$LINE_COUNT"
+        #echo "JOBID:$JOBID"
+        #echo "SUBMIT_COUNT:$SUBMIT_COUNT"
+        #echo "SUBMIT_COUNT_MAX:$SUBMIT_COUNT_MAX"
+        #echo "checking cat FILE_NAME_EXIT | grep -qw JOBID"
+        #$(cat ${FILE_NAME_EXIT} | grep -qw "$JOBID")
+        #echo $?
+        #echo "checking [[ SUBMIT_COUNT -lt SUBMIT_COUNT_MAX ]]"
+        #[[ $SUBMIT_COUNT -lt $SUBMIT_COUNT_MAX ]]
+        #echo $?
+        #echo "checking [[ SUBMIT_COUNT -ge 1 ]]"
+        #[[ $SUBMIT_COUNT -ge 1 ]]
+        #echo $?
 
-        if $(echo "$JOBID" | grep -qw ${FILE_NAME_EXIT}) && [[ $SUBMIT_COUNT -lt $SUBMIT_COUNT_MAX ]] && [[ $SUBMIT_COUNT -ge 1 ]]
+        if $(cat ${FILE_NAME_EXIT} | grep -qw "$JOBID") && [[ $SUBMIT_COUNT -lt $SUBMIT_COUNT_MAX ]] && [[ $SUBMIT_COUNT -ge 1 ]]
         then
             # text substitution using the template
             cat ${FILE_NAME_JOB_TEMPLATE} | sed \
