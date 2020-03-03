@@ -9,3 +9,4 @@ setup.sh
 rnn.lsf
 params.csv
 params_readme.txt
+*.bak

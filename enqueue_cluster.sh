@@ -30,12 +30,12 @@ FILE_NAME_PARAMS="params.csv"
 # get regular expression for grep. 
 # output example for jobs done: ^41422|^41423
 # output example for jobs exit: 41422|41423
-JOB_DONE_REGEX="^$(echo $JOBID_DONE | rev | cut -c 2- | rev | sed 's/,/|^/g')" # TODO: confirm output is correct
+JOB_DONE_REGEX="$(echo $JOBID_DONE | rev | cut -c 2- | rev | sed 's/,/|^/g')"
 JOB_EXIT_REGEX="$(echo $JOBID_EXIT | rev | cut -c 2- | rev | sed 's/,/|/g')"
 
 if [ ! -z $JOB_DONE_REGEX ]
 then
-    grep -vE "$JOB_DONE_REGEX" ${FILE_NAME_PARAMS} > tmp_file
+    grep -vE "^$JOB_DONE_REGEX" ${FILE_NAME_PARAMS} > tmp_file
     mv tmp_file ${FILE_NAME_PARAMS}
 fi
 
