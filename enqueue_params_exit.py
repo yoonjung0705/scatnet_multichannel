@@ -74,6 +74,8 @@ for file_path in file_paths:
             f.write(row)
         file_count += 1
 
+        os.remove(file_path) # remove file since we submitted the hyperparameters to the parameters queue
+
 print("{} training jobs appended to params.csv".format(file_count))
 
         
