@@ -8,5 +8,7 @@ launch.sh
 setup.sh
 rnn.lsf
 params.csv
-params_readme.txt
+params.log
+fail.log
 *.bak
+*.swp

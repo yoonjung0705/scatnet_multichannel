@@ -1,5 +1,5 @@
 #!/bin/sh
-# submits set of hyperparameters to file params.csv and adds description in params_readme.txt
+# submits set of hyperparameters to file params.csv and adds description in params.log
 # the two leading fields in each line are the job id, number of times the job was submitted
 # these two fields get updated when running enqueue_cluster.sh
 
@@ -24,7 +24,7 @@ SEED=42
 LOG_INTERVAL=10
 
 README="testing tbd_0,1,2,3,4.pt for all parameters"
-printf "$(date)\t${README}\n" >> params_readme.txt
+printf "$(date)\t${README}\n" >> params.log
 
 for FILE_NAME in ${FILE_NAMES[@]}
 do

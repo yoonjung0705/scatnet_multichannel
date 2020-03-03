@@ -20,7 +20,17 @@ BATCH_SIZE_FAILED=32 # use a smaller batch size for previously failed jobs
 
 # get jobids. output example: 41422,41423,
 JOBID_DONE=$(bjobs -a 2> /dev/null | grep "DONE" | cut -d' ' -f1 | awk 'BEGIN { ORS = "," } { print }')
-JOBID_EXIT=$(bjobs -a 2> /dev/null | grep "EXIT" | cut -d' ' -f1 | awk 'BEGIN { ORS = "," } { print }')
+# TODO: 
+# - get the exit jobids from bjobs -a - (A)
+# - get the exit jobids from fail.log - (B)
+# - for each jobid in (A), see if it's in (B) and if not, append to (B)
+# - for each jobid in jobid_done, see if it's in (B) and if so, remove it from (B)
+# - the JOB_EXIT_REGEX should be defined from the fail.log file
+# - you don't have to define job exit regex with the "|" thing.
+# just check with grep directly: grep "$JOBID" -qw "fail.log"
+
+#JOBID_EXIT=$(bjobs -a 2> /dev/null | grep "EXIT" | cut -d' ' -f1 | awk 'BEGIN { ORS = "," } { print }')
+#JOBID_EXIT_CUM=$(cat fail.log | paste -sd,)
 
 # the "No unfinished jobs" is an error message and therefore does not count in wc -l
 N_JOBS_SUBMITTED=$(expr $(bjobs 2>/dev/null | wc -l) - 1)
@@ -104,6 +114,11 @@ cat ${FILE_NAME_PARAMS} | while [[ "${N_JOBS_SUBMITTED}" -lt "${N_JOBS_MAX_NORMA
 N_JOBS_SUBMITTED=$(expr $(bjobs 2>/dev/null | wc -l) - 1)
 N_JOBS_SUBMITTED=$(( N_JOBS_SUBMITTED > 0 ? N_JOBS_SUBMITTED : 0 ))
 
+echo "N_JOBS_SUBMITTED: $N_JOBS_SUBMITTED"
+echo "N_JOBS_MAX_FAILED: $N_JOBS_MAX_FAILED"
+echo "checking [ -s FILE_NAME_PARAMS ]"
+[ -s ${FILE_NAME_PARAMS} ]
+echo $?
 # initialize line count variable for submitting jobs that have failed before
 LINE_COUNT=0
 # read parameters 1 line at a time. If the number of times the job has been submitted is more than 1, 
@@ -130,6 +145,21 @@ cat ${FILE_NAME_PARAMS} | while [[ "${N_JOBS_SUBMITTED}" -lt "${N_JOBS_MAX_FAILE
         LOG_INTERVAL
     do
         LINE_COUNT=`expr ${LINE_COUNT} + 1`
+
+        echo "LINE_COUNT:$LINE_COUNT"
+        echo "JOBID:$JOBID"
+        echo "JOB_EXIT_REGEX:$JOB_EXIT_REGEX"
+        echo "SUBMIT_COUNT:$SUBMIT_COUNT"
+        echo "SUBMIT_COUNT_MAX:$SUBMIT_COUNT_MAX"
+        echo "checking echo JOBID | grep -qEw JOB_EXIT_REGEX"
+        $(echo "$JOBID" | grep -qEw "$JOB_EXIT_REGEX")
+        echo $?
+        echo "checking [[ SUBMIT_COUNT -lt SUBMIT_COUNT_MAX ]]"
+        [[ $SUBMIT_COUNT -lt $SUBMIT_COUNT_MAX ]]
+        echo $?
+        echo "checking [[ SUBMIT_COUNT -ge 1 ]]"
+        [[ $SUBMIT_COUNT -ge 1 ]]
+        echo $?
 
         if $(echo "$JOBID" | grep -qEw "$JOB_EXIT_REGEX") && [[ $SUBMIT_COUNT -lt $SUBMIT_COUNT_MAX ]] && [[ $SUBMIT_COUNT -ge 1 ]]
         then
