@@ -7,8 +7,12 @@ import glob
 
 ROOT_DIR='/nobackup/users/yoonjung/repos/scatnet_multichannel/data/simulations'
 file_name_params = 'params.csv'
-file_name_regex = 'tbd_*_meta_rnn_*_k_ratios.pt'
-file_name_data_regex = r'(tbd_[0-9]+)_meta_rnn_.*_k_ratios.pt'
+#file_name_regex = 'tbd_*_meta_rnn_*_k_ratios.pt'
+file_name_regex = 'tbd_*_meta_rnn_*_diff_coef_ratios.pt'
+
+#file_name_data_regex = r'(tbd_[0-9]+)_meta_rnn_.*_k_ratios.pt'
+file_name_data_regex = r'(tbd_[0-9]+)_meta_rnn_.*_diff_coef_ratios.pt'
+
 root_dir=ROOT_DIR
 epochs_len = 200 # threshold for determining whether the training failed or not
 # epochs_len does not mean the 'n_epochs_max' value. 'epochs' is a list of the epoch number
