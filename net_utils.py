@@ -704,9 +704,9 @@ def _train_rnn_cluster(dataset, index, hidden_size, n_layers, bidirectional, cla
     '''
     #hvd.init() # initialize horovod
     torch.manual_seed(seed) # FIXME: necessary here?
-    torch.cuda.set_device(hvd.local_rank()) # pin GPU to local rank
+    #torch.cuda.set_device(hvd.local_rank()) # pin GPU to local rank
     # limit # of CPU threads to be used per worker : FIXME: why do this?
-    torch.set_num_threads(4)
+    torch.set_num_threads(1)
     file_name, _ = os.path.splitext(file_name)
     file_path = os.path.join(root_dir, file_name + '.pt')
     if hvd.rank() == 0:

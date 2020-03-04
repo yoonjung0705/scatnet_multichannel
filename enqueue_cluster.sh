@@ -17,8 +17,8 @@ cd ${SCATNET_DIR}
 # job count
 N_JOBS_MAX_NORMAL=4  # max number of jobs allowed to run simutaneously for new jobs
 N_JOBS_MAX_EXIT=1 # max number of jobs allowed to run simutaneously for previously failed jobs
-SUBMIT_COUNT_MAX=3 # max number of times a job can be submitted to the cluster
-BATCH_SIZE_EXIT=32 # use a smaller batch size for previously failed jobs
+SUBMIT_COUNT_MAX=4 # max number of times a job can be submitted to the cluster
+BATCH_SIZE_EXIT=16 # use a smaller batch size for previously failed jobs
 FILE_NAME_PARAMS="params.csv"
 FILE_NAME_JOB="rnn.lsf"
 FILE_NAME_JOB_TEMPLATE="rnn_template.lsf"
