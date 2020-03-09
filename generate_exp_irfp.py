@@ -12,71 +12,23 @@ from itertools import product
 
 '''custom libraries'''
 import common_utils as cu
-ROOT_DIR = './data/experiment/trap_bead_active_bath'
+ROOT_DIR = './data/experiments/2020_0305/' # 2020_0228
 file_name_data = 'data.pt'
 file_name_data_test = 'data_test.pt'
-
-def train_val_split_exp(n_data, train_ratio):
-    '''
-    splits the experimental data into files for training and validation
-
-    inputs
-    ------
-    n_data: int type number of data
-    train_val_ratio: list-like with float elements indicating ratio for training and validation data.
-        sum should be between 0 and 1
-
-    outputs
-    -------
-    index: dict with keys train and test while values being lists of indices
-    '''
-    assert(len(train_val_ratio) == 2), "Split ratio should be given as a length 2 list like input"
-    for ratio in train_val_ratio:
-        assert(ratio > 0 and ratio < 1), "Invalid train_val_ratio given. Elements should be between 0 and 1"
-    assert(sum(train_val_ratio) > 0 and sum(train_val_ratio) < 1), "Invalid train_val_ratio given.\
-        Not enough data to be assigned for test purposes"
-    idx_train = np.random.choice(n_data, int(n_data * train_val_ratio[0]), replace=False)
-    idx_val_test = np.array(list(set(range(n_data)) - set(idx_train)))
-    idx_val = np.random.choice(idx_val_test, int(n_data * train_val_ratio[1]), replace=False)
-    idx_test = np.array(list(set(idx_val_test) - set(idx_val)))
-    index = {'train':idx_train, 'val':idx_val, 'test':idx_test}
-    return index
 
 # common inputs
 data_len = 2**11
 root_dir = ROOT_DIR
-# we take train_ratio amount of data which includes training and validation data
-# within this data, we take train_ratio amount and use it for training.
-# the remaining data is for test
-# FIXME: change it so that you use train_ratio and val_ratio like below
+# split data for training, validation, test
 train_ratio = 0.8
 val_ratio = 0.1
 test_ratio = 1 - (train_ratio + val_ratio)
 file_paths_data = glob.glob(os.path.join(root_dir, 'ad57_*.txt'))
 
 # scat transform inputs
-#avg_lens = [2**8]
 avg_lens = [2**5, 2**7, 2**8, 2**9]
 n_filter_octaves = [(1, 1)]
-#n_filter_octaves = list(product([1,4], [1,4]))
-# [(1,1), (1,2), (1,4), (2,1), (2,2), (2,4), (4,1), (4,2), (4,4)]
 file_names_scat = []
-
-# training inputs
-n_epochs_max = 2000
-batch_size = 100
-n_workers = 4
-
-# NN inputs
-#n_nodes_hiddens = [] # FIXME: add later
-
-# RNN inputs
-hidden_sizes = [10, 50, 200, 500]
-#hidden_sizes = [10, 50, 200, 500]
-n_layerss = [2]
-bidirectionals = [True]
-lr = 0.001
-betas = (0.9, 0.999)
 
 file_data_lens = []
 # determine number of timepoints per condition in case it differs among files

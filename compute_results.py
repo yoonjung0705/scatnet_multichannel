@@ -19,7 +19,7 @@ import scat_utils as scu
 import net_utils as nu
 
 #root_dir = './data/simulations/'
-root_dir = './data/experiment/trap_bead_active_bath'
+root_dir = './data/experiments/trap_bead_active_bath'
 root_dir_results = os.path.join(root_dir, 'results')
 
 # provide file names (TEST data!) and paths manually
