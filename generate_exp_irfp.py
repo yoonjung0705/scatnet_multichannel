@@ -12,21 +12,20 @@ from itertools import product
 
 '''custom libraries'''
 import common_utils as cu
-ROOT_DIR = './data/experiments/2020_0305/' # 2020_0228
+ROOT_DIR = './data/experiments/irfp'
 file_name_data = 'data.pt'
 file_name_data_test = 'data_test.pt'
 
 # common inputs
-data_len = 2**11
 root_dir = ROOT_DIR
 # split data for training, validation, test
 train_ratio = 0.8
 val_ratio = 0.1
 test_ratio = 1 - (train_ratio + val_ratio)
-file_paths_data = glob.glob(os.path.join(root_dir, 'ad57_*.txt'))
+file_paths_data = glob.glob(os.path.join(root_dir, '*.h5'))
 
 # scat transform inputs
-avg_lens = [2**5, 2**7, 2**8, 2**9]
+avg_lens = [2**4, 2**6]
 n_filter_octaves = [(1, 1)]
 file_names_scat = []
 
