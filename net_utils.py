@@ -10,6 +10,7 @@ import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader, Subset
 from torch.utils.data.sampler import SubsetRandomSampler
 from torch.utils.data.distributed import DistributedSampler
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 import time
 import horovod.torch as hvd
 from apex import amp
@@ -55,16 +56,18 @@ class RNN(nn.Module):
         self.lstm = nn.LSTM(input_size, hidden_size, num_layers=n_layers, bidirectional=bidirectional)
         self.h2o = nn.Linear(self.n_directions * hidden_size, output_size)
 
-    def forward(self, input):
+    def forward(self, input, input_lens=None):
         # no need to check input's shape as it'll be checked in self.lstm
         hidden_size = self.hidden_size
         n_layers = self.n_layers
         n_directions = self.n_directions
         batch_size = input.shape[1]
+        if input_lens is not None: input = pack_padded_sequence(input, input_lens)
         #h_0 = torch.autograd.Variable(torch.zeros(n_layers, batch_size, hidden_size)) # dtype is default to float32
         #c_0 = nn.Parameter(torch.zeros(n_layers, batch_size, hidden_size))
         #output, (h_n, c_n) = self.lstm(input, (h_0, c_0))
-        output, (h_n, c_n) = self.lstm(input)
+        output, _ = self.lstm(input)
+        if input_lens is not None: output = pad_packed_sequence(output)
         output = self.h2o(output[-1, :, :])
         
         return output
