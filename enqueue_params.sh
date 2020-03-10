@@ -6,10 +6,10 @@
 # two queues exist: the cluster queue and the parameters queue. 
 # for job submission to the cluster I term it enqueue for the cluster, 
 # and adding new sets of hyperparameters to params.csv I term it enqueue for the parameters.
-FILE_NAMES=("tbd_0.pt" "tbd_1.pt" "tbd_2.pt" "tbd_3.pt" "tbd_4.pt")
-README="testing tbd_0,1,2,3,4.pt for all parameters"
+FILE_NAMES=("tbd_0_scat_0.pt" "tbd_0_scat_1.pt" "tbd_1_scat_0.pt" "tbd_1_scat_1.pt" "tbd_2_scat_0.pt" "tbd_2_scat_1.pt" "tbd_3_scat_0.pt" "tbd_3_scat_1.pt" "tbd_4_scat_0.pt" "tbd_4_scat_1.pt")
+README="testing scat transformed tbd_0,1,2,3,4.pt for all parameters. scat transform has two versions of hyperparams"
 ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/simulations" # should be given in absolute path format
-HIDDEN_SIZES=(20 50 100 200)
+HIDDEN_SIZES=(20 50)
 N_LAYERSS=(2 3)
 BIDIRECTIONAL="--bidirectional"
 CLASSIFIER="" # CLASSIFIER="--classifier"
