@@ -12,8 +12,11 @@ from torch.utils.data.sampler import SubsetRandomSampler
 from torch.utils.data.distributed import DistributedSampler
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 import time
-import horovod.torch as hvd
-from apex import amp
+try:
+    import horovod.torch as hvd
+    from apex import amp
+except:
+    pass
 
 import common_utils as cu
 import scat_utils as scu

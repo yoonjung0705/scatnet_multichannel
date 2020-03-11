@@ -8,93 +8,135 @@ import sim_utils as siu
 import net_utils as nu
 import torch
 import glob
+import h5py
 from itertools import product
+import scat_utils as scu
+
+np.random.seed(42)
 
 '''custom libraries'''
 import common_utils as cu
 ROOT_DIR = './data/experiments/irfp'
-file_name_data = 'data.pt'
-file_name_data_test = 'data_test.pt'
+file_name_train = 'data.pt'
+file_name_test = 'data_test.pt'
 
 # common inputs
 root_dir = ROOT_DIR
 # split data for training, validation, test
-train_ratio = 0.8
-val_ratio = 0.1
-test_ratio = 1 - (train_ratio + val_ratio)
+train_ratio = 0.8 # used for both training and validation. rest is used for test
 file_paths_data = glob.glob(os.path.join(root_dir, '*.h5'))
 
 # scat transform inputs
 avg_lens = [2**4, 2**6]
 n_filter_octaves = [(1, 1)]
-file_names_scat = []
 
-file_data_lens = []
-# determine number of timepoints per condition in case it differs among files
-for file_path_data in file_paths_data:
-    data = pd.read_csv(file_path_data, header=None, delimiter='\t')
-    file_data_lens.append(len(data))
+log_transform=False
+filter_format='fourier_truncated'
 
-n_data = min(file_data_lens) // data_len
-n_data_test = int(n_data * test_ratio)
-n_data_train_val = n_data - n_data_test
-print("Data length of the files:{}, taking {} timepoints for each file.".format(file_data_lens, n_data * data_len))
-datas = []
+track_lens = []
+label_to_idx = {'nan':0, 'oo':1, 'mrlc':2}
 labels = []
-# load and split data
-regex = r'ad57_([0-9]+p?[0-9]*)x_led_([0-9]+p?[0-9]*)_laser_150ma_[0-9]+.txt'
+data_list = []
+idx_track_cum = 0
+for file_path_data in file_paths_data:
+    file_name_data = os.path.basename(file_path_data)
+    if file_name_data.startswith(('lonan', 'nan')):
+        label = 0
+    elif file_name_data.startswith('oo'):
+        label = 1
+    elif file_name_data.startswith('mrlc'):
+        label = 2
+    else:
+        raise IOError("Invalid file name: should start with either lonan, nan, oo, or mrlc")
 
-cs = [re.match(regex, os.path.basename(file_path_data)).group(1) for file_path_data in file_paths_data]
-leds = [re.match(regex, os.path.basename(file_path_data)).group(2) for file_path_data in file_paths_data]
-cs = np.array([float(c.replace('p', '.')) for c in cs])
-leds = np.array([float(led.replace('p', '.')) for led in leds])
+    with h5py.File(file_path_data, 'r') as f:
+        n_tracks = len(f)
+        labels.append(np.full((n_tracks,), fill_value=label))
+        for idx_track in range(1, n_tracks + 1):
+            track = f[str(idx_track)][()] # shaped (2, track_len)
+            track_len = track.shape[1]
+            track_lens.append(track_len)
+            data_list.append(track)
+            idx_track_cum += 1
 
-cs_uniq = np.unique(cs) # np.unique() also sorts the elements in ascending order
-leds_uniq = np.unique(leds)
-datas = []
-datas_test = []
-for c in cs_uniq:
-    for led in leds_uniq:
-        idxs_file = np.where((c == cs) & (led == leds))[0] # FIXME: multiple indices exist
-        datas_tmp = []
-        datas_tmp_test = []
-        for idx_file in idxs_file:
-            file_path_data = file_paths_data[idx_file]
-            data_raw = pd.read_csv(file_path_data, sep='\t', header=None)
-            idx_1 = n_data_train_val * data_len
-            idx_2 = n_data * data_len
-            data_tmp = (data_raw.iloc[:idx_1].loc[:, [0, 1]].values - data_raw.iloc[:idx_1].loc[:, [2, 3]].values).T # shaped (2, n_data_train_val * data_len)
-            data_tmp = data_tmp.reshape([2, -1, data_len]).transpose([1, 0, 2]) # shaped (n_data_train_val, 2, data_len)
-            datas_tmp.append(data_tmp)
+max_track_len = max(track_lens)
+n_tracks_total = len(track_lens)
 
-            data_tmp_test = (data_raw.iloc[idx_1:idx_2].loc[:, [0, 1]].values - data_raw.iloc[idx_1:idx_2].loc[:, [2, 3]].values).T # shaped (2, n_data_test * data_len)
-            data_tmp_test = data_tmp_test.reshape([2, -1, data_len]).transpose([1, 0, 2]) # shaped (n_data_test, 2, data_len)
-            datas_tmp_test.append(data_tmp_test)
+data = np.zeros((n_tracks_total, 2, max_track_len))
+for idx_track_cum, track in enumerate(data_list):
+    track_len = track_lens[idx_track_cum]
+    data[idx_track_cum, :, :track_len] = track
 
-        data = np.concatenate(datas_tmp, axis=0) # shaped (n_trials * n_data_train_val, 2, data_len)
-        data_test = np.concatenate(datas_tmp_test, axis=0) # shaped (n_trials * n_data_test, 2, data_len)
+labels = np.concatenate(labels, axis=0)
+index = nu._train_test_split(n_tracks_total, train_ratio=train_ratio)
+data_train = data[index['train']]
+data_test = data[index['test']]
+labels_train = labels[index['train']]
+labels_test = labels[index['test']]
+track_lens_train = list(np.array(track_lens)[index['train']])
+track_lens_test = list(np.array(track_lens)[index['test']])
 
-        datas.append(data)
-        datas_test.append(data_test)
+samples_train = {'data':data_train, 'labels':labels_train, 'label_to_idx':label_to_idx, 'data_lens':track_lens_train}
+samples_test = {'data':data_test, 'labels':labels_test, 'label_to_idx':label_to_idx, 'data_lens':track_lens_test}
 
-n_trials = len(idxs_file) # this should be same for every condition. For example, we should have 3 files per condition
-data = np.stack(datas, axis=0).reshape([len(cs_uniq), len(leds_uniq), n_trials * n_data_train_val, 2, data_len])
-data_test = np.stack(datas_test, axis=0).reshape([len(cs_uniq), len(leds_uniq), n_trials * n_data_test, 2, data_len])
-samples = {'data':data, 'labels':[cs_uniq, leds_uniq], 'label_names':['c', 'led'], 'bacteria':'ad57', 'sample_rate':10000., 'laser_ma':150}
-samples_test = {'data':data_test, 'labels':[cs_uniq, leds_uniq], 'label_names':['c', 'led'], 'bacteria':'ad57', 'sample_rate':10000., 'laser_ma':150}
+file_path_train = os.path.join(root_dir, file_name_train)
+file_path_test = os.path.join(root_dir, file_name_test)
 
-torch.save(samples, os.path.join(root_dir, file_name_data))
-torch.save(samples_test, os.path.join(root_dir, file_name_data_test))
+torch.save(samples_train, file_path_train)
+torch.save(samples_test, file_path_test)
 
-# create scat transformed versions
+# perform scat transform and append to list
+file_names = ['data.pt', 'data_test.pt']
 for avg_len in avg_lens:
     for n_filter_octave in n_filter_octaves:
-        try:
-            print("scat transforming data_len:{} with parameters avg_len:{}, n_filter_octave:{}".format(data_len, avg_len, n_filter_octave))
-            file_name_scat = scu.scat_transform('data.pt', avg_len, log_transform=False, n_filter_octave=n_filter_octave, save_file=True, root_dir=root_dir)
-            file_name_test_scat = scu.scat_transform('data_test.pt', avg_len, log_transform=False, n_filter_octave=n_filter_octave, save_file=True, root_dir=root_dir)
-            file_names_scat.append(file_name_scat)
-        except:
-            print("exception for avg_len:{}, n_filter_octave:{}".format(avg_len, n_filter_octave))
+        for file_name in file_names:
+            print("scat transforming {} with parameters avg_len:{}, n_filter_octave:{}".format(file_name, avg_len, n_filter_octave))
+            file_name_no_ext, _ = os.path.splitext(file_name)
+            data_scat_list = []
+            track_scat_lens = []
+            file_path = os.path.join(root_dir, file_name)
+            samples = torch.load(file_path)
+            n_tracks = len(samples['data'])
+            labels = samples['labels']
+            for idx_track in range(n_tracks):
+                track = samples['data'][idx_track]
+                track_len = samples['data_lens'][idx_track]
+                scat = scu.ScatNet(track_len, avg_len, n_filter_octave=n_filter_octave, filter_format=filter_format)
+                S = scat.transform(track[np.newaxis, :, :track_len])
+                S = scu.stack_scat(S)[0] # shaped (2, n_nodes, track_scat_len) where n_nodes is fixed but track_scat_len varies
+                track_scat_len = S.shape[-1]
+                track_scat_lens.append(track_scat_len)
+                data_scat_list.append(S)
 
+            max_track_scat_len = max(track_scat_lens)
+            n_nodes = data_scat_list[0].shape[1]
+            data_scat = np.zeros((n_tracks, 2, n_nodes, max_track_len))
 
+            for idx_track in range(n_tracks):
+                track_scat_len = track_scat_lens[idx_track]
+                data_scat[idx_track, :, :, :track_scat_len] = data_scat_list[idx_track]
+
+            nums = cu.match_filename(r'{}_scat_([0-9]+).pt'.format(file_name_no_ext), root_dir=root_dir)
+            nums = [int(num) for num in nums]; idx = max(nums) + 1 if nums else 0
+            file_name_scat = '{}_scat_{}.pt'.format(file_name_no_ext, idx)
+            file_path_scat = os.path.join(root_dir, file_name_scat)
+
+            samples_scat = {'data':data_scat, 'labels':labels, 'label_to_idx':label_to_idx,
+                    'avg_len':avg_len, 'log_transform':log_transform, 'n_filter_octave':n_filter_octave,
+                    'filter_format':filter_format, 'file_name':file_name, 'data_lens':track_scat_lens}
+            torch.save(samples_scat, file_path_scat)
+
+'''
+# check
+idx = 1568
+data = torch.load('data.pt')
+data_scat = torch.load('data_scat_0.pt')
+track_len = data['data_lens'][idx]
+avg_len = data_scat['avg_len']
+n_filter_octave = data_scat['n_filter_octave']
+scat = scu.ScatNet(track_len, avg_len, n_filter_octave)
+S = scat.transform(data['data'][idx][np.newaxis, :, :track_len])
+S = scu.stack_scat(S)
+track_scat_len = data_scat['data_lens'][idx]
+data_scat['data'][idx][:,:,:track_scat_len] - S[0]
+'''
