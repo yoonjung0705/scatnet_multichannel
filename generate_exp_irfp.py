@@ -22,7 +22,7 @@ file_name_test = 'data_test.pt'
 root_dir = ROOT_DIR
 # split data for training, validation, test
 train_ratio = 0.8 # used for both training and validation. rest is used for test
-file_paths_data = glob.glob(os.path.join(root_dir, '*.h5'))
+file_paths_data = sorted(glob.glob(os.path.join(root_dir, '*.h5'))) # sort to make data consistent when seed given
 
 # scat transform inputs
 avg_lens = [2**4, 2**6]
