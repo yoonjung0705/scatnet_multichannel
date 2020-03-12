@@ -968,8 +968,7 @@ def scat_transform(file_name, avg_len, log_transform=False, n_filter_octave=[1, 
     file_name_scat = '{}_scat_{}.pt'.format(file_name, idx)
     file_path_scat = os.path.join(root_dir, file_name_scat)
 
-    data, labels, label_names = samples['data'], samples['labels'], samples['label_names']
-    
+    data = samples['data'] 
     # flatten the data to shape (n_data_total, n_channels, data_len)
     n_params = data.shape[:-3]
     n_data = data.shape[-3]
@@ -982,12 +981,12 @@ def scat_transform(file_name, avg_len, log_transform=False, n_filter_octave=[1, 
     S = stack_scat(S) # shaped (n_data_total, n_channels, n_scat_nodes, data_len)
     # following is shaped (n_param1, n_param2,..., n_paramN, n_data, n_channels, n_scat_nodes, data_len)
     data_scat = np.reshape(S, list(n_params) + [n_data] + list(S.shape[-3:])) 
+    samples_out = copy.deepcopy(samples)
+    del samples_out['data']
+    samples_out.update({'data':data_scat, 'avg_len':avg_len, 'log_transform':log_transform,
+        'n_filter_octave':n_filter_octave, 'filter_format':filter_format, 'file_name':file_name})
 
     if not save_file:
-        return data_scat
-
-    data = {'data':data_scat, 'labels':labels, 'label_names':label_names,
-        'avg_len':avg_len, 'log_transform':log_transform, 'n_filter_octave':n_filter_octave,
-        'filter_format':filter_format, 'file_name':file_name}
-    torch.save(data, file_path_scat)
+        return samples_out
+    torch.save(samples_out, file_path_scat)
     return file_name_scat
