@@ -12,8 +12,6 @@ import h5py
 from itertools import product
 import scat_utils as scu
 
-np.random.seed(42)
-
 '''custom libraries'''
 import common_utils as cu
 ROOT_DIR = './data/experiments/irfp'
@@ -68,7 +66,7 @@ for idx_track_cum, track in enumerate(data_list):
     data[idx_track_cum, :, :track_len] = track
 
 labels = np.concatenate(labels, axis=0)
-index = nu._train_test_split(n_tracks_total, train_ratio=train_ratio)
+index = nu._train_test_split(n_tracks_total, train_ratio=train_ratio, seed=42)
 data_train = data[index['train']]
 data_test = data[index['test']]
 labels_train = labels[index['train']]

@@ -102,7 +102,7 @@ class ToTensor:
         return sample
 
 
-def _train_test_split(n_data, train_ratio):
+def _train_test_split(n_data, train_ratio, seed=None):
     '''
     splits the data indices for training and testing
 
@@ -110,18 +110,20 @@ def _train_test_split(n_data, train_ratio):
     ------
     n_data: int type number of data
     train_ratio: float indicating ratio for training data. should be between 0 and 1
+    seed - int type seed for random split
 
     outputs
     -------
     index: dict with keys train and test while values being lists of indices
     '''
     assert(train_ratio > 0 and train_ratio < 1), "Invalid train_ratio given. Should be between 0 and 1"
+    if seed is not None: np.random.seed(seed)
     idx_train = np.random.choice(n_data, int(n_data * train_ratio), replace=False)
     idx_test = np.array(list(set(range(n_data)) - set(idx_train)))
     index = {'train':idx_train, 'test':idx_test}
     return index
 
-def _train_val_test_split(n_data, train_val_ratio):
+def _train_val_test_split(n_data, train_val_ratio, seed=None):
     '''
     splits the data indices for training and validation and testing
 
@@ -130,12 +132,14 @@ def _train_val_test_split(n_data, train_val_ratio):
     n_data: int type number of data
     train_val_ratio: list-like with float elements indicating ratio for training and validation data.
         sum should be between 0 and 1
+    seed - int type seed for random split
 
     outputs
     -------
     index: dict with keys train and test while values being lists of indices
     '''
     assert(len(train_val_ratio) == 2), "Split ratio should be given as a length 2 list like input"
+    if seed is not None: np.random.seed(seed)
     for ratio in train_val_ratio:
         assert(ratio > 0 and ratio < 1), "Invalid train_val_ratio given. Elements should be between 0 and 1"
     assert(sum(train_val_ratio) > 0 and sum(train_val_ratio) < 1), "Invalid train_val_ratio given.\
