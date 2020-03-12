@@ -32,7 +32,7 @@ log_transform=False
 filter_format='fourier_truncated'
 
 track_lens = []
-label_to_idx = {'nan':0, 'oo':1, 'mrlc':2}
+labels_lut = [(0.,), (1.,), (2.,)] # label 0 means activity 0., etc.
 labels = []
 data_list = []
 idx_track_cum = 0
@@ -74,8 +74,8 @@ labels_test = labels[index['test']]
 track_lens_train = list(np.array(track_lens)[index['train']])
 track_lens_test = list(np.array(track_lens)[index['test']])
 
-samples_train = {'data':data_train, 'labels':labels_train, 'label_names':'activity', 'label_to_idx':label_to_idx, 'data_lens':track_lens_train}
-samples_test = {'data':data_test, 'labels':labels_test, 'label_names':'activity', 'label_to_idx':label_to_idx, 'data_lens':track_lens_test}
+samples_train = {'data':data_train, 'labels':labels_train, 'label_names':['activity'], 'labels_lut':labels_lut, 'data_lens':track_lens_train}
+samples_test = {'data':data_test, 'labels':labels_test, 'label_names':['activity'], 'labels_lut':labels_lut, 'data_lens':track_lens_test}
 
 file_path_train = os.path.join(root_dir, file_name_train)
 file_path_test = os.path.join(root_dir, file_name_test)
@@ -119,8 +119,8 @@ for avg_len in avg_lens:
             file_name_scat = '{}_scat_{}.pt'.format(file_name_no_ext, idx)
             file_path_scat = os.path.join(root_dir, file_name_scat)
 
-            samples_scat = {'data':data_scat, 'labels':labels, 'label_names':'activity':
-                    'label_to_idx':label_to_idx,
+            samples_scat = {'data':data_scat, 'labels':labels, 'label_names':['activity'],
+                    'labels_lut':labels_lut,
                     'avg_len':avg_len, 'log_transform':log_transform, 'n_filter_octave':n_filter_octave,
                     'filter_format':filter_format, 'file_name':file_name, 'data_lens':track_scat_lens}
             torch.save(samples_scat, file_path_scat)
