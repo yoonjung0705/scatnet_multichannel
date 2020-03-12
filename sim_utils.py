@@ -9,6 +9,7 @@ import torch
 import glob
 import re
 from datetime import datetime
+from itertools import product
 
 import common_utils as cu
 
@@ -31,16 +32,21 @@ def sim_brownian(data_len, diff_coefs, dt, n_data=1, save_file=False, root_dir=R
 
     outputs:
     --------
-    - (processes): ndarray shaped (n_diff_coefs, n_data, 1, data_len) which is an ensemble of brownian trajectories
-    the singleton dimension is for the number of channels. returned if save_file is False
+    - (processes): dict whose key-value pairs are the following:
+        'data': ndarray shaped (n_data, 1, data_len) which is an
+        ensemble of brownian trajectories. the singleton dimension is for the number of channels.
+        returned if save_file is False
+        'labels': list whose values are indices for the label values
+        'label_names': list whose elements are string type, ['diff_coefs']
+        'labels_lut': list where the values are the label values given the index values in 'labels'
+        'dt': float type dt
     - (file_name): string type file name of the simulated data. returned if save_file is True
-
-    FIXME: check if dimensionsare not mixed up
     '''
     concat_list = []
     if isinstance(diff_coefs, (int, float)):
         diff_coefs = [diff_coefs]
-    diff_coefs = np.array(diff_coefs, dtype='float32')
+    diff_coefs = np.array(diff_coefs, dtype=dtype)
+    n_diff_coefs = len(diff_coefs)
     file_size_est = data_len * len(diff_coefs) * n_data * np.dtype(dtype).itemsize
     file_size_est_gb = file_size_est / 1.e9
     if file_size_est_gb > 2.:
@@ -56,8 +62,22 @@ def sim_brownian(data_len, diff_coefs, dt, n_data=1, save_file=False, root_dir=R
     processes = np.stack(concat_list, axis=0)
     processes = np.expand_dims(processes, axis=-2)
 
+    # reshape data
+    n_data_total = n_diff_coefs * n_data
+    processes = np.reshape(processes, (n_data_total, 1, data_len)) # shaped (n_data_total, 1, data_len)
+
+    # reshape labels
+    labels = [diff_coefs]
+    labels = np.array(list(product(*labels)), dtype=dtype) # shaped (n_conditions, n_labels)
+    labels_lut = [tuple(condition) for condition in labels]
+    n_conditions = len(labels_lut)
+
+    labels = np.arange(n_conditions) # shaped (n_conditions,)
+    labels = np.repeat(labels, n_data) # shaped (n_conditions * n_samples_total,)                                                       
+
+    samples = {'data':processes, 'labels':labels, 'label_names':['diff_coefs'], 'dt':dt, 'labels_lut':labels_lut}
     if not save_file:
-        return processes
+        return samples
 
     nums = cu.match_filename(r'brw_([0-9]+).pt', root_dir=root_dir)
     nums = [int(num) for num in nums]
@@ -65,7 +85,6 @@ def sim_brownian(data_len, diff_coefs, dt, n_data=1, save_file=False, root_dir=R
 
     file_name = 'brw_{}.pt'.format(idx)
     file_path = os.path.join(root_dir, file_name)
-    samples = {'data':processes, 'labels':[diff_coefs], 'label_names':['diff_coefs'], 'dt':dt}
     torch.save(samples, file_path)
     return file_name
 
@@ -86,14 +105,17 @@ def sim_brownian_sample(data_len, diff_coefs, dt, n_data=1, save_file=False, roo
 
     outputs:
     --------
-    - (processes): ndarray shaped (n_data, 1, data_len) which is an ensemble of brownian trajectories
-    the 2nd dimension is for the number of channels. data returned if save_file is False
+    - (processes): dict whose key-value pairs are the following:
+        'data': ndarray shaped (n_data, 1, data_len) which is an
+        ensemble of brownian trajectories. the singleton dimension is for the number of channels.
+        returned if save_file is False
+        'labels': list whose values are the diff_coefs values
+        'label_names': list whose elements are string type, ['diff_coefs']
+        'dt': float type dt
     - (file_name): string type file name of the simulated data. returned if save_file is True
-
-    FIXME: check if dimensions are not mixed up
     '''
     if isinstance(diff_coefs, (int, float)):
-        diff_coefs = np.array([diff_coefs, diff_coefs], dtype='float32')
+        diff_coefs = np.array([diff_coefs, diff_coefs], dtype=dtype)
     assert(len(diff_coefs) == 2), "Invalid diff_coefs given: should be numeric or length 2 list-like format"
     diff_coef_low, diff_coef_high = diff_coefs
     diff_coef_samples = (diff_coef_high - diff_coef_low) * np.random.random(n_data,) + diff_coef_low 
@@ -101,12 +123,14 @@ def sim_brownian_sample(data_len, diff_coefs, dt, n_data=1, save_file=False, roo
     concat_list = []
     for diff_coef_sample in diff_coef_samples:
         process = sim_brownian(data_len, diff_coefs=diff_coef_sample, dt=dt, n_data=1, save_file=False, dtype=dtype)
+        process = process['data']
         concat_list.append(process)
-    processes = np.concatenate(concat_list, axis=1)[0] # shaped (n_data, 1, data_len)
-    if not save_file:
-        return processes
-    # append singleton dimension to diff_coef_samples to show it has one parameter
+    processes = np.concatenate(concat_list, axis=0) # shaped (n_data, 1, data_len)
+
     samples = {'data':processes, 'labels':[diff_coef_samples], 'label_names':['diff_coefs'], 'dt':dt}
+    if not save_file:
+        return samples
+
     nums = cu.match_filename(r'brw_([0-9]+).pt', root_dir=root_dir)
     nums = [int(num) for num in nums]
     idx = max(nums) + 1 if nums else 0
@@ -133,18 +157,24 @@ def sim_poisson(data_len, lams, dt, n_data=1, save_file=False, root_dir=ROOT_DIR
 
     outputs:
     --------
-    - (processes): ndarray shaped (n_lams, n_data, 1, data_len) which is an ensemble of poisson processes
-    the singleton dimension is for the number of channels. returned if save_file is False
+    - (processes): dict whose key-value pairs are the following:
+        'data': ndarray shaped (n_data, 1, data_len) which is an
+        ensemble of poisson trajectories. the singleton dimension is for the number of channels.
+        returned if save_file is False
+        'labels': list whose values are indices for the label values
+        'label_names': list whose elements are string type, ['lams']
+        'labels_lut': list where the values are the label values given the index values in 'labels'
+        'dt': float type dt
     - (file_name): string type file name of the simulated data. data returned if save_file is True
 
     REVIEW: confirm this method of using fixed time step generates identical statistics to that of Gielespie algorithm
-    FIXME: confirm dimensions are not mixed up
     '''
     if isinstance(lams, (int, float)):
         lams = [lams]
-    lams = np.array(lams, dtype='float32')
+    lams = np.array(lams, dtype=dtype)
+    n_lams = len(lams)
     
-    file_size_est = data_len * len(lams) * n_data * np.dtype(dtype).itemsize
+    file_size_est = data_len * n_lams * n_data * np.dtype(dtype).itemsize
     file_size_est_gb = file_size_est / 1.e9
     if file_size_est_gb > 2.:
         warnings.warn("Generating file with size roughly {:.2f} GB".format(file_size_est_gb), Category=BytesWarning)
@@ -157,16 +187,29 @@ def sim_poisson(data_len, lams, dt, n_data=1, save_file=False, root_dir=ROOT_DIR
     processes = np.stack(concat_list, axis=0)    
     processes = np.expand_dims(processes, axis=-2)
 
-    if not save_file:
-        return processes
+    # reshape data
+    n_data_total = n_lams * n_data
+    processes = np.reshape(processes, (n_data_total, 1, data_len)) # shaped (n_data_total, 1, data_len)
 
-    nums = cu.match_filename(r'psn_([0-9]+).pt', root_dir=root_dir)
+    # reshape labels
+    labels = [lams]
+    labels = np.array(list(product(*labels)), dtype=dtype) # shaped (n_conditions, n_labels)
+    labels_lut = [tuple(condition) for condition in labels]
+    n_conditions = len(labels_lut)
+
+    labels = np.arange(n_conditions) # shaped (n_conditions,)
+    labels = np.repeat(labels, n_data) # shaped (n_conditions * n_samples_total,)                                                       
+
+    samples = {'data':processes, 'labels':labels, 'label_names':['lams'], 'dt':dt, 'labels_lut':labels_lut}
+    if not save_file:
+        return samples
+
+    nums = cu.match_filename(r'pos_([0-9]+).pt', root_dir=root_dir)
     nums = [int(num) for num in nums]
     idx = max(nums) + 1 if nums else 0
 
-    file_name = 'psn_{}.pt'.format(idx)
+    file_name = 'pos_{}.pt'.format(idx)
     file_path = os.path.join(root_dir, file_name)
-    samples = {'data':processes, 'labels':[lams], 'label_names':['lams'], 'dt':dt}
     torch.save(samples, file_path)
     return file_name
 
@@ -187,15 +230,19 @@ def sim_poisson_sample(data_len, lams, dt, n_data=1, save_file=False, root_dir=R
 
     outputs:
     --------
-    - (processes): ndarray shaped (n_data, 1, data_len) which is an ensemble of poisson processes
-    the 2nd dimension is for the number of channels. data returned if save_file is False
-    - (file_name): string type file name of the simulated data. data returned if save_file is True
+    - (processes): dict whose key-value pairs are the following:
+        'data': ndarray shaped (n_data, 1, data_len) which is an
+        ensemble of poisson trajectories. the singleton dimension is for the number of channels.
+        returned if save_file is False
+        'labels': list whose values are the lams values
+        'label_names': list whose elements are string type, ['lams']
+        'dt': float type dt
+   - (file_name): string type file name of the simulated data. data returned if save_file is True
 
     REVIEW: confirm this method of using fixed time step generates identical statistics to that of Gielespie algorithm
-    FIXME: confirm dimensions are not mixed up
     '''
     if isinstance(lams, (int, float)):
-        lams = np.array([lams, lams], dtype='float32')
+        lams = np.array([lams, lams], dtype=dtype)
     assert(len(lams) == 2), "Invalid lams given: should be numeric or length 2 list-like format"
     lam_low, lam_high = lams
     lam_samples = (lam_high - lam_low) * np.random.random(n_data,) + lam_low 
@@ -203,13 +250,14 @@ def sim_poisson_sample(data_len, lams, dt, n_data=1, save_file=False, root_dir=R
     concat_list = []
     for lam_sample in lam_samples:
         process = sim_poisson(data_len, lams=lam_sample, dt=dt, n_data=1, save_file=False, dtype=dtype)
+        process = process['data']
         concat_list.append(process)
-    processes = np.concatenate(concat_list, axis=1)[0] # shaped (n_data, 1, data_len)
-    if not save_file:
-        return processes
+    processes = np.concatenate(concat_list, axis=0) # shaped (n_data, 1, data_len)
 
-    # append singleton dimension to lam_samples to show it has one parameter
     samples = {'data':processes, 'labels':[lam_samples], 'label_names':['lams'], 'dt':dt}
+    if not save_file:
+        return samples
+
     nums = cu.match_filename(r'pos_([0-9]+).pt', root_dir=root_dir)
     nums = [int(num) for num in nums]
     idx = max(nums) + 1 if nums else 0
@@ -239,20 +287,26 @@ def sim_one_bead(data_len, ks, diff_coefs, dt, n_data=1, n_steps_initial=10000,
 
     outputs:
     --------
-    - (processes): ndarray shaped (n_ks, n_diff_coefs, n_data, 1, data_len) which is an ensemble of one bead simulation trajectories
-    the singleton dimension is for the number of channels. returned if save_file is False
-    - (file_name): string type file name of the simulated data. returned if save_file is True
+    - (processes): dict whose key-value pairs are the following:
+        'data': ndarray shaped (n_data, 1, data_len) which is an
+        ensemble of one bead trajectories. the singleton dimension is for the number of channels.
+        returned if save_file is False
+        'labels': list whose values are indices for the label values
+        'label_names': list whose elements are string type, ['ks', 'diff_coefs']
+        'labels_lut': list where the values are the label values given the index values in 'labels'
+        'dt': float type dt
+        'n_steps_initial': int type n_steps_initial
+   - (file_name): string type file name of the simulated data. returned if save_file is True
 
-
-    FIXME: check the code to see if the dimensions are not mixed up, check if actual simulation part is not mixed up with initial condition simulation
+    FIXME: check the code to see if actual simulation part is not mixed up with initial condition simulation
     '''
     if isinstance(ks, (int, float)):
         ks = [ks]
     if isinstance(diff_coefs, (int, float)):
         diff_coefs = [diff_coefs]
 
-    ks = np.array(ks, dtype='float32')
-    diff_coefs = np.array(diff_coefs, dtype='float32')
+    ks = np.array(ks, dtype=dtype)
+    diff_coefs = np.array(diff_coefs, dtype=dtype)
     n_ks = len(ks)
     n_diff_coefs = len(diff_coefs)
 
@@ -285,8 +339,22 @@ def sim_one_bead(data_len, ks, diff_coefs, dt, n_data=1, n_steps_initial=10000,
 
     processes = np.expand_dims(processes, axis=-2)
 
+    # reshape data
+    n_data_total = n_ks * n_diff_coefs * n_data
+    processes = np.reshape(processes, (n_data_total, 1, data_len)) # shaped (n_data_total, 1, data_len)
+
+    # reshape labels
+    labels = [ks, diff_coefs]
+    labels = np.array(list(product(*labels)), dtype=dtype) # shaped (n_conditions, n_labels)
+    labels_lut = [tuple(condition) for condition in labels]
+    n_conditions = len(labels_lut)
+
+    labels = np.arange(n_conditions) # shaped (n_conditions,)
+    labels = np.repeat(labels, n_data) # shaped (n_conditions * n_samples_total,)                                                       
+
+    samples = {'data':processes, 'labels':labels, 'label_names':['ks', 'diff_coefs'], 'dt':dt, 'n_steps_initial':n_steps_initial, 'labels_lut':labels_lut}
     if not save_file:
-        return processes
+        return samples
 
     nums = cu.match_filename(r'obd_([0-9]+).pt', root_dir=root_dir)
     nums = [int(num) for num in nums]
@@ -294,8 +362,6 @@ def sim_one_bead(data_len, ks, diff_coefs, dt, n_data=1, n_steps_initial=10000,
 
     file_name = 'obd_{}.pt'.format(idx)
     file_path = os.path.join(root_dir, file_name)
-    samples = {'data':processes, 'labels':[ks, diff_coefs], 'label_names':['ks', 'diff_coefs'],
-        'dt':dt, 'n_steps_initial':n_steps_initial}
     torch.save(samples, file_path)
     return file_name
 
@@ -319,16 +385,23 @@ def sim_one_bead_sample(data_len, ks, diff_coefs, dt, n_data=1, n_steps_initial=
 
     outputs:
     --------
-    - (processes): ndarray shaped (n_data, 1, data_len) which is an ensemble of one bead simulation trajectories
-    the 2nd dimension is for the number of channels. data returned if save_file is False
+    - (processes): dict whose key-value pairs are the following:
+        'data': ndarray shaped (n_data, 1, data_len) which is an
+        ensemble of one bead trajectories. the singleton dimension is for the number of channels.
+        returned if save_file is False
+        'labels': list whose values are the ndarrays. 
+            each ndarray is shaped (n_data,) whose values are the ks, diff_coefs values
+        'label_names': list whose elements are string type, ['ks', 'diff_coefs']
+        'dt': float type dt
+        'n_steps_initial': int type n_steps_initial
     - (file_name): string type file name of the simulated data. returned if save_file is True
 
-    FIXME: check the code to see if the dimensions are not mixed up, check if actual simulation part is not mixed up with initial condition simulation
+    FIXME: check the code to see if actual simulation part is not mixed up with initial condition simulation
     '''
     if isinstance(ks, (int, float)):
-        ks = np.array([ks, ks], dtype='float32')
+        ks = np.array([ks, ks], dtype=dtype)
     if isinstance(diff_coefs, (int, float)):
-        diff_coefs = np.array([diff_coefs, diff_coefs], dtype='float32')
+        diff_coefs = np.array([diff_coefs, diff_coefs], dtype=dtype)
     assert(len(ks) == 2), "Invalid ks given: should be numeric or length 2 list-like format"
     assert(len(diff_coefs) == 2), "Invalid diff_coefs given: should be numeric or length 2 list-like format"
     k_low, k_high = ks
@@ -340,12 +413,14 @@ def sim_one_bead_sample(data_len, ks, diff_coefs, dt, n_data=1, n_steps_initial=
     concat_list = []
     for k_sample, diff_coef_sample in k_diff_coef_samples:
         process = sim_one_bead(data_len, ks=k_sample, diff_coefs=diff_coef_sample, dt=dt, n_data=1, n_steps_initial=n_steps_initial, save_file=False, dtype=dtype)
+        process = process['data']
         concat_list.append(process)
-    processes = np.concatenate(concat_list, axis=2)[0, 0] # shaped (n_data, 1, data_len)
-    if not save_file:
-        return processes
+    processes = np.concatenate(concat_list, axis=0) # shaped (n_data, 1, data_len)
 
     samples = {'data':processes, 'labels':[k_samples, diff_coef_samples], 'label_names':['ks', 'diff_coefs'], 'dt':dt, 'n_steps_initial':n_steps_initial}
+    if not save_file:
+        return samples
+
     nums = cu.match_filename(r'obd_([0-9]+).pt', root_dir=root_dir)
     nums = [int(num) for num in nums]
     idx = max(nums) + 1 if nums else 0
@@ -376,8 +451,15 @@ def sim_two_beads(data_len, gammas, k_ratios, diff_coef_ratios, dt, n_data=1, n_
 
     outputs:
     --------
-    - (processes): ndarray shaped (n_ks, n_diff_coefs, n_data, 2, data_len) which is an ensemble of two bead simulation trajectories
-    the dimension size 2 is for the number of channels. returned if save_file is False
+    - (processes): dict whose key-value pairs are the following:
+        'data': ndarray shaped (n_data, 2, data_len) which is an
+        ensemble of two beads trajectories. the 2nd dimension is for the number of channels.
+        returned if save_file is False
+        'labels': list whose values are indices for the label values
+        'label_names': list whose elements are string type, ['gammas', 'k_ratios', 'diff_coef_ratios']
+        'labels_lut': list where the values are the label values given the index values in 'labels'
+        'dt': float type dt
+        'n_steps_initial': int type n_steps_initial
     - (file_name): string type file name of the simulated data. data returned if save_file is True
 
     FIXME: check the code to see if the dimensions are not mixed up, check if actual simulation part is not mixed up with initial condition simulation
@@ -389,9 +471,9 @@ def sim_two_beads(data_len, gammas, k_ratios, diff_coef_ratios, dt, n_data=1, n_
     if isinstance(diff_coef_ratios, (int, float)):
         diff_coef_ratios = [diff_coef_ratios]
 
-    gammas = np.array(gammas, dtype='float32')
-    k_ratios = np.array(k_ratios, dtype='float32')
-    diff_coef_ratios = np.array(diff_coef_ratios, dtype='float32')
+    gammas = np.array(gammas, dtype=dtype)
+    k_ratios = np.array(k_ratios, dtype=dtype)
+    diff_coef_ratios = np.array(diff_coef_ratios, dtype=dtype)
     n_gammas = len(gammas)
     n_k_ratios = len(k_ratios)
     n_diff_coef_ratios = len(diff_coef_ratios)
@@ -430,8 +512,22 @@ def sim_two_beads(data_len, gammas, k_ratios, diff_coef_ratios, dt, n_data=1, n_
 
         processes[idx0] = processes[idx0] / gamma
 
+    # reshape data
+    n_data_total = n_gammas * n_k_ratios * n_diff_coef_ratios * n_data
+    processes = np.reshape(processes, (n_data_total, 2, data_len)) # shaped (n_data_total, 2, data_len)
+
+    # reshape labels
+    labels = [gammas, k_ratios, diff_coef_ratios]
+    labels = np.array(list(product(*labels)), dtype=dtype) # shaped (n_conditions, n_labels)
+    labels_lut = [tuple(condition) for condition in labels]
+    n_conditions = len(labels_lut)
+
+    labels = np.arange(n_conditions) # shaped (n_conditions,)
+    labels = np.repeat(labels, n_data) # shaped (n_conditions * n_samples_total,)                                                       
+
+    samples = {'data':processes, 'labels':labels, 'label_names':['gammas', 'k_ratios', 'diff_coefs'], 'dt':dt, 'n_steps_initial':n_steps_initial, 'labels_lut':labels_lut}
     if not save_file:
-        return processes
+        return samples
 
     nums = cu.match_filename(r'tbd_([0-9]+).pt', root_dir=root_dir)
     nums = [int(num) for num in nums]
@@ -439,8 +535,6 @@ def sim_two_beads(data_len, gammas, k_ratios, diff_coef_ratios, dt, n_data=1, n_
 
     file_name = 'tbd_{}.pt'.format(idx)
     file_path = os.path.join(root_dir, file_name)
-    samples = {'data':processes, 'labels':[gammas, k_ratios, diff_coef_ratios],
-        'label_names':['gammas', 'k_ratios', 'diff_coef_ratios'], 'dt':dt, 'n_steps_initial':n_steps_initial}
     torch.save(samples, file_path)
     return file_name
 
@@ -465,18 +559,25 @@ def sim_two_beads_sample(data_len, gammas, k_ratios, diff_coef_ratios, dt, n_dat
 
     outputs:
     --------
-    - (processes): ndarray shaped (n_data, 2, data_len) which is an ensemble of two bead simulation trajectories
-    the 2nd dimension is for the number of channels. returned if save_file is False
+    - (processes): dict whose key-value pairs are the following:
+        'data': ndarray shaped (n_data, 2, data_len) which is an
+        ensemble of two beads trajectories. the 2nd dimension is for the number of channels.
+        returned if save_file is False
+        'labels': list whose values are the ndarrays. 
+            each ndarray is shaped (n_data,) whose values are the gammas, k_ratios, diff_coef_ratios values
+        'label_names': list whose elements are string type, ['gammas', 'k_ratios', 'diff_coef_ratios']
+        'dt': float type dt
+        'n_steps_initial': int type n_steps_initial
     - (file_name): string type file name of the simulated data. data returned if save_file is True
 
-    FIXME: check the code to see if the dimensions are not mixed up, check if actual simulation part is not mixed up with initial condition simulation
+    FIXME: check the code to see if actual simulation part is not mixed up with initial condition simulation
     '''
     if isinstance(gammas, (int, float)):
-        gammas = np.array([gammas, gammas], dtype='float32')
+        gammas = np.array([gammas, gammas], dtype=dtype)
     if isinstance(k_ratios, (int, float)):
-        k_ratios = np.array([k_ratios, k_ratios], dtype='float32')
+        k_ratios = np.array([k_ratios, k_ratios], dtype=dtype)
     if isinstance(diff_coef_ratios, (int, float)):
-        diff_coef_ratios = np.array([diff_coef_ratios, diff_coef_ratios], dtype='float32')
+        diff_coef_ratios = np.array([diff_coef_ratios, diff_coef_ratios], dtype=dtype)
     assert(len(gammas) == 2), "Invalid gammas given: should be numeric or length 2 list-like format"
     assert(len(k_ratios) == 2), "Invalid k_ratios given: should be numeric or length 2 list-like format"
     assert(len(diff_coef_ratios) == 2), "Invalid diff_coef_ratios given: should be numeric or length 2 list-like format"
@@ -493,13 +594,15 @@ def sim_two_beads_sample(data_len, gammas, k_ratios, diff_coef_ratios, dt, n_dat
         process = sim_two_beads(data_len, gammas=gamma_sample, k_ratios=k_ratio_sample,
                 diff_coef_ratios=diff_coef_ratio_sample, dt=dt, n_data=1,
                 n_steps_initial=n_steps_initial, save_file=False, dtype=dtype)
+        process = process['data']
         concat_list.append(process)
-    processes = np.concatenate(concat_list, axis=3)[0, 0, 0] # shaped (n_data, 2, data_len)
-    if not save_file:
-        return processes
+    processes = np.concatenate(concat_list, axis=0) # shaped (n_data, 2, data_len)
 
     samples = {'data':processes, 'labels':[gamma_samples, k_ratio_samples, diff_coef_ratio_samples],
             'label_names':['gammas', 'k_ratios', 'diff_coef_ratios'], 'dt':dt, 'n_steps_initial':n_steps_initial}
+    if not save_file:
+        return samples
+
     nums = cu.match_filename(r'tbd_([0-9]+).pt', root_dir=root_dir)
     nums = [int(num) for num in nums]
     idx = max(nums) + 1 if nums else 0

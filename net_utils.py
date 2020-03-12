@@ -604,17 +604,9 @@ def train_rnn_cluster(file_name, hidden_size, n_layers=1, bidirectional=False, c
     file_path = os.path.join(root_dir, file_name + '.pt')
     transformed = 'scat' in file_name
     samples = torch.load(file_path)
-    # shape of data generated for classification purpose:
-    #   (n_param_1, n_param_2,..., n_param_N, n_samples_total, n_channels, (n_nodes), data_len)
-    # shape of data generated for regression purpose:
-    #   (n_samples_total, n_channels, (n_nodes), data_len)
+    # shape of data: (n_data_total, n_channels, (n_nodes), data_len)
     data, labels, label_names = samples['data'], samples['labels'], samples['label_names']
-    # the number of dimensions that do not correspond to the parameter dimension is 4 if scat transformed.
-    # Otherwise, it's 3
-    n_none_param_dims = 4 if transformed else 3
-    n_samples_total = data.shape[-n_none_param_dims]
-    n_data_total = np.prod(data.shape[:-(n_none_param_dims - 1)]) if classifier else n_samples_total
-    n_labels = len(label_names) # number of labels to predict
+    n_data_total = len(data)
     if root_process:
         assert(isinstance(hidden_size, int)), "Invalid format of hidden_size given. Should be type int"
 
@@ -652,16 +644,8 @@ def train_rnn_cluster(file_name, hidden_size, n_layers=1, bidirectional=False, c
         'labels':labels if classifier else label,
         'label_names':label_names if classifier else label_name}
     if classifier:
-        labels = np.array(list(product(*labels)), dtype='float32') # shaped (n_conditions, n_labels)
-        label_to_idx = {tuple(condition):idx_condition for idx_condition, condition in enumerate(labels)}
-        n_conditions = len(label_to_idx)
-        meta.update({'label_to_idx':label_to_idx})
+        if 'labels_lut' in samples.keys(): meta.update({'labels_lut':samples['labels_lut']})
         _init_meta(**meta) # done for all processes to ensure data gets loaded after initializing file
-
-        labels = np.arange(n_conditions) # shaped (n_conditions,)
-        labels = np.repeat(labels, n_samples_total) # shaped (n_conditions * n_samples_total,)
-        # which, for example, looks like [0,0,0,1,1,1,2,2,2,3,3,3,4,4,4] 
-        # for n_samples_total being 3 and n_conditions being 5
 
         dataset = TimeSeriesDataset(data, labels, transform=ToTensor())
         # train the neural network for classification
