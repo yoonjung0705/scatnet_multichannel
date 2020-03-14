@@ -76,9 +76,11 @@ class RNN(nn.Module):
         n_directions = self.n_directions
         batch_size = input.shape[1]
         if input_lens is None:
-            output, _ = self.lstm(input)[-1, :, :]
+            output, _ = self.lstm(input)
+            output = output[-1, :, :]
         elif torch.all(input_lens[0] == input_lens).item(): # if lengths same
-            output, _ = self.lstm(input)[-1, :, :]
+            output, _ = self.lstm(input)
+            output = output[-1, :, :]
         else: # if lengths different
             data_len = input.shape[0]
             input = pack_padded_sequence(input, input_lens, enforce_sorted=False)
