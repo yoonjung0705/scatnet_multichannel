@@ -4,6 +4,7 @@ data
 *.pyo
 *.pt
 log/*
+obsolete/*
 launch.sh
 setup.sh
 rnn.lsf

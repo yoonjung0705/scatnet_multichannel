@@ -60,25 +60,45 @@ class RNN(nn.Module):
         self.h2o = nn.Linear(self.n_directions * hidden_size, output_size)
 
     def forward(self, input, input_lens=None):
+        '''
+        inputs
+        ------
+        input: torch float32 tensor shaped (data_len, batch_size, n_features)
+        input_lens: torch long tensor shaped (batch_size,)
+
+        outputs
+        -------
+        output: torch float32 tensor shaped (batch_size, output_size)
+        '''
         # no need to check input's shape as it'll be checked in self.lstm
         hidden_size = self.hidden_size
         n_layers = self.n_layers
         n_directions = self.n_directions
         batch_size = input.shape[1]
-        if input_lens is not None: input = pack_padded_sequence(input, input_lens)
+        if input_lens is None:
+            output, _ = self.lstm(input)[-1, :, :]
+        elif torch.all(input_lens[0] == input_lens).item(): # if lengths same
+            output, _ = self.lstm(input)[-1, :, :]
+        else: # if lengths different
+            data_len = input.shape[0]
+            input = pack_padded_sequence(input, input_lens, enforce_sorted=False)
+            output, _ = self.lstm(input)
+            output, _ = pad_packed_sequence(output, total_length=data_len)
+            idx = (input_lens - 1).view(-1, 1).expand(len(input_lens), output.size(2))
+            idx = idx.unsqueeze(0)
+            output = output.gather(0, idx).squeeze(0)
         #h_0 = torch.autograd.Variable(torch.zeros(n_layers, batch_size, hidden_size)) # dtype is default to float32
         #c_0 = nn.Parameter(torch.zeros(n_layers, batch_size, hidden_size))
         #output, (h_n, c_n) = self.lstm(input, (h_0, c_0))
-        output, _ = self.lstm(input)
-        if input_lens is not None: output = pad_packed_sequence(output)
-        output = self.h2o(output[-1, :, :])
+        output = self.h2o(output)
         
         return output
 
 
 class TimeSeriesDataset(Dataset):
     def __init__(self, data, labels, transform=None):
-        assert(len(data) == len(labels)), "Invalid inputs: shape mismatch between data and labels"
+        assert(len(data) == len(labels)),\
+            "Invalid inputs: shape mismatch between data and labels"
         self._data = data
         self._labels = labels
         self._len = len(self._data)
@@ -94,13 +114,56 @@ class TimeSeriesDataset(Dataset):
 
         return sample
 
+
 class ToTensor:
     def __call__(self, sample):
         dtype = torch.get_default_dtype()
-        sample = {'data':torch.tensor(sample['data'], dtype=dtype),
-            'labels':torch.tensor(sample['labels'], dtype=dtype)}
-        return sample
+        data = torch.tensor(sample['data'], dtype=dtype)
+        labels = torch.tensor(sample['labels'], dtype=dtype)
+        sample_out = {'data': data, 'labels':labels}
 
+        return sample_out
+
+
+def collate_fn(batch):
+    '''
+    inputs:
+    -------
+    batch - list where elements are dictionaries with following keys
+        data - n_data length list of ndarrays shaped (n_features, data_len) where data_len varies
+        labels - n_data length list of int type elements
+    
+    outputs:
+    --------
+    output - dictionary with keys data, labels, input_lens. 
+        The values are concatenated versions of the inputs
+    '''
+    n_data = len(batch)
+    n_features = batch[0]['data'].shape[0]
+    labels = []
+    input_lens = []
+    data_out = []
+    dtype = torch.get_default_dtype()
+    max_data_len = 0
+    for idx in range(n_data):
+        input_len = batch[idx]['data'].shape[1]
+        max_data_len = max(max_data_len, input_len)
+
+    for idx in range(n_data):
+        data_slice = batch[idx]['data']
+        label = batch[idx]['labels']
+        input_len = data_slice.shape[1]
+
+        data_zeros = torch.zeros((n_features, max_data_len - input_len), dtype=dtype)
+        data_out.append(torch.cat([data_slice, data_zeros], dim=1))
+        labels.append(label)
+        input_lens.append(input_len)
+
+    data_out = torch.stack(data_out, dim=0)
+    labels = torch.stack(labels, dim=0)
+    input_lens = torch.tensor(input_lens).type(torch.LongTensor)
+    batch_out = {'data':data_out, 'labels':labels, 'input_lens':input_lens}
+    return batch_out
 
 def _train_test_split(n_data, train_ratio, seed=None):
     '''
@@ -631,8 +694,13 @@ def train_rnn_cluster(file_name, hidden_size, n_layers=1, bidirectional=False, c
 
     # reshape data. output is shaped (n_data_total, n_channels * (n_scat_nodes), data_len).
     # (n_scat_nodes) means 1 if data not transformed
-    data = np.reshape(data, (n_data_total, -1, data.shape[-1]))
-    input_size = data.shape[-2]
+    if isinstance(data, np.ndarray):
+        data = np.reshape(data, (n_data_total, -1, data.shape[-1]))
+    elif isinstance(data, list):
+        data = [np.reshape(data_slice, (-1, data_slice.shape[-1])) for data_slice in data]
+    else:
+        raise ValueError("Invalid type of data given")
+    input_size = data[0].shape[0]
 
     # initialize meta data and save it to a file
     meta = {'file_name':file_name_meta, 'root_dir':root_dir, 'input_size':input_size,
@@ -709,13 +777,14 @@ def _train_rnn_cluster(dataset, index, hidden_size, n_layers, bidirectional, cla
     # Partition dataset among workers using DistributedSampler
     sampler = {phase:DistributedSampler(Subset(dataset, index[phase]), num_replicas=hvd.size(), rank=hvd.rank()) for phase in ['train', 'val']}
     dataloader = {phase:DataLoader(dataset, sampler=sampler[phase],
-        batch_size=batch_size, num_workers=n_workers, pin_memory=True) for phase in ['train', 'val']} 
+        batch_size=batch_size, num_workers=n_workers, collate_fn=collate_fn, pin_memory=True)
+        for phase in ['train', 'val']} 
         # FIXME: pin_memory? perhaps pin_memory means putting data on the gpu, 
     n_data = {phase:len(index[phase]) for phase in ['train', 'val']}
 
     input_size = dataset[0]['data'].shape[-2]
     meta = torch.load(file_path)
-    output_size = len(meta['label_to_idx']) if classifier else 1
+    output_size = len(meta['labels_lut']) if classifier else 1
     rnn = RNN(input_size, hidden_size=hidden_size, output_size=output_size, n_layers=n_layers,
         bidirectional=bidirectional).cuda()
     optimizer = optim.Adam(rnn.parameters(), lr=lr, betas=betas)
@@ -741,7 +810,8 @@ def _train_rnn_cluster(dataset, index, hidden_size, n_layers, bidirectional, cla
                 # permute s.t. shape is (data_len, n_data_total, n_channels * (n_scat_nodes))
                 batch_data = batch['data'].permute([2, 0, 1]).cuda()
                 batch_labels = batch['labels'].cuda()
-                output = rnn(batch_data)
+                input_lens = batch['input_lens'].cuda()
+                output = rnn(batch_data, input_lens=input_lens)
                 # for regression, output of rnn is shaped (batch_size, 1). drop dummy axis
                 if classifier:
                     batch_labels = batch_labels.type(torch.cuda.LongTensor)

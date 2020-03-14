@@ -34,7 +34,7 @@ filter_format='fourier_truncated'
 track_lens = []
 labels_lut = [(0.,), (1.,), (2.,)] # label 0 means activity 0., etc.
 labels = []
-data_list = []
+data = []
 idx_track_cum = 0
 for file_path_data in file_paths_data:
     file_name_data = os.path.basename(file_path_data)
@@ -54,28 +54,23 @@ for file_path_data in file_paths_data:
             track = f[str(idx_track)][()] # shaped (2, track_len)
             track_len = track.shape[1]
             track_lens.append(track_len)
-            data_list.append(track)
+            data.append(track)
             idx_track_cum += 1
 
-max_track_len = max(track_lens)
 n_tracks_total = len(track_lens)
-
-data = np.zeros((n_tracks_total, 2, max_track_len))
-for idx_track_cum, track in enumerate(data_list):
-    track_len = track_lens[idx_track_cum]
-    data[idx_track_cum, :, :track_len] = track
 
 labels = np.concatenate(labels, axis=0)
 index = nu._train_test_split(n_tracks_total, train_ratio=train_ratio, seed=42)
-data_train = data[index['train']]
-data_test = data[index['test']]
+data_train = [data[idx] for idx in index['train']]
+data_test = [data[idx] for idx in index['test']]
+#data_test = data[index['test']]
 labels_train = labels[index['train']]
 labels_test = labels[index['test']]
 track_lens_train = list(np.array(track_lens)[index['train']])
 track_lens_test = list(np.array(track_lens)[index['test']])
 
-samples_train = {'data':data_train, 'labels':labels_train, 'label_names':['activity'], 'labels_lut':labels_lut, 'data_lens':track_lens_train}
-samples_test = {'data':data_test, 'labels':labels_test, 'label_names':['activity'], 'labels_lut':labels_lut, 'data_lens':track_lens_test}
+samples_train = {'data':data_train, 'labels':labels_train, 'label_names':['activity'], 'labels_lut':labels_lut}
+samples_test = {'data':data_test, 'labels':labels_test, 'label_names':['activity'], 'labels_lut':labels_lut}
 
 file_path_train = os.path.join(root_dir, file_name_train)
 file_path_test = os.path.join(root_dir, file_name_test)
@@ -90,29 +85,16 @@ for avg_len in avg_lens:
         for file_name in file_names:
             print("scat transforming {} with parameters avg_len:{}, n_filter_octave:{}".format(file_name, avg_len, n_filter_octave))
             file_name_no_ext, _ = os.path.splitext(file_name)
-            data_scat_list = []
-            track_scat_lens = []
+            data_scat = []
             file_path = os.path.join(root_dir, file_name)
             samples = torch.load(file_path)
-            n_tracks = len(samples['data'])
             labels = samples['labels']
-            for idx_track in range(n_tracks):
-                track = samples['data'][idx_track]
-                track_len = samples['data_lens'][idx_track]
+            for track in samples['data']:
+                track_len = track.shape[1]
                 scat = scu.ScatNet(track_len, avg_len, n_filter_octave=n_filter_octave, filter_format=filter_format)
-                S = scat.transform(track[np.newaxis, :, :track_len])
+                S = scat.transform(track[np.newaxis, :, :])
                 S = scu.stack_scat(S)[0] # shaped (2, n_nodes, track_scat_len) where n_nodes is fixed but track_scat_len varies
-                track_scat_len = S.shape[-1]
-                track_scat_lens.append(track_scat_len)
-                data_scat_list.append(S)
-
-            max_track_scat_len = max(track_scat_lens)
-            n_nodes = data_scat_list[0].shape[1]
-            data_scat = np.zeros((n_tracks, 2, n_nodes, max_track_len))
-
-            for idx_track in range(n_tracks):
-                track_scat_len = track_scat_lens[idx_track]
-                data_scat[idx_track, :, :, :track_scat_len] = data_scat_list[idx_track]
+                data_scat.append(S)
 
             nums = cu.match_filename(r'{}_scat_([0-9]+).pt'.format(file_name_no_ext), root_dir=root_dir)
             nums = [int(num) for num in nums]; idx = max(nums) + 1 if nums else 0
@@ -122,7 +104,7 @@ for avg_len in avg_lens:
             samples_scat = {'data':data_scat, 'labels':labels, 'label_names':['activity'],
                     'labels_lut':labels_lut,
                     'avg_len':avg_len, 'log_transform':log_transform, 'n_filter_octave':n_filter_octave,
-                    'filter_format':filter_format, 'file_name':file_name, 'data_lens':track_scat_lens}
+                    'filter_format':filter_format, 'file_name':file_name}
             torch.save(samples_scat, file_path_scat)
 
 '''

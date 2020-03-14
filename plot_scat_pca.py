@@ -27,9 +27,9 @@ scat = scu.ScatNet(data_len, avg_len, n_filter_octave=n_filter_octave)
 # simulate brownian
 if sim_type == 'brw':
     diff_coefs_brw = np.arange(4,8,1)
-    traj_brw = siu.sim_brownian(data_len, diff_coefs_brw, dt=dt, n_data=n_data)
+    samples = siu.sim_brownian(data_len, diff_coefs_brw, dt=dt, n_data=n_data)
+    traj_brw = samples['data']
     scat_brw = scu.ScatNet(data_len, avg_len, n_filter_octave=n_filter_octave)
-    traj_brw = traj_brw.reshape(-1, 1, traj_brw.shape[-1])
     S_brw = scat.transform(traj_brw)
     S_brw_log = scu.log_scat(S_brw)
     S_brw_log = scu.stack_scat(S_brw_log)
@@ -47,9 +47,9 @@ if sim_type == 'brw':
 # simulate poisson
 elif sim_type == 'psn':
     lams_psn = np.arange(4,8,1)
-    traj_psn = siu.sim_poisson(data_len, lams_psn, dt=dt, n_data=n_data)
+    samples = siu.sim_poisson(data_len, lams_psn, dt=dt, n_data=n_data)
+    traj_psn = samples['data']
     scat_psn = scu.ScatNet(data_len, avg_len, n_filter_octave=n_filter_octave)
-    traj_psn = traj_psn.reshape(-1, 1, traj_psn.shape[-1])
     S_psn = scat.transform(traj_psn)
     S_psn_log = scu.log_scat(S_psn)
     S_psn_log = scu.stack_scat(S_psn_log)
@@ -68,9 +68,9 @@ elif sim_type == 'psn':
 elif sim_type == 'obd':
     diff_coefs_obd = np.arange(3,6,1)
     ks_obd = np.arange(2,4,1)
-    traj_obd = siu.sim_one_bead(data_len, ks=ks_obd, diff_coefs=diff_coefs_obd, dt=dt, n_data=n_data)
+    samples = siu.sim_one_bead(data_len, ks=ks_obd, diff_coefs=diff_coefs_obd, dt=dt, n_data=n_data)
+    traj_obd = samples['data']
     scat_obd = scu.ScatNet(data_len, avg_len, n_filter_octave=n_filter_octave)
-    traj_obd = traj_obd.reshape(-1, 1, traj_obd.shape[-1])
     S_obd = scat.transform(traj_obd)
     S_obd_log = scu.log_scat(S_obd)
     S_obd_log = scu.stack_scat(S_obd_log)
@@ -99,8 +99,8 @@ elif sim_type == 'tbd':
     gammas = 1
     k_ratios = np.arange(2,6,2)
     diff_coef_ratios = np.arange(3,9,2)
-    traj_tbd = siu.sim_two_beads(data_len, gammas=gammas, k_ratios=k_ratios, diff_coef_ratios=diff_coef_ratios, dt=dt, n_data=n_data) 
-    traj_tbd = traj_tbd.reshape(-1,2,traj_tbd.shape[-1])
+    samples = siu.sim_two_beads(data_len, gammas=gammas, k_ratios=k_ratios, diff_coef_ratios=diff_coef_ratios, dt=dt, n_data=n_data) 
+    traj_tbd = samples['data']
     scat_tbd = scu.ScatNet(data_len, avg_len, n_filter_octave = n_filter_octave) 
     S_tbd = scat.transform(traj_tbd)
     S_tbd_log = scu.log_scat(S_tbd)
