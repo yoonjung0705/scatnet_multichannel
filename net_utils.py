@@ -147,7 +147,7 @@ def collate_fn(batch):
         max_data_len = max(max_data_len, input_len)
 
     for idx in range(n_data):
-        data_slice = torch.tensor(batch[idx]['data'], dtype=dtype)
+        data_slice = batch[idx]['data']
         label = batch[idx]['labels']
         input_len = data_slice.shape[1]
 
@@ -157,7 +157,7 @@ def collate_fn(batch):
         input_lens.append(input_len)
 
     data_out = torch.stack(data_out, dim=0)
-    labels = torch.tensor(labels).type(torch.LongTensor)
+    labels = torch.stack(labels, dim=0)
     input_lens = torch.tensor(input_lens).type(torch.LongTensor)
     batch_out = {'data':data_out, 'labels':labels, 'input_lens':input_lens}
     return batch_out
@@ -769,7 +769,8 @@ def _train_rnn_cluster(dataset, index, hidden_size, n_layers, bidirectional, cla
     # Partition dataset among workers using DistributedSampler
     sampler = {phase:DistributedSampler(Subset(dataset, index[phase]), num_replicas=hvd.size(), rank=hvd.rank()) for phase in ['train', 'val']}
     dataloader = {phase:DataLoader(dataset, sampler=sampler[phase],
-        batch_size=batch_size, num_workers=n_workers, pin_memory=True) for phase in ['train', 'val']} 
+        batch_size=batch_size, num_workers=n_workers, collate_fn=collate_fn, pin_memory=True)
+        for phase in ['train', 'val']} 
         # FIXME: pin_memory? perhaps pin_memory means putting data on the gpu, 
     n_data = {phase:len(index[phase]) for phase in ['train', 'val']}
 
