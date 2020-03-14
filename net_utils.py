@@ -76,18 +76,21 @@ class RNN(nn.Module):
         n_directions = self.n_directions
         batch_size = input.shape[1]
         if input_lens is None:
-            output, _ = self.lstm(input)
+            output, _ = self.lstm(input)[-1, :, :]
         elif torch.all(input_lens[0] == input_lens).item(): # if lengths same
-            output, _ = self.lstm(input)
+            output, _ = self.lstm(input)[-1, :, :]
         else: # if lengths different
             data_len = input.shape[0]
-            input = pack_padded_sequence(input, input_lens)
+            input = pack_padded_sequence(input, input_lens, enforce_sorted=False)
             output, _ = self.lstm(input)
-            output = pad_packed_sequence(output, total_length=data_len)
+            output, _ = pad_packed_sequence(output, total_length=data_len)
+            idx = (input_lens - 1).view(-1, 1).expand(len(input_lens), output.size(2))
+            idx = idx.unsqueeze(0)
+            output = output.gather(0, idx).squeeze(0)
         #h_0 = torch.autograd.Variable(torch.zeros(n_layers, batch_size, hidden_size)) # dtype is default to float32
         #c_0 = nn.Parameter(torch.zeros(n_layers, batch_size, hidden_size))
         #output, (h_n, c_n) = self.lstm(input, (h_0, c_0))
-        output = self.h2o(output[-1, :, :])
+        output = self.h2o(output)
         
         return output
 
@@ -691,8 +694,13 @@ def train_rnn_cluster(file_name, hidden_size, n_layers=1, bidirectional=False, c
 
     # reshape data. output is shaped (n_data_total, n_channels * (n_scat_nodes), data_len).
     # (n_scat_nodes) means 1 if data not transformed
-    data = np.reshape(data, (n_data_total, -1, data.shape[-1]))
-    input_size = data.shape[-2]
+    if isinstance(data, np.ndarray):
+        data = np.reshape(data, (n_data_total, -1, data.shape[-1]))
+    elif isinstance(data, list):
+        data = [np.reshape(data_slice, (-1, data_slice.shape[-1])) for data_slice in data]
+    else:
+        raise ValueError("Invalid type of data given")
+    input_size = data[0].shape[0]
 
     # initialize meta data and save it to a file
     meta = {'file_name':file_name_meta, 'root_dir':root_dir, 'input_size':input_size,
@@ -776,7 +784,7 @@ def _train_rnn_cluster(dataset, index, hidden_size, n_layers, bidirectional, cla
 
     input_size = dataset[0]['data'].shape[-2]
     meta = torch.load(file_path)
-    output_size = len(meta['label_to_idx']) if classifier else 1
+    output_size = len(meta['labels_lut']) if classifier else 1
     rnn = RNN(input_size, hidden_size=hidden_size, output_size=output_size, n_layers=n_layers,
         bidirectional=bidirectional).cuda()
     optimizer = optim.Adam(rnn.parameters(), lr=lr, betas=betas)
