@@ -955,11 +955,10 @@ def scat_transform(file_name, avg_len, log_transform=False, n_filter_octave=[1, 
     outputs:
     --------
     - (processes): dict whose key-value pairs are the following:
-        'data': ndarray shaped (n_data, n_channels, n_nodes, data_len) or 
-            (n_param_1, n_param_2, ..., n_param_N, n_data, n_channels, n_nodes, data_len)
+        'data': ndarray shaped (n_data, n_channels, n_nodes, data_len) or
+        list of ndarrays where each array is shaped (n_channels, n_nodes, data_len)
         whatever key-values were in the given file
         hyperparameters used for performing the scat transform
-    - (processes): ndarray shaped (n_param_1, n_param_2, ..., n_param_N, n_data, n_channels, n_nodes, data_len)
         Returned if save_file is False
     - (file_name): string type file name of the simulated data. returned if save_file is True
     '''
@@ -973,19 +972,29 @@ def scat_transform(file_name, avg_len, log_transform=False, n_filter_octave=[1, 
     file_name_scat = '{}_scat_{}.pt'.format(file_name, idx)
     file_path_scat = os.path.join(root_dir, file_name_scat)
 
-    data = samples['data'] 
-    # flatten the data to shape (n_data_total, n_channels, data_len)
-    n_params = data.shape[:-3]
-    n_data = data.shape[-3]
-    n_channels, data_len = data.shape[-2:]
-    data = np.reshape(data, [-1, n_channels, data_len])
-    # perform scattering transform
-    scat = ScatNet(data_len, avg_len, n_filter_octave=n_filter_octave, filter_format=filter_format)
-    S = scat.transform(data)
-    if log_transform: S = log_scat(S)
-    S = stack_scat(S) # shaped (n_data_total, n_channels, n_scat_nodes, data_len)
-    # following is shaped (n_param1, n_param2,..., n_paramN, n_data, n_channels, n_scat_nodes, data_len)
-    data_scat = np.reshape(S, list(n_params) + [n_data] + list(S.shape[-3:])) 
+    data = samples['data']
+    if isinstance(data, np.ndarray):
+        assert(len(data.shape) == 3),\
+            "Invalid data shape given. If type is ndarray, should be rank 3"
+        n_data, n_channels, data_len = data.shape
+        # perform scattering transform
+        scat = ScatNet(data_len, avg_len, n_filter_octave=n_filter_octave, filter_format=filter_format)
+        S = scat.transform(data)
+        if log_transform: S = log_scat(S)
+        data_scat = stack_scat(S) # shaped (n_data, n_channels, n_scat_nodes, data_len)
+    elif isinstance(data, list):
+        assert(len(data[0].shape) == 2),\
+            "Invalid data shape given. If type is list, elements should be rank 2 ndarrays"
+        data_scat = []
+        for track in data:
+            track_len = track.shape[1]
+            scat = ScatNet(track_len, avg_len, n_filter_octave=n_filter_octave, filter_format=filter_format)
+            S = scat.transform(track[np.newaxis, :, :])
+            S = stack_scat(S)[0] # shaped (2, n_nodes, track_scat_len) where n_nodes is fixed but track_scat_len varies
+            data_scat.append(S)
+    else:
+        raise ValueError("Invalid data given. Type should be either ndarray or list")
+
     samples_out = copy.deepcopy(samples)
     del samples_out['data']
     samples_out.update({'data':data_scat, 'avg_len':avg_len, 'log_transform':log_transform,

@@ -84,28 +84,7 @@ for avg_len in avg_lens:
     for n_filter_octave in n_filter_octaves:
         for file_name in file_names:
             print("scat transforming {} with parameters avg_len:{}, n_filter_octave:{}".format(file_name, avg_len, n_filter_octave))
-            file_name_no_ext, _ = os.path.splitext(file_name)
-            data_scat = []
-            file_path = os.path.join(root_dir, file_name)
-            samples = torch.load(file_path)
-            labels = samples['labels']
-            for track in samples['data']:
-                track_len = track.shape[1]
-                scat = scu.ScatNet(track_len, avg_len, n_filter_octave=n_filter_octave, filter_format=filter_format)
-                S = scat.transform(track[np.newaxis, :, :])
-                S = scu.stack_scat(S)[0] # shaped (2, n_nodes, track_scat_len) where n_nodes is fixed but track_scat_len varies
-                data_scat.append(S)
-
-            nums = cu.match_filename(r'{}_scat_([0-9]+).pt'.format(file_name_no_ext), root_dir=root_dir)
-            nums = [int(num) for num in nums]; idx = max(nums) + 1 if nums else 0
-            file_name_scat = '{}_scat_{}.pt'.format(file_name_no_ext, idx)
-            file_path_scat = os.path.join(root_dir, file_name_scat)
-
-            samples_scat = {'data':data_scat, 'labels':labels, 'label_names':['activity'],
-                    'labels_lut':labels_lut,
-                    'avg_len':avg_len, 'log_transform':log_transform, 'n_filter_octave':n_filter_octave,
-                    'filter_format':filter_format, 'file_name':file_name}
-            torch.save(samples_scat, file_path_scat)
+            file_name_scat = scu.scat_transform(file_name, avg_len, log_transform=False, n_filter_octave=n_filter_octave, save_file=True, root_dir=root_dir)
 
 '''
 # check

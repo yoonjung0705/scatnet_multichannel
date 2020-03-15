@@ -17,9 +17,6 @@ n_datas = [200, 400, 600, 800, 1000]
 n_data_test = 1000
 
 root_dir = ROOT_DIR
-file_names_data = []
-file_names_scat = []
-file_names_scat_test = []
 
 gamma_low = 1
 gamma_high = 1.5
@@ -39,15 +36,10 @@ for n_data in n_datas:
             diff_coef_ratios=[diff_coef_ratio_low, diff_coef_ratio_high],
             dt=dt, n_data=n_data, n_steps_initial=10000,
             save_file=True, root_dir=root_dir, dtype='float32')
-    file_names_data.append(file_name_data)
     for avg_len in avg_lens:
         for n_filter_octave in n_filter_octaves:
-            try:
-                print("\tscat transforming with parameters avg_len:{}, n_filter_octave:{}".format(avg_len, n_filter_octave))
-                file_name_scat = scu.scat_transform(file_name_data, avg_len, log_transform=False, n_filter_octave=n_filter_octave, save_file=True, root_dir=root_dir)
-                file_names_scat.append(file_name_scat)
-            except:
-                print("\texception occurred with parameters avg_len:{}, n_filter_octave:{}".format(avg_len, n_filter_octave))
+            print("\tscat transforming with parameters avg_len:{}, n_filter_octave:{}".format(avg_len, n_filter_octave))
+            file_name_scat = scu.scat_transform(file_name_data, avg_len, log_transform=False, n_filter_octave=n_filter_octave, save_file=True, root_dir=root_dir)
 
 # simulate data for testing performance
 print("simulating test data for n_data_test:{}".format(n_data_test))
@@ -68,10 +60,7 @@ os.rename(os.path.join(root_dir, file_name_data_test_old), os.path.join(root_dir
 # scat transforming test data
 for avg_len in avg_lens:
     for n_filter_octave in n_filter_octaves:
-        try:
-            print("\tscat transforming with parameters avg_len:{}, n_filter_octave:{}".format(avg_len, n_filter_octave))
-            file_name_scat_test = scu.scat_transform(file_name_data_test_new,
-                    avg_len, log_transform=False, n_filter_octave=n_filter_octave,
-                    save_file=True, root_dir=root_dir)
-        except:
-            print("\texception occurred with parameters avg_len:{}, n_filter_octave:{}".format(avg_len, n_filter_octave))
+        print("\tscat transforming with parameters avg_len:{}, n_filter_octave:{}".format(avg_len, n_filter_octave))
+        file_name_scat_test = scu.scat_transform(file_name_data_test_new,
+                avg_len, log_transform=False, n_filter_octave=n_filter_octave,
+                save_file=True, root_dir=root_dir)
