@@ -9,8 +9,8 @@ import common_utils as cu
 ROOT_DIR = './data/simulations/'
 
 # common inputs
-data_len = 2**11
-avg_lens = [2**6, 2**8]
+data_len = 2**9
+avg_lens = [2**4, 2**6]
 n_filter_octaves = [(1,1)]
 dt = 0.001
 n_datas = [200, 400, 600, 800, 1000]

@@ -13,6 +13,7 @@ from itertools import product
 '''custom libraries'''
 import common_utils as cu
 ROOT_DIR = './data/experiments/bead/2020_0305'
+#ROOT_DIR = './data/experiments/bead/2020_0228'
 file_name_data = 'data.pt'
 file_name_data_test = 'data_test.pt'
 
