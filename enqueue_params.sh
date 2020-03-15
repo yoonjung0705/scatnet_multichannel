@@ -6,16 +6,32 @@
 # two queues exist: the cluster queue and the parameters queue. 
 # for job submission to the cluster I term it enqueue for the cluster, 
 # and adding new sets of hyperparameters to params.csv I term it enqueue for the parameters.
+#############################
 #FILE_NAMES=("tbd_0.pt" "tbd_1.pt" "tbd_2.pt" "tbd_3.pt" "tbd_4.pt")
 #FILE_NAMES=("tbd_0_scat_0.pt" "tbd_0_scat_1.pt" "tbd_1_scat_0.pt" "tbd_1_scat_1.pt" "tbd_2_scat_0.pt" "tbd_2_scat_1.pt" "tbd_3_scat_0.pt" "tbd_3_scat_1.pt" "tbd_4_scat_0.pt" "tbd_4_scat_1.pt")
+
 FILE_NAMES=("data.pt")
-#README="training tbd_0,1,2,3,4.pt for hidden size 100 and 2,3 layers parameters"
-#README="training scat transformed tbd_0,1,2,3,4.pt for all parameters. scat transform has two versions of hyperparams"
-README="training irfp data.pt for all parameters"
+#FILE_NAMES=("data_scat_0.pt" "data_scat_1.pt")
+#FILE_NAMES=("data_scat_0.pt" "data_scat_1.pt" "data_scat_2.pt" "data_scat_3.pt")
+#############################
+#README="training tbd_0,1,2,3,4.pt (data_len being 2**9=512) for hidden size 20,50,100 and 2,3 layers parameters"
+#README="training scat transformed tbd_0,1,2,3,4.pt (data_len being 2**9=512) for hidden size 20,50 and 2,3 layers. scat transform has two versions of hyperparams"
+
+README="training irfp data.pt for hidden size 20,50,100 and 2,3 layers"
+#README="training scat transformed irfp data.pt for hidden size 20,50 and 2,3 layers"
+
+#README="training polydisperse 2020_0305 data.pt (data_len being 2**9=512) for hidden size 20,50,100 and 2,3 layers"
+#README="training scat transformed polydisperse 2020_0305 data.pt (data_len being 2**9=512) for hidden size 20,50 and 2,3 layers"
+
+#README="training monodisperse 2020_0228 data.pt (data_len being 2**9=512) for hidden size 20,50,100 and 2,3 layers"
+#README="training scat transformed monodisperse 2020_0228 data.pt (data_len being 2**9=512) for hidden size 20,50 and 2,3 layers"
+#############################
 #ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/simulations" # should be given in absolute path format
 ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/experiments/irfp" # should be given in absolute path format
+#ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/experiments/bead/2020_0305" # should be given in absolute path format
+#ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/experiments/bead/2020_0228" # should be given in absolute path format
+#############################
 HIDDEN_SIZES=(20 50 100)
-#HIDDEN_SIZES=(100)
 N_LAYERSS=(2 3)
 BIDIRECTIONAL="--bidirectional"
 #CLASSIFIER="" # CLASSIFIER="--classifier"
