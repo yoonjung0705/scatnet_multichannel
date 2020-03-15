@@ -15,13 +15,19 @@ SCATNET_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel"
 cd ${SCATNET_DIR}
 
 # job count
-N_JOBS_MAX_NORMAL=4 # max number of jobs allowed to run simutaneously for new jobs
+N_JOBS_MAX_NORMAL=8 # max number of jobs allowed to run simutaneously for new jobs
 N_JOBS_MAX_EXIT=3 # max number of jobs allowed to run simutaneously for previously failed jobs
 SUBMIT_COUNT_MAX=4 # max number of times a job can be submitted to the cluster
 BATCH_SIZE_EXIT=64 # use a smaller batch size for previously failed jobs
 FILE_NAME_PARAMS="params.csv"
 FILE_NAME_JOB="rnn.lsf"
 FILE_NAME_JOB_TEMPLATE="rnn_template.lsf"
+PAUSE_TIME=60 # wait between job submission to see if jobs can be distributed to different hosts
+# the longested time it took for a job to start the actual training was ~180 seconds
+# setting time to 60 is expected to make roughly 2~4 jobs being in the same host
+# even though a long time is waited between jobs, previous jobs can still get terminated due to new jobs
+# so first try to limit the N_JOBS_MAX values, then use this parameter to further decrease the chances of
+# jobs being terminated
 
 # delete empty lines. This is due to the usage of the while loop when using the file
 # reading is fine with while loop but since we make changes inplace for each line sometimes
@@ -106,6 +112,7 @@ cat ${FILE_NAME_PARAMS} | while [[ "${N_JOBS_SUBMITTED}" -lt "${N_JOBS_MAX_NORMA
                 ${FILE_NAME_PARAMS} > tmp_file
             mv tmp_file ${FILE_NAME_PARAMS}
             N_JOBS_SUBMITTED=`expr ${N_JOBS_SUBMITTED} + 1` 
+            sleep $PAUSE_TIME
         fi
     done
 
@@ -171,5 +178,6 @@ cat ${FILE_NAME_PARAMS} | while [[ "${N_JOBS_SUBMITTED}" -lt "${N_JOBS_MAX_EXIT}
                 ${FILE_NAME_PARAMS} > tmp_file
             mv tmp_file ${FILE_NAME_PARAMS}
             N_JOBS_SUBMITTED=`expr ${N_JOBS_SUBMITTED} + 1` 
+            sleep $PAUSE_TIME
         fi
     done
