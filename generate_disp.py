@@ -3,13 +3,15 @@ import os
 import numpy as np
 import torch
 from copy import deepcopy
-# FIXME: add part that performs scat transform after generating data
-# FIXME: check the results of the generated displacement file
+
+'''custom libraries'''
+import common_utils as cu
+import scat_utils as scu
 
 #ROOT_DIR = './data/simulations/trial_1'
-ROOT_DIR = './data/experiments/irfp'
+#ROOT_DIR = './data/experiments/irfp'
 #ROOT_DIR = './data/experiments/bead/2020_0228'
-#ROOT_DIR = './data/experiments/bead/2020_0305'
+ROOT_DIR = './data/experiments/bead/2020_0305'
 
 #file_names = ['tbd_0.pt', 'tbd_1.pt', 'tbd_2.pt', 'tbd_3.pt', 'tbd_4.pt', 'tbd_0_test.pt']
 file_names = ['data.pt', 'data_test.pt']
@@ -40,3 +42,14 @@ for file_name in file_names:
     file_name_out = file_name_no_ext + '_disp.pt'
     file_path_out = os.path.join(root_dir, file_name_out)
     torch.save(samples_out, file_path_out)
+
+    file_names_scat = cu.match_filename(r'({}_scat_[0-9]+.pt)'.format(file_name_no_ext), root_dir=root_dir)
+    for file_name_scat in file_names_scat:
+        file_path_scat = os.path.join(root_dir, file_name_scat)
+        samples_scat = torch.load(file_path_scat)
+        avg_len = samples_scat['avg_len']
+        n_filter_octave = samples_scat['n_filter_octave']
+
+        # perform scat transform and append to list
+        print("scat transforming {} with parameters avg_len:{}, n_filter_octave:{}".format(file_name_out, avg_len, n_filter_octave))
+        file_name_scat_out = scu.scat_transform(file_name_out, avg_len, log_transform=False, n_filter_octave=n_filter_octave, save_file=True, root_dir=root_dir)

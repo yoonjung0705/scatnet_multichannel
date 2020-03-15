@@ -87,16 +87,15 @@ for avg_len in avg_lens:
             file_name_scat = scu.scat_transform(file_name, avg_len, log_transform=False, n_filter_octave=n_filter_octave, save_file=True, root_dir=root_dir)
 
 '''
-# check
-idx = 1568
-data = torch.load('data.pt')
-data_scat = torch.load('data_scat_0.pt')
-track_len = data['data_lens'][idx]
-avg_len = data_scat['avg_len']
-n_filter_octave = data_scat['n_filter_octave']
-scat = scu.ScatNet(track_len, avg_len, n_filter_octave)
-S = scat.transform(data['data'][idx][np.newaxis, :, :track_len])
-S = scu.stack_scat(S)
-track_scat_len = data_scat['data_lens'][idx]
-data_scat['data'][idx][:,:,:track_scat_len] - S[0]
+# sanity check
+idx = 168 
+samples = torch.load('data.pt') 
+samples_scat = torch.load('data_scat_0.pt') 
+track_len = samples['data'][idx].shape[1] 
+avg_len = samples_scat['avg_len'] 
+n_filter_octave = samples_scat['n_filter_octave'] 
+scat = scu.ScatNet(track_len, avg_len, n_filter_octave) 
+S = scat.transform(samples['data'][idx][np.newaxis, :, :]) 
+S = scu.stack_scat(S) 
+samples_scat['data'][idx] - S[0] # should be all zero
 '''
