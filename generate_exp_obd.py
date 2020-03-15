@@ -114,7 +114,5 @@ for avg_len in avg_lens:
     for n_filter_octave in n_filter_octaves:
         for file_name in file_names:
             print("scat transforming {} with parameters avg_len:{}, n_filter_octave:{}".format(file_name, avg_len, n_filter_octave))
-            file_name_scat = scu.scat_transform('data.pt', avg_len, log_transform=False, n_filter_octave=n_filter_octave, save_file=True, root_dir=root_dir)
-            file_name_test_scat = scu.scat_transform('data_test.pt', avg_len, log_transform=False, n_filter_octave=n_filter_octave, save_file=True, root_dir=root_dir)
-
+            file_name_scat = scu.scat_transform(file_name, avg_len, log_transform=False, n_filter_octave=n_filter_octave, save_file=True, root_dir=root_dir)
 
