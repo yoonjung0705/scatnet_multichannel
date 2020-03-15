@@ -954,6 +954,11 @@ def scat_transform(file_name, avg_len, log_transform=False, n_filter_octave=[1, 
 
     outputs:
     --------
+    - (processes): dict whose key-value pairs are the following:
+        'data': ndarray shaped (n_data, n_channels, n_nodes, data_len) or 
+            (n_param_1, n_param_2, ..., n_param_N, n_data, n_channels, n_nodes, data_len)
+        whatever key-values were in the given file
+        hyperparameters used for performing the scat transform
     - (processes): ndarray shaped (n_param_1, n_param_2, ..., n_param_N, n_data, n_channels, n_nodes, data_len)
         Returned if save_file is False
     - (file_name): string type file name of the simulated data. returned if save_file is True
