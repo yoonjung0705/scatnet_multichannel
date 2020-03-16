@@ -8,7 +8,7 @@ from copy import deepcopy
 import common_utils as cu
 import scat_utils as scu
 
-#ROOT_DIR = './data/simulations/trial_1'
+#ROOT_DIR = './data/simulations/data_len_2048_gamma_1_1p5/disp'
 #ROOT_DIR = './data/experiments/irfp'
 #ROOT_DIR = './data/experiments/bead/2020_0228'
 ROOT_DIR = './data/experiments/bead/2020_0305'

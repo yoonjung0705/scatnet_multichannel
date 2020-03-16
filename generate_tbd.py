@@ -6,11 +6,11 @@ import sim_utils as siu
 
 '''custom libraries'''
 import common_utils as cu
-ROOT_DIR = './data/simulations/'
+ROOT_DIR = './data/simulations/data_len_256_gamma_1_1p5/'
 
 # common inputs
-data_len = 2**9
-avg_lens = [2**4, 2**6]
+data_len = 2**8
+avg_lens = [2**3, 2**5]
 n_filter_octaves = [(1,1)]
 dt = 0.001
 n_datas = [200, 400, 600, 800, 1000]
