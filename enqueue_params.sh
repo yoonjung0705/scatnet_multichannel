@@ -11,72 +11,74 @@
 #FILE_NAMES=("tbd_0_scat_0.pt" "tbd_0_scat_1.pt" "tbd_1_scat_0.pt" "tbd_1_scat_1.pt" "tbd_2_scat_0.pt" "tbd_2_scat_1.pt" "tbd_3_scat_0.pt" "tbd_3_scat_1.pt" "tbd_4_scat_0.pt" "tbd_4_scat_1.pt")
 
 #FILE_NAMES=("tbd_0_disp.pt" "tbd_1_disp.pt" "tbd_2_disp.pt" "tbd_3_disp.pt" "tbd_4_disp.pt")
-#FILE_NAMES=("tbd_0_disp_scat_0.pt" "tbd_0_disp_scat_1.pt" "tbd_1_disp_scat_0.pt" "tbd_1_disp_scat_1.pt" "tbd_2_disp_scat_0.pt" "tbd_2_disp_scat_1.pt" "tbd_3_disp_scat_0.pt" "tbd_3_disp_scat_1.pt" "tbd_4_disp_scat_0.pt" "tbd_4_disp_scat_1.pt")
+FILE_NAMES=("tbd_0_disp_scat_0.pt" "tbd_0_disp_scat_1.pt" "tbd_1_disp_scat_0.pt" "tbd_1_disp_scat_1.pt" "tbd_2_disp_scat_0.pt" "tbd_2_disp_scat_1.pt" "tbd_3_disp_scat_0.pt" "tbd_3_disp_scat_1.pt" "tbd_4_disp_scat_0.pt" "tbd_4_disp_scat_1.pt")
 
 #FILE_NAMES=("data.pt")
 #FILE_NAMES=("data_scat_0.pt" "data_scat_1.pt")
 
 #FILE_NAMES=("data_disp.pt")
-FILE_NAMES=("data_disp_scat_0.pt" "data_disp_scat_1.pt")
+#FILE_NAMES=("data_disp_scat_0.pt" "data_disp_scat_1.pt")
 #############################
-#README="training tbd_0,1,2,3,4.pt (data_len being 2**8=256, gamma=1-1.5) for hidden size 20,50,100 and 2,3 layers parameters"
-#README="training scat transformed tbd_0,1,2,3,4.pt (data_len being 2**8=256, gamma=1-1.5) for hidden size 20,50 and 2,3 layers parameters"
+#README="training tbd_0,1,2,3,4.pt (data_len being 2**10=1024, gamma=1-1.5) for hidden size 100,150,200 and 3 layers parameters"
+#README="training scat transformed tbd_0,1,2,3,4.pt (data_len being 2**10=1024, gamma=1-1.5) for hidden size 20,50 and 2,3 layers parameters"
 
-#README="training displacement of tbd_0,1,2,3,4.pt (data_len being 2**9=512, gamma=1-1.5) for hidden size 20,50,100 and 2,3 layers parameters"
-#README="training scat transformed displacement of tbd_0,1,2,3,4.pt (data_len being 2**9=512, gamma=1-1.5) for hidden size 20,50 and 2,3 layers parameters"
+#README="training displacement of tbd_0,1,2,3,4.pt (data_len being 2**10=1024, gamma=1-1.5) for hidden size 100,150,200 and 3 layers parameters"
+README="training scat transformed displacement of tbd_0,1,2,3,4.pt (data_len being 2**10=1024, gamma=1-1.5) for hidden size 20,50 and 2,3 layers parameters"
 
 
-#README="training irfp data.pt for hidden size 20,50,100 and 2,3 layers"
+#README="training irfp data.pt for hidden size 150,200 and 3 layers"
 #README="training scat transformed irfp data.pt for hidden size 20,50 and 2,3 layers"
 
-#README="training displacement of irfp data.pt for hidden size 20,50,100 and 2,3 layers"
-README="training scat transformed displacement of irfp data.pt for hidden size 20,50 and 2,3 layers"
+#README="training displacement of irfp data.pt for hidden size 150,200 and 3 layers"
+#README="training scat transformed displacement of irfp data.pt for hidden size 20,50 and 2,3 layers"
 
 
-#README="training monodisperse 2020_0228 data.pt (data_len being 2**8=256) for hidden size 20,50,100 and 2,3 layers"
+#README="training monodisperse 2020_0228 data.pt (data_len being 2**9=512) for hidden size 150,200 and 3 layers"
 #README="training scat transformed monodisperse 2020_0228 data.pt (data_len being 2**8=256) for hidden size 20,50 and 2,3 layers"
 
-#README="training displacement of monodisperse 2020_0228 data.pt (data_len being 2**8=256) for hidden size 20,50,100 and 2,3 layers"
+#README="training displacement of monodisperse 2020_0228 data.pt (data_len being 2**9=512) for hidden size 150,200 and 3 layers"
 #README="training scat transformed displacement of monodisperse 2020_0228 data.pt (data_len being 2**8=256) for hidden size 20,50 and 2,3 layers"
 
 
-#README="training monodisperse 2020_0305 data.pt (data_len being 2**8=256) for hidden size 20,50,100 and 2,3 layers"
+#README="training monodisperse 2020_0305 data.pt (data_len being 2**9=512) for hidden size 150,200 and 3 layers"
 #README="training scat transformed monodisperse 2020_0305 data.pt (data_len being 2**8=256) for hidden size 20,50 and 2,3 layers"
 
-#README="training displacement of monodisperse 2020_0305 data.pt (data_len being 2**8=256) for hidden size 20,50,100 and 2,3 layers"
+#README="training displacement of monodisperse 2020_0305 data.pt (data_len being 2**9=512) for hidden size 150,200 and 3 layers"
 #README="training scat transformed displacement of monodisperse 2020_0305 data.pt (data_len being 2**8=256) for hidden size 20,50 and 2,3 layers"
 
 
-#README="training polydisperse 2020_0305 data.pt (data_len being 2**9=512) for hidden size 20,50,100 and 2,3 layers"
+#README="training polydisperse 2020_0305 data.pt (data_len being 2**9=512) for hidden size 150,200 and 3 layers"
 #README="training scat transformed polydisperse 2020_0305 data.pt (data_len being 2**9=512) for hidden size 20,50 and 2,3 layers"
 
-#README="training displacement of polydisperse 2020_0305 data.pt (data_len being 2**9=512) for hidden size 20,50,100 and 2,3 layers"
+#README="training displacement of polydisperse 2020_0305 data.pt (data_len being 2**9=512) for hidden size 150,200 and 3 layers"
 #README="training scat transformed displacement of polydisperse 2020_0305 data.pt (data_len being 2**9=512) for hidden size 20,50 and 2,3 layers"
-
-
 #############################
 #ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/simulations" # should be given in absolute path format
-#ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/simulations/data_len_2048_gamma_1/disp"
+#ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/simulations/data_len_2048_gamma_1/pos"
 #ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/simulations/data_len_2048_gamma_1_1p5/disp"
-#ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/simulations/data_len_256_gamma_1_1p5/pos"
-#ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/simulations/data_len_512_gamma_1_1p5/disp"
-ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/experiments/irfp"
-#ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/experiments/bead/2020_0228/data_len_256/pos"
+#ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/simulations/data_len_256_gamma_1_1p5/disp"
+#ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/simulations/data_len_512_gamma_1_1p5/pos"
+ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/simulations/data_len_1024_gamma_1_1p5/disp"
+
+#ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/experiments/irfp"
+#ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/experiments/bead/2020_0228/data_len_512/disp"
 #ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/experiments/bead/2020_0305/data_len_512_poly/disp"
 #############################
 HIDDEN_SIZES=(20 50)
+#HIDDEN_SIZES=(100 150 200)
 N_LAYERSS=(2 3)
+#N_LAYERSS=(3)
 BIDIRECTIONAL="--bidirectional"
 
-#CLASSIFIER="" # regression
-CLASSIFIER="--classifier" # classification
+CLASSIFIER="" # regression
+#CLASSIFIER="--classifier" # classification
 
-#IDX_LABELS=(1 2) # set to (0) if classifier to avoid training the same classifier twice. Should be (1 2) for two beads 
-IDX_LABELS=(0) # set to (0) if classifier to avoid training the same classifier twice. Should be (1 2) for two beads 
+IDX_LABELS=(1 2) # (1 2) for regression. (0 1) for gamma_1
+#IDX_LABELS=(0) # set to (0) if classifier to avoid training the same classifier twice. Should be (1 2) for two beads 
 
 EPOCHS=2000
 TRAIN_RATIO=0.8
-BATCH_SIZE=128 # 256
+BATCH_SIZE=64 # 256
 N_WORKERS=4
 LR=0.001
 BETAS="0.9 0.999"

@@ -1,7 +1,10 @@
 #!/usr/bin/sh
 # submits jobs to the cluster using list of hyperparameters in the params.csv file. In detail, it does the following:
 # - updates the status of the jobs by removing lines that were successfully completed (status DONE) for
-# files params.csv and exit.log
+# files params.csv and exit.log.
+# NOTE: it uses the bjobs -a command to see what jobs were successfully finished with the exit status DONE
+# However, since this information is only shown for the jobs within the last 1 hour, in order to maintain the parameters list correctly,
+# this script must run at least every 1 hour
 # - updates the status of the jobs by adding jobids that failed to exit.log
 # - goes through line by line in params.csv, submits job if it’s not a failed job until the number of submitted jobs becomes N_JOBS_MAX_NORMAL. update the job id and submission count in params.csv
 # - goes through line by line in params.csv, submits job if it’s a failed job until the number of submitted jobs becomes N_JOBS_MAX_EXIT. update the job id and submission count
@@ -15,7 +18,7 @@ SCATNET_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel"
 cd ${SCATNET_DIR}
 
 # job count
-N_JOBS_MAX_NORMAL=6 # max number of jobs allowed to run simutaneously for new jobs
+N_JOBS_MAX_NORMAL=5 # max number of jobs allowed to run simutaneously for new jobs. do not go beyond 8
 N_JOBS_MAX_EXIT=3 # max number of jobs allowed to run simutaneously for previously failed jobs
 SUBMIT_COUNT_MAX=4 # max number of times a job can be submitted to the cluster
 BATCH_SIZE_EXIT=64 # use a smaller batch size for previously failed jobs

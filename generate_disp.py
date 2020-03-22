@@ -8,13 +8,13 @@ from copy import deepcopy
 import common_utils as cu
 import scat_utils as scu
 
-#ROOT_DIR = './data/simulations/data_len_2048_gamma_1_1p5/disp'
+ROOT_DIR = './data/simulations/data_len_1024_gamma_1_1p5/pos'
 #ROOT_DIR = './data/experiments/irfp'
 #ROOT_DIR = './data/experiments/bead/2020_0228'
-ROOT_DIR = './data/experiments/bead/2020_0305'
+#ROOT_DIR = './data/experiments/bead/2020_0305'
 
-#file_names = ['tbd_0.pt', 'tbd_1.pt', 'tbd_2.pt', 'tbd_3.pt', 'tbd_4.pt', 'tbd_0_test.pt']
-file_names = ['data.pt', 'data_test.pt']
+file_names = ['tbd_0.pt', 'tbd_1.pt', 'tbd_2.pt', 'tbd_3.pt', 'tbd_4.pt', 'tbd_0_test.pt']
+#file_names = ['data.pt', 'data_test.pt']
 
 # common inputs
 root_dir = ROOT_DIR

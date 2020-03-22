@@ -69,3 +69,14 @@ for idx_file in range(n_files):
         figs[idx_file].suptitle(file_names[idx_file])
 
 plt.show()
+
+
+
+"""
+files = glob.glob('tbd_0_scat_*_meta_rnn_*_diff_coef_ratios.pt') 
+for file in files: 
+    meta = torch.load(file) 
+    loss_val = meta['loss']['val'] 
+    if len(loss_val) == 200: 
+        print("min val loss:{:.5f}, hidden_size:{}, n_layers:{}".format(min(loss_val), meta['hidden_size'], meta['n_layers']))
+"""
