@@ -74,7 +74,7 @@ args = parser.parse_args()
 if args.classifier: args.idx_label = None
 args.betas = tuple(np.array(args.betas, dtype=float))
 
-nu.train_rnn_cluster(file_name=args.file_name, hidden_size=args.hidden_size, n_layers=args.n_layers,
+nu.train_rnn(file_name=args.file_name, hidden_size=args.hidden_size, n_layers=args.n_layers,
     bidirectional=args.bidirectional, classifier=args.classifier, idx_label=args.idx_label,
     n_epochs_max=args.epochs, train_ratio=args.train_ratio, batch_size=args.batch_size,
     n_workers=args.n_workers, root_dir=args.root_dir, lr=args.lr, betas=args.betas,

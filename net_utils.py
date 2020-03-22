@@ -230,6 +230,8 @@ def train_nn(file_name, n_nodes_hidden, classifier=False, n_epochs_max=2000, tra
     trains the neural network given a file that contains data.
     this data can be either scat transformed or pure simulated data
 
+    NOTE: requires refactoring to run on cluster
+
     inputs
     ------
     file_name: string type name of file
@@ -327,7 +329,8 @@ def train_nn(file_name, n_nodes_hidden, classifier=False, n_epochs_max=2000, tra
 
 def _train_nn(dataset, index, n_nodes_hidden, classifier, n_epochs_max, batch_size, device, n_workers,
         file_name, root_dir=ROOT_DIR, idx_label=None, lr=0.001, betas=(0.9, 0.999)):
-    '''constructs and trains neural networks given the dataloader instance and network structure
+    '''constructs and trains neural networks given the dataset instance and network structure
+    NOTE: requires refactoring to run on cluster
 
     inputs
     ------
@@ -415,7 +418,7 @@ def _train_nn(dataset, index, n_nodes_hidden, classifier, n_epochs_max, batch_si
         except KeyboardInterrupt:
             break
 
-def train_rnn(file_name, hidden_size, n_layers=1, bidirectional=False, classifier=False, idx_label=None, n_epochs_max=2000,
+def train_rnn_noncluster(file_name, hidden_size, n_layers=1, bidirectional=False, classifier=False, idx_label=None, n_epochs_max=2000,
         train_ratio=0.8, batch_size=128, n_workers=4, root_dir=ROOT_DIR, lr=0.001, betas=(0.9, 0.999)):
     '''
     NOTE: to be deprecated. classifier works but regressor has not been integrated yet
@@ -503,7 +506,7 @@ def train_rnn(file_name, hidden_size, n_layers=1, bidirectional=False, classifie
         dataset = TimeSeriesDataset(data, labels, transform=ToTensor())
         # train the neural network for classification
         print("Beginning training of {}:".format(', '.join(samples['label_names'])))
-        _train_rnn(dataset, index, hidden_size=hidden_size, n_layers=n_layers,
+        _train_rnn_noncluster(dataset, index, hidden_size=hidden_size, n_layers=n_layers,
             bidirectional=bidirectional, classifier=classifier, n_epochs_max=n_epochs_max,
             batch_size=batch_size, n_workers=n_workers, device=device,
             file_name=file_name_meta, root_dir=root_dir, lr=lr, betas=betas)
@@ -521,14 +524,14 @@ def train_rnn(file_name, hidden_size, n_layers=1, bidirectional=False, classifie
             dataset = TimeSeriesDataset(data, labels[idx_label], transform=ToTensor())
             # train the rnn for the given idx_label
             print("Beginning training of {}:".format(samples['label_names'][idx_label]))
-            _train_rnn(dataset, index, hidden_size=hidden_size[idx_label], n_layers=n_layers,
+            _train_rnn_noncluster(dataset, index, hidden_size=hidden_size[idx_label], n_layers=n_layers,
                 bidirectional=bidirectional, classifier=classifier, n_epochs_max=n_epochs_max,
                 batch_size=batch_size, n_workers=n_workers, device=device, idx_label=idx_label,
                 file_name=file_name_meta, root_dir=root_dir, lr=lr, betas=betas)
 
-def _train_rnn(dataset, index, hidden_size, n_layers, bidirectional, classifier, n_epochs_max, batch_size,
+def _train_rnn_noncluster(dataset, index, hidden_size, n_layers, bidirectional, classifier, n_epochs_max, batch_size,
         device, n_workers, file_name, root_dir=ROOT_DIR, idx_label=None, lr=0.001, betas=(0.9, 0.999)):
-    '''constructs and trains neural networks given the dataloader instance and network structure
+    '''constructs and trains neural networks given the dataset instance and network structure
 
     NOTE: to be deprecated. classifier works but regressor has not been integrated yet
 
@@ -623,7 +626,7 @@ def _train_rnn(dataset, index, hidden_size, n_layers, bidirectional, classifier,
         except KeyboardInterrupt:
             break
 
-def train_rnn_cluster(file_name, hidden_size, n_layers=1, bidirectional=False, classifier=False, idx_label=None, n_epochs_max=2000,
+def train_rnn(file_name, hidden_size, n_layers=1, bidirectional=False, classifier=False, idx_label=None, n_epochs_max=2000,
         train_ratio=0.8, batch_size=128, n_workers=4, root_dir=ROOT_DIR, lr=0.001, betas=(0.9, 0.999),
         opt_level="O0", seed=42, log_interval=10):
     '''
@@ -658,7 +661,6 @@ def train_rnn_cluster(file_name, hidden_size, n_layers=1, bidirectional=False, c
     # NOTE: regression means you train on data whose parameters are sampled continuously and test also for data whose parameters are sampled continuously, whereas
     # classifier means you train on data on the grid and test on the grid.
     # pass the dataset as an argument to _train_rnn() not with the index but the dataset being a dictionary with keys 'train' and 'val'
-    # TODO: make train_rnn() and train_rnn_cluster() into a single function since now that my local machine has horovod too and there's no problem when importing it.
     
     hvd.init()
     torch.cuda.set_device(hvd.local_rank())
@@ -720,7 +722,7 @@ def train_rnn_cluster(file_name, hidden_size, n_layers=1, bidirectional=False, c
         dataset = TimeSeriesDataset(data, labels, transform=ToTensor())
         # train the neural network for classification
         if root_process: print("Training classifier for {}:".format(', '.join(samples['label_names'])))
-        _train_rnn_cluster(dataset, index, hidden_size=hidden_size, n_layers=n_layers,
+        _train_rnn(dataset, index, hidden_size=hidden_size, n_layers=n_layers,
             bidirectional=bidirectional, classifier=classifier, n_epochs_max=n_epochs_max,
             batch_size=batch_size, n_workers=n_workers,
             file_name=file_name_meta, root_dir=root_dir, lr=lr, betas=betas,
@@ -731,16 +733,16 @@ def train_rnn_cluster(file_name, hidden_size, n_layers=1, bidirectional=False, c
         dataset = TimeSeriesDataset(data, label, transform=ToTensor())
         # train the rnn for the given idx_label
         if root_process: print("Training regressor for {}:".format(label_name))
-        _train_rnn_cluster(dataset, index, hidden_size=hidden_size, n_layers=n_layers,
+        _train_rnn(dataset, index, hidden_size=hidden_size, n_layers=n_layers,
             bidirectional=bidirectional, classifier=classifier, n_epochs_max=n_epochs_max,
             batch_size=batch_size, n_workers=n_workers,
             file_name=file_name_meta, root_dir=root_dir, lr=lr, betas=betas,
             opt_level=opt_level, seed=seed, log_interval=log_interval)
 
-def _train_rnn_cluster(dataset, index, hidden_size, n_layers, bidirectional, classifier, n_epochs_max, batch_size,
+def _train_rnn(dataset, index, hidden_size, n_layers, bidirectional, classifier, n_epochs_max, batch_size,
         n_workers, file_name, root_dir=ROOT_DIR, lr=0.001, betas=(0.9, 0.999), 
         opt_level="O0", seed=42, log_interval=10):
-    '''constructs and trains neural networks given the dataloader instance and network structure for a cluster
+    '''constructs and trains neural networks given the dataset instance and network structure
 
     inputs
     ------
