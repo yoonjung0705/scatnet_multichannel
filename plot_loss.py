@@ -3,80 +3,73 @@ import os
 import torch
 import matplotlib.pyplot as plt
 import glob
+
+import common_utils as cu
 import scat_utils as scu
 
-root_dir = './data/simulations/'
+root_dir = './data/simulations/data_len_256_gamma_1_1p5/pos/'
+# file_name_regexs elements must be enclosed with ()
+file_name_regexs = ['(tbd_0_scat_[0-9]+_meta_rnn_[0-9]+_diff_coef_ratios.pt)',
+    '(tbd_0_meta_rnn_[0-9]+_diff_coef_ratios.pt)'] 
 
-# provide file names and paths manually
-file_names = ['tbd_0_scat_0_meta_rnn_0.pt']
-#file_names = ['tbd_0_meta_rnn_0.pt' ,'tbd_1_meta_rnn_0.pt', 'tbd_2_meta_rnn_0.pt']
-file_paths = [os.path.join(root_dir, file_name) for file_name in file_names]
+idx_file_start = 0 # None or 0 to start from beginning
+idx_file_end = 5 # None for going to end
 
-# provide file names and paths using regular expression
-#file_paths = glob.glob(os.path.join(root_dir, 'tbd_*_scat_meta_rnn_0.pt'))
-#file_names = [os.path.basename(file_path) for file_path in file_paths]
-
-plt.style.use('dark_background')
+epoch_len = 200 # only consider files that went through 2000 epochs
+#plt.style.use('dark_background')
 fontsize_label = 14
 fontsize_title = 18
 fig_w = 12
 fig_h = 8
 
+file_names = []
+for file_name_regex in file_name_regexs:
+    file_names += cu.match_filename(file_name_regex, root_dir)
+file_paths = [os.path.join(root_dir, file_name) for file_name in file_names]
+
+file_paths_tmp = []
 plt.close('all')
-n_files = len(file_names)
+for file_path in file_paths: 
+    meta = torch.load(file_path) 
+    if len(meta['epoch']) == epoch_len:
+        file_paths_tmp.append(file_path)
 
-figs = []; axs = []
-meta_0 = torch.load(file_paths[0])
-n_labels = len(meta_0['label_names'])
+file_paths = file_paths_tmp[idx_file_start:idx_file_end]
+n_files = len(file_paths)
 
-for idx_file in range(n_files):
-    file_path = file_paths[idx_file]
-    file_name = file_names[idx_file]
+figs = []; axs = [];
+for file_path in file_paths:
+    file_name = os.path.basename(file_path)
     meta = torch.load(file_path)
 
-    fig, ax = plt.subplots(1, n_labels, num=idx_file)
-    fig.set_size_inches(fig_w * n_labels, fig_h)
-    fig.suptitle(file_name)
+    fig, ax = plt.subplots()
+    fig.set_size_inches(fig_w, fig_h)
+    #fig.suptitle(file_name)
 
-    for idx_label in range(n_labels):
-        loss = meta['loss'][idx_label]
-        epoch = meta['epoch'][idx_label]
+    loss = meta['loss']
+    epoch = meta['epoch']
 
-        # ignore the first iteration's loss to better visualize the trend
-        ax[idx_label].plot(epoch[1:], loss['train'][1:], label='train')
-        ax[idx_label].plot(epoch[1:], loss['val'][1:], label='validation')
-        ax[idx_label].set_title(meta['label_names'][idx_label].replace('_', ' '), fontsize=fontsize_title)
-        ax[idx_label].set_xlabel('Epochs', fontsize=fontsize_label)
-        ax[idx_label].set_ylabel(meta['criterion'], fontsize=fontsize_label)
-        ax[idx_label].legend()
+    # ignore the first iteration's loss to better visualize the trend
+    ax.plot(epoch[1:], loss['train'][1:], label='train')
+    ax.plot(epoch[1:], loss['val'][1:], label='validation')
+    ax.set_title("{}, elapsed:{:.2f}, loss_train_min:{:.5f}, loss_val_min:{:.5f}".
+        format(meta['label_names'], meta['elapsed'][-1],
+        min(loss['train'][1:]), min(loss['val'][1:])), fontsize=fontsize_title)
+    ax.set_xlabel('Epochs', fontsize=fontsize_label)
+    ax.set_ylabel(meta['criterion'], fontsize=fontsize_label)
+    ax.legend()
     
     figs.append(fig)
     axs.append(ax)
 
-
-ylim_low = []
-ylim_high = []
-
 # match the axis limits
-for idx_label in range(n_labels):
-    ylim_low.append(min([ax[idx_label].get_ylim()[0] for ax in axs]))
-    ylim_high.append(max([ax[idx_label].get_ylim()[1] for ax in axs]))
+ylim_low = min([ax.get_ylim()[0] for ax in axs])
+ylim_high = max([ax.get_ylim()[1] for ax in axs])
 
 for idx_file in range(n_files):
-    for idx_label in range(n_labels):
-        axs[idx_file][idx_label].set_ylim(ylim_low[idx_label], ylim_high[idx_label])
-        #axs[idx_file][idx_label].set_ylim(0, 40)
-        figs[idx_file].suptitle(file_names[idx_file])
+    file_path = file_paths[idx_file]
+    file_name = os.path.basename(file_path)
+    axs[idx_file].set_ylim(ylim_low, ylim_high)
+    figs[idx_file].suptitle(file_name)
 
 plt.show()
-
-
-
-"""
-files = glob.glob('tbd_0_scat_*_meta_rnn_*_diff_coef_ratios.pt') 
-for file in files: 
-    meta = torch.load(file) 
-    loss_val = meta['loss']['val'] 
-    if len(loss_val) == 200: 
-        print("min val loss:{:.5f}, hidden_size:{}, n_layers:{}".format(min(loss_val), meta['hidden_size'], meta['n_layers']))
-"""
