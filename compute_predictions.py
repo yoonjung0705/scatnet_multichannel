@@ -18,8 +18,10 @@ import common_utils as cu
 import scat_utils as scu
 import net_utils as nu
 
-#root_dir = './data/simulations/'
-root_dir = './data/experiments/trap_bead_active_bath'
+root_dir = './data/simulations/data_len_256_gamma_1_1p5/pos'
+#root_dir = './data/experiments/bead/2020_0228/'
+#root_dir = './data/experiments/bead/2020_0305/'
+#root_dir = './data/experiments/irfp'
 root_dir_results = os.path.join(root_dir, 'results')
 
 # provide file names (TEST data!) and paths manually
