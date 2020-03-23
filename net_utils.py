@@ -628,7 +628,7 @@ def _train_rnn_noncluster(dataset, index, hidden_size, n_layers, bidirectional, 
 
 def train_rnn(file_name, hidden_size, n_layers=1, bidirectional=False, classifier=False, idx_label=None, n_epochs_max=2000,
         train_ratio=0.8, batch_size=128, n_workers=4, root_dir=ROOT_DIR, lr=0.001, betas=(0.9, 0.999),
-        opt_level="O0", seed=42, log_interval=10):
+        opt_level="O0", seed=42, log_interval=10, save_model=False):
     '''
     trains the recurrent neural network given a file that contains data.
     this data can be either scat transformed or pure simulated data
@@ -652,7 +652,8 @@ def train_rnn(file_name, hidden_size, n_layers=1, bidirectional=False, classifie
     betas - tuple of floats indicating betas arguments in Adam optimizer
     opt_level - optimization level
     seed - random seed
-    log_interval - how many batches to wait before logging training status
+    log_interval - how many epochs to wait before logging training status
+    save_model - boolean indicating whether to save the model for every log_interval epochs
 
     outputs
     -------
@@ -711,10 +712,11 @@ def train_rnn(file_name, hidden_size, n_layers=1, bidirectional=False, classifie
         'hidden_size':hidden_size, 'n_layers':n_layers, 'bidirectional':bidirectional,
         'classifier':classifier, 'n_epochs_max':n_epochs_max, 'train_ratio':train_ratio,
         'batch_size':batch_size, 'n_workers':n_workers, 'index':index,
-        'epoch':[], 'weights':None, 'elapsed':[], 'loss':{'train':[], 'val':[]},
+        'epoch':[], 'elapsed':[], 'loss':{'train':[], 'val':[]},
         'criterion':'cross_entropy_mean' if classifier else 'rmse',
         'labels':labels if classifier else label,
         'label_names':label_names if classifier else label_name}
+    if save_model: meta.update({'model':[]})
     if classifier:
         if 'labels_lut' in samples.keys(): meta.update({'labels_lut':samples['labels_lut']})
         _init_meta(**meta) # done for all processes to ensure data gets loaded after initializing file
@@ -726,7 +728,7 @@ def train_rnn(file_name, hidden_size, n_layers=1, bidirectional=False, classifie
             bidirectional=bidirectional, classifier=classifier, n_epochs_max=n_epochs_max,
             batch_size=batch_size, n_workers=n_workers,
             file_name=file_name_meta, root_dir=root_dir, lr=lr, betas=betas,
-            opt_level=opt_level, seed=seed, log_interval=log_interval)
+            opt_level=opt_level, seed=seed, log_interval=log_interval, save_model=save_model)
     else:
         _init_meta(**meta) # done for all processes to ensure data gets loaded after initializing file
         
@@ -737,11 +739,11 @@ def train_rnn(file_name, hidden_size, n_layers=1, bidirectional=False, classifie
             bidirectional=bidirectional, classifier=classifier, n_epochs_max=n_epochs_max,
             batch_size=batch_size, n_workers=n_workers,
             file_name=file_name_meta, root_dir=root_dir, lr=lr, betas=betas,
-            opt_level=opt_level, seed=seed, log_interval=log_interval)
+            opt_level=opt_level, seed=seed, log_interval=log_interval, save_model=save_model)
 
 def _train_rnn(dataset, index, hidden_size, n_layers, bidirectional, classifier, n_epochs_max, batch_size,
         n_workers, file_name, root_dir=ROOT_DIR, lr=0.001, betas=(0.9, 0.999), 
-        opt_level="O0", seed=42, log_interval=10):
+        opt_level="O0", seed=42, log_interval=10, save_model=False):
     '''constructs and trains neural networks given the dataset instance and network structure
 
     inputs
@@ -762,7 +764,8 @@ def _train_rnn(dataset, index, hidden_size, n_layers, bidirectional, classifier,
     betas - tuple of floats indicating betas arguments in Adam optimizer
     opt_level - optimization level
     seed - random seed
-    log_interval - how many batches to wait before logging training status
+    log_interval - how many epochs to wait before logging training status
+    save_model - boolean indicating whether to save the model
 
     outputs
     -------
@@ -789,6 +792,8 @@ def _train_rnn(dataset, index, hidden_size, n_layers, bidirectional, classifier,
     input_size = dataset[0]['data'].shape[-2]
     meta = torch.load(file_path)
     output_size = len(meta['labels_lut']) if classifier else 1
+    meta['output_size'] = output_size
+    torch.save(meta, file_path)
     rnn = RNN(input_size, hidden_size=hidden_size, output_size=output_size, n_layers=n_layers,
         bidirectional=bidirectional).cuda()
     optimizer = optim.Adam(rnn.parameters(), lr=lr, betas=betas)
@@ -842,13 +847,13 @@ def _train_rnn(dataset, index, hidden_size, n_layers, bidirectional, classifier,
             if classifier:
                 meta['epoch'].append(epoch)
                 meta['elapsed'].append(elapsed)
-                #meta['weights'] = rnn.state_dict()
+                if save_model: meta['model'].append(rnn.state_dict())
                 for phase in ['train', 'val']:
                     meta['loss'][phase].append(loss_metric[phase])
             else:
                 meta['epoch'].append(epoch)
                 meta['elapsed'].append(elapsed)
-                #meta['weights'] = rnn.state_dict()
+                if save_model: meta['model'].append(rnn.state_dict())
                 for phase in ['train', 'val']:
                     meta['loss'][phase].append(loss_metric[phase])
             torch.save(meta, file_path)

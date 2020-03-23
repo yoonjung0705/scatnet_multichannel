@@ -85,6 +85,7 @@ BETAS="0.9 0.999"
 OPT_LEVEL="O2"
 SEED=42
 LOG_INTERVAL=10
+SAVE_MODEL=""
 
 printf "$(date)\t${README}\n" >> params.log
 
@@ -112,7 +113,8 @@ do
                 PARAMS+="${BETAS},"
                 PARAMS+="${OPT_LEVEL},"
                 PARAMS+="${SEED},"
-                PARAMS+="${LOG_INTERVAL}"
+                PARAMS+="${LOG_INTERVAL},"
+                PARAMS+="${SAVE_MODEL}"
                 echo "${PARAMS}" >> params.csv
             done
         done
