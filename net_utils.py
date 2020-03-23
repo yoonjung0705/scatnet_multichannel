@@ -792,6 +792,8 @@ def _train_rnn(dataset, index, hidden_size, n_layers, bidirectional, classifier,
     input_size = dataset[0]['data'].shape[-2]
     meta = torch.load(file_path)
     output_size = len(meta['labels_lut']) if classifier else 1
+    meta['output_size'] = output_size
+    torch.save(meta, file_path)
     rnn = RNN(input_size, hidden_size=hidden_size, output_size=output_size, n_layers=n_layers,
         bidirectional=bidirectional).cuda()
     optimizer = optim.Adam(rnn.parameters(), lr=lr, betas=betas)
