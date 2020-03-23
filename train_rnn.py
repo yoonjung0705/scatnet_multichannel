@@ -1,34 +1,18 @@
 '''standard imports'''
-import os
-from itertools import product
 import numpy as np
-import cv2
 import argparse
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
-#from torch.autograd import Variable
-from torch.utils.data import Dataset, DataLoader, Subset
-from torch.utils.data.sampler import SubsetRandomSampler
-from torch.utils.data.distributed import DistributedSampler
-import horovod.torch as hvd
-import time
-from apex import amp
 
 '''custom libraries'''
-import common_utils as cu
-import scat_utils as scu
 import net_utils as nu
 
 #regression training example:
 #python train_rnn.py --file-name tbd_0.pt --root-dir /nobackup/users/yoonjung/repos/scatnet_multichannel/data/simulations/ \
-#    --hidden-size 200 --n-layers 2 --bidirectional --idx-label 0 --epochs 2000 --train-ratio 0.8 --batch-size 128 --n-workers 4 \
+#    --hidden-size 200 --n-layers 2 --bidirectional --idx-label 0 --epochs 2000 --train-ratio 0.8 --batch-size 128 --n-workers 0 \
 #    --lr 0.001 --betas 0.9 0.999 --opt-level "O2" --seed 42 --log-interval 10 --save-model
 
 #classifier training example
 #python train_rnn.py --file-name tbd_1.pt --root-dir /nobackup/users/yoonjung/repos/scatnet_multichannel/data/simulations/ \
-#    --hidden-size 200 --n-layers 2 --bidirectional --classifier --epochs 2000 --train-ratio 0.8 --batch-size 128 --n-workers 4 \
+#    --hidden-size 200 --n-layers 2 --bidirectional --classifier --epochs 2000 --train-ratio 0.8 --batch-size 128 --n-workers 0 \
 #    --lr 0.001 --betas 0.9 0.999 --opt-level "O2" --seed 42 --log-interval 10 --save-model
 
 # most of the arguments can be skipped to use their default values. 
@@ -76,8 +60,9 @@ args = parser.parse_args()
 if args.classifier: args.idx_label = None
 args.betas = tuple(np.array(args.betas, dtype=float))
 
-nu.train_rnn(file_name=args.file_name, hidden_size=args.hidden_size, n_layers=args.n_layers,
-    bidirectional=args.bidirectional, classifier=args.classifier, idx_label=args.idx_label,
-    n_epochs_max=args.epochs, train_ratio=args.train_ratio, batch_size=args.batch_size,
-    n_workers=args.n_workers, root_dir=args.root_dir, lr=args.lr, betas=args.betas,
-    opt_level=args.opt_level, seed=args.seed, log_interval=args.log_interval, save_model=args.save_model)
+if __name__ == '__main__':
+    nu.train_rnn(file_name=args.file_name, hidden_size=args.hidden_size, n_layers=args.n_layers,
+        bidirectional=args.bidirectional, classifier=args.classifier, idx_label=args.idx_label,
+        n_epochs_max=args.epochs, train_ratio=args.train_ratio, batch_size=args.batch_size,
+        n_workers=args.n_workers, root_dir=args.root_dir, lr=args.lr, betas=args.betas,
+        opt_level=args.opt_level, seed=args.seed, log_interval=args.log_interval, save_model=args.save_model)

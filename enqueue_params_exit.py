@@ -33,7 +33,7 @@ file_count = 0
 #epochs = 2000
 #train_ratio = 0.8
 batch_size_exit = 32
-#n_workers = 4
+n_workers_exit = 0
 lr = 0.001
 betas = "0.9 0.999"
 opt_level = "O2"
@@ -65,7 +65,7 @@ for file_path in file_paths:
                 meta['n_epochs_max'],
                 meta['train_ratio'],
                 batch_size_exit,
-                meta['n_workers'],
+                n_workers_exit,
                 lr,
                 betas,
                 opt_level,

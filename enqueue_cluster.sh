@@ -18,10 +18,11 @@ SCATNET_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel"
 cd ${SCATNET_DIR}
 
 # job count
-N_JOBS_MAX_NORMAL=4 # max number of jobs allowed to run simutaneously for new jobs. do not go beyond 8
-N_JOBS_MAX_EXIT=3 # max number of jobs allowed to run simutaneously for previously failed jobs
+N_JOBS_MAX_NORMAL=6 # 4-8. max number of jobs allowed to run simutaneously for new jobs. do not go beyond 8
+N_JOBS_MAX_EXIT=4 # 4-8. max number of jobs allowed to run simutaneously for previously failed jobs
 SUBMIT_COUNT_MAX=4 # max number of times a job can be submitted to the cluster
 BATCH_SIZE_EXIT=32 # use a smaller batch size for previously failed jobs
+N_WORKERS_EXIT=0 # set num_workers to 0 to reduce memory usage. also, ran out of input error might be due to this being larger than 0
 FILE_NAME_PARAMS="params.csv"
 FILE_NAME_JOB="rnn.lsf"
 FILE_NAME_JOB_TEMPLATE="rnn_template.lsf"
@@ -167,7 +168,7 @@ cat ${FILE_NAME_PARAMS} | while [[ "${N_JOBS_SUBMITTED}" -lt "${N_JOBS_MAX_EXIT}
                 -e "s/<EPOCHS>/${EPOCHS}/g" \
                 -e "s/<TRAIN_RATIO>/${TRAIN_RATIO}/g" \
                 -e "s/<BATCH_SIZE>/${BATCH_SIZE_EXIT}/g" \
-                -e "s/<N_WORKERS>/${N_WORKERS}/g" \
+                -e "s/<N_WORKERS>/${N_WORKERS_EXIT}/g" \
                 -e "s/<LR>/${LR}/g" \
                 -e "s/<BETAS>/${BETAS}/g" \
                 -e "s/<OPT_LEVEL>/${OPT_LEVEL}/g" \
