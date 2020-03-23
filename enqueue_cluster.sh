@@ -81,7 +81,8 @@ cat ${FILE_NAME_PARAMS} | while [[ "${N_JOBS_SUBMITTED}" -lt "${N_JOBS_MAX_NORMA
         BETAS \
         OPT_LEVEL \
         SEED \
-        LOG_INTERVAL
+        LOG_INTERVAL \
+        SAVE_MODEL
     do
         LINE_COUNT=`expr ${LINE_COUNT} + 1`
         if [[ $SUBMIT_COUNT -eq 0 ]]
@@ -104,6 +105,7 @@ cat ${FILE_NAME_PARAMS} | while [[ "${N_JOBS_SUBMITTED}" -lt "${N_JOBS_MAX_NORMA
                 -e "s/<OPT_LEVEL>/${OPT_LEVEL}/g" \
                 -e "s/<SEED>/${SEED}/g" \
                 -e "s/<LOG_INTERVAL>/${LOG_INTERVAL}/g" \
+                -e "s/<SAVE_MODEL>/${SAVE_MODEL}/g" \
                 > ${FILE_NAME_JOB}
 
             # submit the job and get new job id
@@ -146,7 +148,8 @@ cat ${FILE_NAME_PARAMS} | while [[ "${N_JOBS_SUBMITTED}" -lt "${N_JOBS_MAX_EXIT}
         BETAS \
         OPT_LEVEL \
         SEED \
-        LOG_INTERVAL
+        LOG_INTERVAL \
+        SAVE_MODEL
     do
         LINE_COUNT=`expr ${LINE_COUNT} + 1`
 
@@ -170,6 +173,7 @@ cat ${FILE_NAME_PARAMS} | while [[ "${N_JOBS_SUBMITTED}" -lt "${N_JOBS_MAX_EXIT}
                 -e "s/<OPT_LEVEL>/${OPT_LEVEL}/g" \
                 -e "s/<SEED>/${SEED}/g" \
                 -e "s/<LOG_INTERVAL>/${LOG_INTERVAL}/g" \
+                -e "s/<SAVE_MODEL>/${SAVE_MODEL}/g" \
                 > ${FILE_NAME_JOB}
 
             # submit the job and get new job id

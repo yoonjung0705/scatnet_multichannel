@@ -39,6 +39,7 @@ betas = "0.9 0.999"
 opt_level = "O2"
 seed = 42
 log_interval = 10
+#save_model = False
 
 file_paths = glob.glob(os.path.join(root_dir, file_name_regex))
 file_paths_exit = []
@@ -50,9 +51,10 @@ for file_path in file_paths:
     meta = torch.load(file_path)
     bidirectional = "--bidirectional" if meta['bidirectional'] else ""
     classifier = "--classifier" if meta['classifier'] else ""
+    save_model = "--save-model" if "model" in meta.keys() else ""
     idx_label = 0 if label_names[0] in file_name else 1
     if len(meta['epoch']) < epochs_len:
-        row = "\n,1,{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11},{12},{13},{14},{15}".format(
+        row = "\n,1,{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11},{12},{13},{14},{15},{16}".format(
                 file_name_data,
                 root_dir,
                 meta['hidden_size'],
@@ -68,7 +70,8 @@ for file_path in file_paths:
                 betas,
                 opt_level,
                 seed,
-                log_interval)
+                log_interval,
+                save_model)
 
         with open(file_name_params, 'a') as f:
             f.write(row)
@@ -77,8 +80,3 @@ for file_path in file_paths:
         os.remove(file_path) # remove file since we submitted the hyperparameters to the parameters queue
 
 print("{} training jobs appended to params.csv".format(file_count))
-
-        
-        
-
-

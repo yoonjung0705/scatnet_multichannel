@@ -66,7 +66,7 @@ ddlrun --mpiarg "-x EGO_TOP" "-x HOROVOD_FUSION_THRESHOLD=16777216" -v \
   --hidden-size <HIDDEN_SIZE> --n-layers <N_LAYERS> <BIDIRECTIONAL> <CLASSIFIER> \
   --idx-label <IDX_LABEL> --epochs <EPOCHS> --train-ratio <TRAIN_RATIO> \
   --batch-size <BATCH_SIZE> --n-workers <N_WORKERS> \
-  --lr <LR> --betas <BETAS> --opt-level <OPT_LEVEL> --seed <SEED> --log-interval <LOG_INTERVAL>
+  --lr <LR> --betas <BETAS> --opt-level <OPT_LEVEL> --seed <SEED> --log-interval <LOG_INTERVAL> <SAVE_MODEL>
 
 #
 # EoF
