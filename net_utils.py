@@ -716,11 +716,11 @@ def train_rnn(file_name, hidden_size, n_layers=1, bidirectional=False, classifie
         'criterion':'cross_entropy_mean' if classifier else 'rmse',
         'labels':labels if classifier else label,
         'label_names':label_names if classifier else label_name}
-    if save_model: meta.update({'model':[]})
+    if save_model: meta['model'] = []
     if classifier:
-        if 'labels_lut' in samples.keys(): meta.update({'labels_lut':samples['labels_lut']})
+        meta['labels_lut'] = samples['labels_lut']
+        meta['output_size'] = len(meta['labels_lut'])
         _init_meta(**meta) # done for all processes to ensure data gets loaded after initializing file
-
         dataset = TimeSeriesDataset(data, labels, transform=ToTensor())
         # train the neural network for classification
         if root_process: print("Training classifier for {}:".format(', '.join(samples['label_names'])))
@@ -730,8 +730,8 @@ def train_rnn(file_name, hidden_size, n_layers=1, bidirectional=False, classifie
             file_name=file_name_meta, root_dir=root_dir, lr=lr, betas=betas,
             opt_level=opt_level, seed=seed, log_interval=log_interval, save_model=save_model)
     else:
+        meta['output_size'] = 1
         _init_meta(**meta) # done for all processes to ensure data gets loaded after initializing file
-        
         dataset = TimeSeriesDataset(data, label, transform=ToTensor())
         # train the rnn for the given idx_label
         if root_process: print("Training regressor for {}:".format(label_name))
@@ -775,7 +775,7 @@ def _train_rnn(dataset, index, hidden_size, n_layers, bidirectional, classifier,
     torch.manual_seed(seed) # FIXME: necessary here?
     #torch.cuda.set_device(hvd.local_rank()) # pin GPU to local rank
     # limit # of CPU threads to be used per worker : FIXME: why do this?
-    torch.set_num_threads(1)
+    torch.set_num_threads(4)
     file_name, _ = os.path.splitext(file_name)
     file_path = os.path.join(root_dir, file_name + '.pt')
     if hvd.rank() == 0:
@@ -791,9 +791,7 @@ def _train_rnn(dataset, index, hidden_size, n_layers, bidirectional, classifier,
 
     input_size = dataset[0]['data'].shape[-2]
     meta = torch.load(file_path)
-    output_size = len(meta['labels_lut']) if classifier else 1
-    meta['output_size'] = output_size
-    torch.save(meta, file_path)
+    output_size = meta['output_size']
     rnn = RNN(input_size, hidden_size=hidden_size, output_size=output_size, n_layers=n_layers,
         bidirectional=bidirectional).cuda()
     optimizer = optim.Adam(rnn.parameters(), lr=lr, betas=betas)
