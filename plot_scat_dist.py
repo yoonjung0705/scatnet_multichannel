@@ -12,14 +12,15 @@ import scat_utils as scu
 import sim_utils as siu
 
 plt.style.use('dark_background')
+plt.close('all')
 fontsize_title = 18
 fontsize_label = 14
-data_len = 2**12
+data_len = 2**10 # 2**12
 avg_len = 2**8
 disp_len = 2**7
 dt = 0.001
-n_data = 10
-eps = 0.02
+n_data = 9
+eps = 0.03
 
 padded_len = np.ceil(data_len * (1 + eps * n_data))
 t = np.arange(0, data_len) * dt
@@ -35,7 +36,16 @@ data = np.stack(data, axis=0) # shaped (n_data, data_len)
 
 fig1, ax1 = plt.subplots()
 
-ax1.plot(data[:, :disp_len].swapaxes(0,1))
+color_start = np.array([141,211,199]) / 255
+color_stepsize = np.array([7,7,7]) / 255
+
+cmap = plt.get_cmap('gnuplot')
+#colors = [list(color_start + color_stepsize * i) for i in range(n_data)]
+colors = [cmap(i) for i in np.linspace(0.7,1,n_data)]
+#ax1.plot(data[:, :disp_len].swapaxes(0,1))
+#ax1.plot(data[:, :disp_len].swapaxes(0,1), color=colors)
+for idx in range(n_data):
+    ax1.plot(data[idx, :disp_len], color=colors[idx])
 ax1.set_title('Dilated time series', fontsize=fontsize_title)
 ax1.set_xlabel('Time', fontsize=fontsize_label)
 ax1.set_ylabel('Position', fontsize=fontsize_label)
