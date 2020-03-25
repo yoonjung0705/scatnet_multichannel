@@ -18,25 +18,33 @@ import common_utils as cu
 import scat_utils as scu
 import net_utils as nu
 
-idx_model = 5 # max 39
-#root_dir = './data/simulations/data_len_256_gamma_1_1p5/pos'
+min_loss_epochs = [2000,1800,2000,1550] # max 39 for log every 50. max 199 for log every 10.
+root_dir = './data/simulations/data_len_256_gamma_1_1p5/model_candidates'
 #root_dir = './data/experiments/bead/2020_0228/'
 #root_dir = './data/experiments/bead/2020_0305/'
-root_dir = './data/experiments/irfp'
+#root_dir = './data/experiments/irfp'
 
 # file name of test data
 # TWO BEADS
-#file_name_test = 'tbd_0_test.pt'
+file_names_test = ['tbd_0_test.pt',
+        'tbd_0_test_scat_1.pt',
+        'tbd_0_test.pt',
+        'tbd_0_test_scat_1.pt']
 #file_name_test = 'tbd_0_test_scat_0.pt'
 #file_name_test = 'tbd_0_test_scat_1.pt'
 
 # IRFP
-file_name_test = 'data_test.pt'
+#file_name_test = 'data_test.pt'
 
 
 # LIST of file names of trained models
 # TWO BEADS
-#file_names_meta = ['tbd_4_meta_rnn_16_k_ratios.pt']
+file_names_meta = ['tbd_0_meta_rnn_21_diff_coef_ratios.pt',
+        'tbd_0_scat_1_meta_rnn_15_diff_coef_ratios.pt',
+        'tbd_0_meta_rnn_22_k_ratios.pt',
+        'tbd_0_scat_1_meta_rnn_9_k_ratios.pt']
+
+
 #file_names_meta = ['tbd_9_meta_rnn_9_diff_coef_ratios.pt']
 #file_names_meta = ['tbd_9_scat_0_meta_rnn_9_k_ratios.pt']
 #file_names_meta = ['tbd_9_scat_0_meta_rnn_9_diff_coef_ratios.pt']
@@ -44,7 +52,7 @@ file_name_test = 'data_test.pt'
 #file_names_meta = ['tbd_9_scat_1_meta_rnn_9_diff_coef_ratios.pt']
 
 # IRFP
-file_names_meta = ['data_meta_rnn_17.pt']
+#file_names_meta = ['data_meta_rnn_17.pt']
 # OR, provide file names and paths using regular expression
 #file_paths_meta = glob.glob(os.path.join(root_dir, 'tbd_0_scat_meta_rnn_*.pt'))
 #file_names_meta = [os.path.basename(file_path) for file_path in file_paths]
@@ -52,19 +60,24 @@ file_names_meta = ['data_meta_rnn_17.pt']
 
 batch_size = 10 # batch size when performing forward propagation on test data using trained weights
 
-file_path_test = os.path.join(root_dir, file_name_test)
+file_paths_test = [os.path.join(root_dir, file_name_test) for file_name_test in file_names_test]
 file_paths_meta = [os.path.join(root_dir, file_name_meta) for file_name_meta in file_names_meta]
 n_files = len(file_paths_meta)
 
 for idx_file in range(n_files):
+
     file_path_meta = file_paths_meta[idx_file]
     file_name_meta = file_names_meta[idx_file]
+    file_path_test = file_paths_test[idx_file]
 
     samples = torch.load(file_path_test)
     data, labels, label_names = samples['data'], samples['labels'], samples['label_names']
     n_data_total = len(data) 
 
     meta = torch.load(file_path_meta)
+    # compute the nearest epoch number
+    min_loss_epoch = min_loss_epochs[idx_file]
+    idx_min_loss_epoch = np.argmin(np.abs((np.array(meta['epoch']) - min_loss_epoch)))
     classifier = meta['classifier']
     if not meta['classifier']:
         idx_label = samples['label_names'].index(meta['label_names'])
@@ -87,7 +100,7 @@ for idx_file in range(n_files):
 
     rnn = nu.RNN(input_size=meta['input_size'], hidden_size=meta['hidden_size'],
         output_size=meta['output_size'], n_layers=meta['n_layers'], bidirectional=meta['bidirectional']).cuda()
-    rnn.load_state_dict(meta['model'][idx_model])
+    rnn.load_state_dict(meta['model'][idx_min_loss_epoch])
 
     #criterion = nn.CrossEntropyLoss(reduction='sum') if classifier else nn.MSELoss(reduction='sum')
     #metric = 'cross_entropy_mean' if classifier else 'rmse'
@@ -96,7 +109,6 @@ for idx_file in range(n_files):
     loss_sum = 0.
     outputs = []
     for batch in dataloader:
-        print("processing a batch")
         # permute s.t. shape is (data_len, n_data_total, n_channels * (n_scat_nodes))
         batch_data = batch['data'].permute([2, 0, 1]).cuda()
         #batch_labels = batch['labels']
@@ -115,6 +127,6 @@ for idx_file in range(n_files):
         print("file_name:{}, accuracy:{}".format(file_name_meta, accuracy))
     else:
         rmse = np.sqrt(sum((outputs - labels)**2) / n_data_total)
-        print("rmse:{}".format(rmse))
+        print("file_name:{}, rmse:{}".format(file_name_meta, rmse))
 
 
