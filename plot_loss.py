@@ -13,35 +13,33 @@ fontsize_title = 18
 fig_w = 12
 fig_h = 8
 
-root_dir = './data/simulations/data_len_256_gamma_1_1p5/model_candidates'
+#root_dir = './data/simulations/data_len_256_gamma_1_1p5/model_candidates'
+root_dir = './data/experiments/bead/2020_0305/data_len_256_poly/pos/models'
 save_fig = True
 """
 # file_name_regexs elements must be enclosed with ()
 file_name_regexs = ['(tbd_0_scat_[0-9]+_meta_rnn_[0-9]+_diff_coef_ratios.pt)',
     '(tbd_0_meta_rnn_[0-9]+_diff_coef_ratios.pt)'] 
-
-idx_file_start = 0 # None or 0 to start from beginning
-idx_file_end = 5 # None for going to end
-
-epoch_len = 200 # only consider files that went through 2000 epochs
-
 file_names = []
 for file_name_regex in file_name_regexs:
     file_names += cu.match_filename(file_name_regex, root_dir)
 file_paths = [os.path.join(root_dir, file_name) for file_name in file_names]
 
+"""
+
+epoch_len_thresh = 35 # only consider files that have at least this number of logs
+
+#file_paths = [os.path.join(root_dir, file_name) for file_name in file_names]
+file_paths = glob.glob(os.path.join(root_dir, '*.pt'))
+
 file_paths_tmp = []
 plt.close('all')
 for file_path in file_paths: 
     meta = torch.load(file_path) 
-    if len(meta['epoch']) == epoch_len:
+    if len(meta['epoch']) > epoch_len_thresh:
         file_paths_tmp.append(file_path)
+file_paths = file_paths_tmp
 
-file_paths = file_paths_tmp[idx_file_start:idx_file_end]
-"""
-
-#file_paths = [os.path.join(root_dir, file_name) for file_name in file_names]
-file_paths = glob.glob(os.path.join(root_dir, '*.pt'))
 n_files = len(file_paths)
 
 figs = []; axs = [];
