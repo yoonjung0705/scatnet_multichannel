@@ -50,7 +50,7 @@ file_names_meta = ['data_meta_rnn_17.pt']
 #file_names_meta = [os.path.basename(file_path) for file_path in file_paths]
 #file_names = ['tbd_1_scat.pt'] * len(file_paths_meta)
 
-batch_size = 100 # batch size when performing forward propagation on test data using trained weights
+batch_size = 10 # batch size when performing forward propagation on test data using trained weights
 
 file_path_test = os.path.join(root_dir, file_name_test)
 file_paths_meta = [os.path.join(root_dir, file_name_meta) for file_name_meta in file_names_meta]
@@ -86,7 +86,7 @@ for idx_file in range(n_files):
         batch_size=batch_size, collate_fn=nu.collate_fn)
 
     rnn = nu.RNN(input_size=meta['input_size'], hidden_size=meta['hidden_size'],
-        output_size=meta['output_size'], n_layers=meta['n_layers'], bidirectional=meta['bidirectional'])
+        output_size=meta['output_size'], n_layers=meta['n_layers'], bidirectional=meta['bidirectional']).cuda()
     rnn.load_state_dict(meta['model'][idx_model])
 
     #criterion = nn.CrossEntropyLoss(reduction='sum') if classifier else nn.MSELoss(reduction='sum')
@@ -98,20 +98,21 @@ for idx_file in range(n_files):
     for batch in dataloader:
         print("processing a batch")
         # permute s.t. shape is (data_len, n_data_total, n_channels * (n_scat_nodes))
-        batch_data = batch['data'].permute([2, 0, 1])
+        batch_data = batch['data'].permute([2, 0, 1]).cuda()
         #batch_labels = batch['labels']
-        input_lens = batch['input_lens']
-        output = rnn(batch_data, input_lens=input_lens).detach().numpy()
+        input_lens = batch['input_lens'].type(torch.cuda.LongTensor)
+        output = rnn(batch_data, input_lens=input_lens)
         # for regression, output of rnn is shaped (batch_size, 1). drop dummy axis
         if classifier:
             output = output.argmax(axis=1)
         else:
             output = output[:, 0]
         outputs.append(output)
-    outputs = np.concatenate(outputs, axis=0)
+    outputs = torch.cat(outputs, dim=0)
+    outputs = outputs.detach().cpu().numpy()
     if classifier:
         accuracy = sum(outputs == np.array(labels)) / n_data_total
-        print("accuracy:{}".format(accuracy))
+        print("file_name:{}, accuracy:{}".format(file_name_meta, accuracy))
     else:
         rmse = np.sqrt(sum((outputs - labels)**2) / n_data_total)
         print("rmse:{}".format(rmse))
