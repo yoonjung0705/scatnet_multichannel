@@ -13,7 +13,7 @@
 #BSUB -e "log/rnn_e.%J"
 #BSUB -n 4
 #BSUB -R "span[ptile=4]"
-#BSUB -gpu "num=4"
+#BSUB -gpu "num=1"
 #BSUB -q "normal"
 
 

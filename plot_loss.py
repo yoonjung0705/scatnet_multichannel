@@ -14,7 +14,7 @@ fig_w = 12
 fig_h = 8
 
 root_dir = './data/simulations/data_len_256_gamma_1_1p5/pos/'
-
+save_fig = True
 """
 # file_name_regexs elements must be enclosed with ()
 file_name_regexs = ['(tbd_0_scat_[0-9]+_meta_rnn_[0-9]+_diff_coef_ratios.pt)',
@@ -104,4 +104,11 @@ for idx_file in range(n_files):
     axs[idx_file].set_ylim(ylim_low, ylim_high)
     figs[idx_file].suptitle(file_name)
 
+    if save_fig:
+        file_name_no_ext, _ = os.path.splitext(file_name)
+        file_name_fig = file_name_no_ext + '.png'
+        file_path_fig = os.path.join(root_dir, file_name_fig)
+        figs[idx_file].save_fig(file_path_fig)
+
 plt.show()
+
