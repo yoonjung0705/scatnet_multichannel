@@ -8,7 +8,7 @@ import re
 import common_utils as cu
 import scat_utils as scu
 
-root_dir = './data/simulations/data_len_256_gamma_1_1p5/disp/models'
+root_dir = './data/simulations/data_len_256_gamma_1_1p5/pos/models'
 #root_dir = './data/simulations/data_len_256_gamma_1_1p5/disp/'
 #root_dir = './data/experiments/irfp/models'
 #root_dir = './data/experiments/irfp/'
@@ -19,14 +19,14 @@ root_dir = './data/simulations/data_len_256_gamma_1_1p5/disp/models'
 # POS
 #file_name_regexs = ['(tbd_0_meta_rnn_[0-9]+_diff_coef_ratios.pt)', # raw model
 #    '(tbd_0_scat_[0-9]+_meta_rnn_[0-9]+_diff_coef_ratios.pt)'] # scat model
-#file_name_regexs = ['(tbd_4_meta_rnn_[0-9]+_k_ratios.pt)', # raw model
-#    '(tbd_4_scat_[0-9]+_meta_rnn_[0-9]+_k_ratios.pt)'] # scat model
+file_name_regexs = ['(tbd_0_meta_rnn_[0-9]+_k_ratios.pt)', # raw model
+    '(tbd_0_scat_[0-9]+_meta_rnn_[0-9]+_k_ratios.pt)'] # scat model
 
 # DISP
 #file_name_regexs = ['(tbd_4_disp_meta_rnn_[0-9]+_diff_coef_ratios.pt)', # raw model
 #    '(tbd_4_disp_scat_[0-9]+_meta_rnn_[0-9]+_diff_coef_ratios.pt)'] # scat model
-file_name_regexs = ['(tbd_2_disp_meta_rnn_[0-9]+_k_ratios.pt)', # raw model
-    '(tbd_2_disp_scat_[0-9]+_meta_rnn_[0-9]+_k_ratios.pt)'] # scat model
+#file_name_regexs = ['(tbd_2_disp_meta_rnn_[0-9]+_k_ratios.pt)', # raw model
+#    '(tbd_2_disp_scat_[0-9]+_meta_rnn_[0-9]+_k_ratios.pt)'] # scat model
 
 # IRFP
 #file_name_regexs = ['(data_meta_rnn_[0-9]+.pt)',
