@@ -13,7 +13,7 @@ fontsize_title = 18
 fig_w = 12
 fig_h = 8
 
-root_dir = './data/simulations/data_len_256_gamma_1_1p5/pos/'
+root_dir = './data/simulations/data_len_256_gamma_1_1p5/model_candidates'
 save_fig = True
 """
 # file_name_regexs elements must be enclosed with ()
@@ -39,34 +39,9 @@ for file_path in file_paths:
 
 file_paths = file_paths_tmp[idx_file_start:idx_file_end]
 """
-file_names = [
-'tbd_0_meta_rnn_12_diff_coef_ratios.pt',
-#'tbd_0_disp_meta_rnn_15_diff_coef_ratios.pt',
-#'tbd_0_disp_meta_rnn_14_diff_coef_ratios.pt',
-'tbd_0_scat_1_meta_rnn_4_diff_coef_ratios.pt',
-'tbd_0_scat_0_meta_rnn_6_diff_coef_ratios.pt',
-'tbd_0_scat_1_meta_rnn_7_diff_coef_ratios.pt',
-'tbd_1_meta_rnn_15_diff_coef_ratios.pt',
-'tbd_1_scat_0_meta_rnn_3_diff_coef_ratios.pt',
-'tbd_1_scat_1_meta_rnn_7_diff_coef_ratios.pt',
-'tbd_2_meta_rnn_7_diff_coef_ratios.pt',
-'tbd_2_meta_rnn_15_diff_coef_ratios.pt',
-'tbd_2_scat_1_meta_rnn_7_diff_coef_ratios.pt',
-'tbd_2_scat_1_meta_rnn_3_diff_coef_ratios.pt',
-'tbd_3_meta_rnn_12_diff_coef_ratios.pt',
-'tbd_3_meta_rnn_15_diff_coef_ratios.pt',
-#'tbd_3_disp_meta_rnn_14_diff_coef_ratios.pt',
-'tbd_3_scat_1_meta_rnn_4_diff_coef_ratios.pt',
-'tbd_3_scat_1_meta_rnn_7_diff_coef_ratios.pt',
-'tbd_4_meta_rnn_13_diff_coef_ratios.pt',
-'tbd_4_meta_rnn_8_diff_coef_ratios.pt',
-#'tbd_4_disp_meta_rnn_14_diff_coef_ratios.pt',
-#'tbd_4_disp_meta_rnn_15_diff_coef_ratios.pt',
-'tbd_4_scat_1_meta_rnn_7_diff_coef_ratios.pt',
-'tbd_4_scat_1_meta_rnn_4_diff_coef_ratios.pt'
-]
 
-file_paths = [os.path.join(root_dir, file_name) for file_name in file_names]
+#file_paths = [os.path.join(root_dir, file_name) for file_name in file_names]
+file_paths = glob.glob(os.path.join(root_dir, '*.pt'))
 n_files = len(file_paths)
 
 figs = []; axs = [];
@@ -108,7 +83,7 @@ for idx_file in range(n_files):
         file_name_no_ext, _ = os.path.splitext(file_name)
         file_name_fig = file_name_no_ext + '.png'
         file_path_fig = os.path.join(root_dir, file_name_fig)
-        figs[idx_file].save_fig(file_path_fig)
+        figs[idx_file].savefig(file_path_fig)
 
 plt.show()
 
