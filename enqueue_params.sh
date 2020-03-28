@@ -8,23 +8,29 @@
 # and adding new sets of hyperparameters to params.csv I term it enqueue for the parameters.
 #############################
 #FILE_NAMES=("tbd_0.pt" "tbd_1.pt" "tbd_2.pt" "tbd_3.pt" "tbd_4.pt")
+#FILE_NAMES=("tbd_0.pt" "tbd_1.pt" "tbd_2.pt" "tbd_3.pt")
 #FILE_NAMES=("tbd_5.pt" "tbd_6.pt" "tbd_7.pt" "tbd_8.pt")
+#FILE_NAMES=("tbd_0_scat_0.pt" "tbd_1_scat_0.pt" "tbd_2_scat_0.pt" "tbd_3_scat_0.pt")
 #FILE_NAMES=("tbd_0_scat_0.pt" "tbd_0_scat_1.pt" "tbd_1_scat_0.pt" "tbd_1_scat_1.pt" "tbd_2_scat_0.pt" "tbd_2_scat_1.pt" "tbd_3_scat_0.pt" "tbd_3_scat_1.pt" "tbd_4_scat_0.pt" "tbd_4_scat_1.pt")
-FILE_NAMES=("tbd_5_scat_0.pt" "tbd_5_scat_1.pt" "tbd_6_scat_0.pt" "tbd_6_scat_1.pt" "tbd_7_scat_0.pt" "tbd_7_scat_1.pt" "tbd_8_scat_0.pt" "tbd_8_scat_1.pt")
+#FILE_NAMES=("tbd_5_scat_0.pt" "tbd_5_scat_1.pt" "tbd_6_scat_0.pt" "tbd_6_scat_1.pt" "tbd_7_scat_0.pt" "tbd_7_scat_1.pt" "tbd_8_scat_0.pt" "tbd_8_scat_1.pt")
 
 #FILE_NAMES=("tbd_0_disp.pt" "tbd_1_disp.pt" "tbd_2_disp.pt" "tbd_3_disp.pt" "tbd_4_disp.pt")
 #FILE_NAMES=("tbd_0_disp_scat_0.pt" "tbd_0_disp_scat_1.pt" "tbd_1_disp_scat_0.pt" "tbd_1_disp_scat_1.pt" "tbd_2_disp_scat_0.pt" "tbd_2_disp_scat_1.pt" "tbd_3_disp_scat_0.pt" "tbd_3_disp_scat_1.pt" "tbd_4_disp_scat_0.pt" "tbd_4_disp_scat_1.pt")
 
 #FILE_NAMES=("data.pt")
 #FILE_NAMES=("data_scat_0.pt" "data_scat_1.pt")
+FILE_NAMES=("data_scat_0.pt")
 
 #FILE_NAMES=("data_disp.pt")
 #FILE_NAMES=("data_disp_scat_0.pt" "data_disp_scat_1.pt")
 #############################
-#README="training tbd_0,1,2,3,4.pt (data_len being 2**10=1024, gamma=1-1.5) for hidden size 100,150,200 and 3 layers parameters"
+#README="training tbd_0,1,2,3.pt (data_len being 2**7=128, gamma=1-3) for hidden size 20,50,100,150,200,250 and 3 layers parameters"
+#README="training tbd_0,1,2,3.pt (data_len being 2**7=128, gamma=1-3) for hidden size 20,50,100,150,200,250 and 3 layers parameters for new k_ratios and diff_coef_ratios data"
 #README="training tbd_5,6,7,8.pt (data_len being 2**8=256, gamma=1-1.5) for hidden size 50,100,150,200,250,300 and 3 layers parameters"
+#README="training scat transformed tbd_0,1,2,3.pt (data_len being 2**7=128, gamma=1-3) for hidden size 20,50,100,150,200 and 3 layers parameters"
+#README="training scat transformed tbd_0,1,2,3.pt (data_len being 2**7=128, gamma=1-3) for hidden size 20,50,100,150,200 and 3 layers parameters for new k_ratios and diff_coef_ratios data"
 #README="training scat transformed tbd_0,1,2,3,4.pt (data_len being 2**10=1024, gamma=1-1.5) for hidden size 20,50 and 2,3 layers parameters"
-README="training scat transformed tbd_5,6,7,8.pt (data_len being 2**8=256, gamma=1-1.5) for hidden size 20,50,100,150,200,250 and 3 layers parameters"
+#README="training scat transformed tbd_5,6,7,8.pt (data_len being 2**8=256, gamma=1-1.5) for hidden size 20,50,100,150,200,250 and 3 layers parameters"
 
 #README="training displacement of tbd_0,1,2,3,4.pt (data_len being 2**10=1024, gamma=1-1.5) for hidden size 100,150,200 and 3 layers parameters"
 #README="training scat transformed displacement of tbd_0,1,2,3,4.pt (data_len being 2**10=1024, gamma=1-1.5) for hidden size 20,50 and 2,3 layers parameters"
@@ -51,8 +57,8 @@ README="training scat transformed tbd_5,6,7,8.pt (data_len being 2**8=256, gamma
 #README="training scat transformed displacement of monodisperse 2020_0305 data.pt (data_len being 2**8=256) for hidden size 20,50 and 2,3 layers"
 
 
-#README="training polydisperse 2020_0305 data.pt (data_len being 2**9=512) for hidden size 150,200 and 3 layers"
-#README="training scat transformed polydisperse 2020_0305 data.pt (data_len being 2**9=512) for hidden size 20,50 and 2,3 layers"
+#README="training polydisperse 2020_0305 data.pt (data_len being 2**8=256) for hidden size 50,100,150,200,250 and 3 layers for 10000 epochs"
+README="training scat transformed polydisperse 2020_0305 data.pt (data_len being 2**8=256) for hidden size 20,50,100,150,200 and 3 layers"
 
 #README="training displacement of polydisperse 2020_0305 data.pt (data_len being 2**9=512) for hidden size 150,200 and 3 layers"
 #README="training scat transformed displacement of polydisperse 2020_0305 data.pt (data_len being 2**9=512) for hidden size 20,50 and 2,3 layers"
@@ -60,36 +66,38 @@ README="training scat transformed tbd_5,6,7,8.pt (data_len being 2**8=256, gamma
 #ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/simulations" # should be given in absolute path format
 #ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/simulations/data_len_2048_gamma_1/pos"
 #ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/simulations/data_len_2048_gamma_1_1p5/disp"
-ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/simulations/data_len_256_gamma_1_1p5/pos"
+#ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/simulations/data_len_256_gamma_1_1p5/pos"
 #ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/simulations/data_len_512_gamma_1_1p5/pos"
 #ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/simulations/data_len_1024_gamma_1_1p5/disp"
+#ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/simulations/data_len_128_gamma_1_3_k_1_7_t_4_10/"
 
 #ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/experiments/irfp"
 #ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/experiments/bead/2020_0228/data_len_512/disp"
-#ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/experiments/bead/2020_0305/data_len_512_poly/disp"
+ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/experiments/bead/2020_0305/data_len_256_poly_train_ratio_0p02/"
 #############################
-#HIDDEN_SIZES=(20 50)
-HIDDEN_SIZES=(20 50 100 150 200 250)
+#HIDDEN_SIZES=(150)
+HIDDEN_SIZES=(20 50 100 150 200)
 #N_LAYERSS=(2 3)
 N_LAYERSS=(3)
 BIDIRECTIONAL="--bidirectional"
 
-CLASSIFIER="" # regression
-#CLASSIFIER="--classifier" # classification
+#CLASSIFIER="" # regression
+CLASSIFIER="--classifier" # classification
 
-IDX_LABELS=(1 2) # (1 2) for regression. (0 1) for gamma_1
-#IDX_LABELS=(0) # set to (0) if classifier to avoid training the same classifier twice. Should be (1 2) for two beads 
+#IDX_LABELS=(1 2) # (1 2) for regression. (0 1) for gamma_1
+IDX_LABELS=(0) # set to (0) if classifier to avoid training the same classifier twice. Should be (1 2) for two beads 
 
-EPOCHS=2000
+EPOCHS=10000
 TRAIN_RATIO=0.8
-BATCH_SIZE=8 # 256
+BATCH_SIZE=128 # 256
 N_WORKERS=0
 LR=0.001
 BETAS="0.9 0.999"
 OPT_LEVEL="O2"
 SEED=42
-LOG_INTERVAL=10
+LOG_INTERVAL=50 # 10
 SAVE_MODEL=""
+#SAVE_MODEL="--save-model"
 
 printf "$(date)\t${README}\n" >> params.log
 

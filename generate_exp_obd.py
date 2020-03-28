@@ -20,19 +20,21 @@ file_name_data_test = 'data_test.pt'
 # common inputs
 data_len = 2**8 # timepoints is ~15000 per condition. don't set this larger than 2**9
 root_dir = ROOT_DIR
-# we take train_ratio amount of data which includes training and validation data
-# within this data, we take train_ratio amount and use it for training.
+# we take train_val_ratio amount of data which includes training and validation data
+# within this data, we take train_ratio amount which is set in net_utils.py's train_rnn() and use it for training.
+# in other words, we only determine the amount of train+val amount here. How it's divided between train, val is 
+# determined when you actually do the training.
 # the remaining data is for test
-train_ratio = 0.6
-val_ratio = 0.1
-test_ratio = 1 - (train_ratio + val_ratio)
+train_val_ratio = 0.05
+test_ratio = 1 - (train_val_ratio)
 file_paths_data = glob.glob(os.path.join(root_dir, 'ad57_*.txt')) # polydisperse
 #file_paths_data = glob.glob(os.path.join(root_dir, 'ad57_*_5um_*.txt')) # monodisperse
 samples = {'label_names':['cs', 'leds'], 'bacteria':'ad57', 'sample_rate_hz':50.}
 samples_test = {'label_names':['cs', 'leds'], 'bacteria':'ad57', 'sample_rate_hz':50.}
 
 # scat transform inputs
-avg_lens = [2**3, 2**5]
+#avg_lens = [2**3, 2**5]
+avg_lens = [2**5]
 n_filter_octaves = [(1, 1)]
 
 file_data_lens = []

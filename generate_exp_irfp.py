@@ -21,7 +21,7 @@ file_name_test = 'data_test.pt'
 # common inputs
 root_dir = ROOT_DIR
 # split data for training, validation, test
-train_ratio = 0.8 # used for both training and validation. rest is used for test
+train_val_ratio = 0.8 # used for both training and validation. rest is used for test
 file_paths_data = sorted(glob.glob(os.path.join(root_dir, '*.h5'))) # sort to make data consistent when seed given
 
 # scat transform inputs
@@ -60,7 +60,7 @@ for file_path_data in file_paths_data:
 n_tracks_total = len(track_lens)
 
 labels = np.concatenate(labels, axis=0)
-index = nu._train_test_split(n_tracks_total, train_ratio=train_ratio, seed=42)
+index = nu._train_test_split(n_tracks_total, train_ratio=train_val_ratio, seed=42)
 data_train = [data[idx] for idx in index['train']]
 data_test = [data[idx] for idx in index['test']]
 #data_test = data[index['test']]

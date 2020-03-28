@@ -13,8 +13,9 @@ fontsize_title = 18
 fig_w = 12
 fig_h = 8
 
-#root_dir = './data/simulations/data_len_256_gamma_1_1p5/model_candidates'
-root_dir = './data/experiments/bead/2020_0305/data_len_256_poly/pos/models'
+root_dir = './data/simulations/data_len_256_gamma_1_1p5/pos/models'
+#root_dir = './data/experiments/bead/2020_0305/data_len_256_poly/pos/models'
+#root_dir = './data/experiments/bead/2020_0305/data_len_256_poly_train_ratio_0p3/models'
 save_fig = True
 """
 # file_name_regexs elements must be enclosed with ()
