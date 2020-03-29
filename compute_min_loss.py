@@ -43,7 +43,7 @@ file_name_regexs = ['(tbd_7_meta_rnn_[0-9]+_k_ratios.pt)', # raw model
 #file_name_regexs = ['(data_disp_meta_rnn_[0-9]+.pt)',
 #    '(data_disp_scat_[0-9]+_meta_rnn_[0-9]+.pt)']
  
-epoch_len_thresh = 30
+epoch_thresh = 1900
 
 file_names = []
 for file_name_regex in file_name_regexs:
@@ -53,8 +53,9 @@ file_paths = [os.path.join(root_dir, file_name) for file_name in file_names]
 file_paths_tmp = []
 for file_path in file_paths: 
     meta = torch.load(file_path, map_location='cpu') 
-    if len(meta['epoch']) > epoch_len_thresh:
-        file_paths_tmp.append(file_path)
+    if meta['epoch']:
+        if max(meta['epoch']) >= epoch_thresh:
+            file_paths_tmp.append(file_path)
 
 file_paths = file_paths_tmp
 
