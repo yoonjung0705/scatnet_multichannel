@@ -18,31 +18,31 @@ import common_utils as cu
 import scat_utils as scu
 import net_utils as nu
 
-min_loss_epochs = [2000,1800,2000,1550] # max 39 for log every 50. max 199 for log every 10.
-root_dir = './data/simulations/data_len_256_gamma_1_1p5/model_candidates'
+min_loss_epochs = [8000, 4000] # max 39 for log every 50. max 199 for log every 10.
+#root_dir = './data/simulations/data_len_256_gamma_1_1p5/model_candidates'
 #root_dir = './data/experiments/bead/2020_0228/'
-#root_dir = './data/experiments/bead/2020_0305/'
+root_dir = './data/experiments/bead/2020_0305/data_len_256_poly_train_val_ratio_0p2/models'
 #root_dir = './data/experiments/irfp'
 
 # file name of test data
 # TWO BEADS
-file_names_test = ['tbd_0_test.pt',
-        'tbd_0_test_scat_1.pt',
-        'tbd_0_test.pt',
-        'tbd_0_test_scat_1.pt']
+#file_names_test = ['tbd_0_test.pt',
+#        'tbd_0_test_scat_1.pt',
+#        'tbd_0_test.pt',
+#        'tbd_0_test_scat_1.pt']
 #file_name_test = 'tbd_0_test_scat_0.pt'
 #file_name_test = 'tbd_0_test_scat_1.pt'
 
 # IRFP
-#file_name_test = 'data_test.pt'
+file_names_test = ['data_test.pt', 'data_test_scat_0.pt']
 
 
 # LIST of file names of trained models
 # TWO BEADS
-file_names_meta = ['tbd_0_meta_rnn_21_diff_coef_ratios.pt',
-        'tbd_0_scat_1_meta_rnn_15_diff_coef_ratios.pt',
-        'tbd_0_meta_rnn_22_k_ratios.pt',
-        'tbd_0_scat_1_meta_rnn_9_k_ratios.pt']
+#file_names_meta = ['tbd_0_meta_rnn_21_diff_coef_ratios.pt',
+#        'tbd_0_scat_1_meta_rnn_15_diff_coef_ratios.pt',
+#        'tbd_0_meta_rnn_22_k_ratios.pt',
+#        'tbd_0_scat_1_meta_rnn_9_k_ratios.pt']
 
 
 #file_names_meta = ['tbd_9_meta_rnn_9_diff_coef_ratios.pt']
@@ -52,7 +52,7 @@ file_names_meta = ['tbd_0_meta_rnn_21_diff_coef_ratios.pt',
 #file_names_meta = ['tbd_9_scat_1_meta_rnn_9_diff_coef_ratios.pt']
 
 # IRFP
-#file_names_meta = ['data_meta_rnn_17.pt']
+file_names_meta = ['data_meta_rnn_11.pt', 'data_scat_0_meta_rnn_11.pt']
 # OR, provide file names and paths using regular expression
 #file_paths_meta = glob.glob(os.path.join(root_dir, 'tbd_0_scat_meta_rnn_*.pt'))
 #file_names_meta = [os.path.basename(file_path) for file_path in file_paths]
