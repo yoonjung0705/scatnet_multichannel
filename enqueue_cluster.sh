@@ -18,9 +18,9 @@ SCATNET_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel"
 cd ${SCATNET_DIR}
 
 # job count
-N_JOBS_MAX_NORMAL=8 # 4-8. max number of jobs allowed to run simutaneously for new jobs. do not go beyond 8
+N_JOBS_MAX_NORMAL=4 # 4-8. max number of jobs allowed to run simutaneously for new jobs. do not go beyond 8
 N_JOBS_MAX_EXIT=4 # 4-8. max number of jobs allowed to run simutaneously for previously failed jobs
-SUBMIT_COUNT_MAX=4 # max number of times a job can be submitted to the cluster
+SUBMIT_COUNT_MAX=6 # max number of times a job can be submitted to the cluster
 BATCH_SIZE_EXIT=64 # use a smaller batch size for previously failed jobs
 N_WORKERS_EXIT=0 # set num_workers to 0 to reduce memory usage. also, ran out of input error might be due to this being larger than 0
 FILE_NAME_PARAMS="params.csv"
@@ -39,19 +39,25 @@ PAUSE_TIME=0 # wait between job submission to see if jobs can be distributed to 
 # we delete lines that have 0 or multiple spaces (a line with tabs \t also gets deleted, too)
 sed -i '/^\s*$/d' ${FILE_NAME_PARAMS}
 
-# get done jobids. output example: 41422,41423,
+# get done jobids. output example: 41422,41423, but outputs empty string when there's no finished job
 JOBIDS_DONE=$(bjobs -a 2> /dev/null | grep "DONE" | cut -d' ' -f1 | awk 'BEGIN { ORS = "," } { print }')
 # get exit jobids. output example: 41422\n41423
-JOBIDS_EXIT_RECENT=$(bjobs -a 2> /dev/null | grep "EXIT" | cut -d' ' -f1)
+#JOBIDS_EXIT_RECENT=$(bjobs -a 2> /dev/null | grep "EXIT" | cut -d' ' -f1)
+# get running or pending jobids. output example: 41422,41423, but outputs empty string when there's no running/pending job
+JOBIDS_RUN_PEND=$(bjobs 2> /dev/null | grep "RUN\|PEND" | cut -d' ' -f1 | awk 'BEGIN { ORS = "," } { print }')
 
 # the "No unfinished jobs" is an error message and therefore does not count in wc -l
 N_JOBS_SUBMITTED=$(expr $(bjobs 2>/dev/null | wc -l) - 1)
 N_JOBS_SUBMITTED=$(( N_JOBS_SUBMITTED > 0 ? N_JOBS_SUBMITTED : 0 ))
 
 # get regular expression of finished jobs for grep. 
-# output example for jobs done: 41422|^41423
+# output example of following: 41422|^41423 but empty string if there's no finished job
 # the ^ is not added at the beginning to check if JOBIDS_DONE_REGEX is an empty string
 JOBIDS_DONE_REGEX="$(echo $JOBIDS_DONE | rev | cut -c 2- | rev | sed 's/,/|^/g')"
+
+# get regular expression of running or pending jobs for grep.
+# output example of following: 41422|41423 but empty string if there's no running/pending job
+JOBIDS_RUN_PEND_REGEX="$(echo $JOBIDS_RUN_PEND | rev | cut -c 2- | rev | sed 's/,/|/g')"
 
 # remove the finished jobs in the params.csv file 
 if [ ! -z $JOBIDS_DONE_REGEX ]
@@ -153,8 +159,7 @@ cat ${FILE_NAME_PARAMS} | while [[ "${N_JOBS_SUBMITTED}" -lt "${N_JOBS_MAX_EXIT}
         SAVE_MODEL
     do
         LINE_COUNT=`expr ${LINE_COUNT} + 1`
-
-        if [[ $SUBMIT_COUNT -lt $SUBMIT_COUNT_MAX ]] && [[ $SUBMIT_COUNT -ge 1 ]]
+        if [[ $SUBMIT_COUNT -lt $SUBMIT_COUNT_MAX ]] && [[ $SUBMIT_COUNT -ge 1 ]] && [[ ! `echo "$JOBID" | grep -wE "$JOBIDS_RUN_PEND_REGEX"` ]]
         then
             # text substitution using the template
             cat ${FILE_NAME_JOB_TEMPLATE} | sed \
