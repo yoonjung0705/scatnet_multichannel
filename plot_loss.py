@@ -13,9 +13,10 @@ fontsize_title = 18
 fig_w = 12
 fig_h = 8
 
-#root_dir = './data/simulations/data_len_256_gamma_1_1p5/pos/models'
+#root_dir = './data/simulations/data_len_128_gamma_1_3/tbd_3'
+root_dir = './data/simulations/data_len_2048_gamma_1_3_k_1_7_t_4_10'
 #root_dir = './data/experiments/bead/2020_0305/data_len_256_poly/pos/models'
-root_dir = './data/experiments/bead/2020_0305/data_len_256_poly_train_val_ratio_0p2/models'
+#root_dir = './data/experiments/bead/2020_0305/data_len_256_poly_train_val_ratio_0p2/models'
 save_fig = True
 """
 # file_name_regexs elements must be enclosed with ()
@@ -28,7 +29,7 @@ file_paths = [os.path.join(root_dir, file_name) for file_name in file_names]
 
 """
 
-epoch_thresh = 1900 # only consider files that have at least this number of epochs processed
+epoch_thresh = 9950 # only consider files that have at least this number of epochs processed
 
 #file_paths = [os.path.join(root_dir, file_name) for file_name in file_names]
 file_paths = glob.glob(os.path.join(root_dir, '*.pt'))
@@ -37,9 +38,10 @@ file_paths_tmp = []
 plt.close('all')
 for file_path in file_paths: 
     meta = torch.load(file_path) 
-    if meta['epoch']:
-        if max(meta['epoch']) >= epoch_thresh:
-            file_paths_tmp.append(file_path)
+    if 'epoch' in meta.keys():
+        if meta['epoch']:
+            if max(meta['epoch']) >= epoch_thresh:
+                file_paths_tmp.append(file_path)
 file_paths = file_paths_tmp
 
 n_files = len(file_paths)
