@@ -18,7 +18,7 @@ file_name_data = 'data.pt'
 file_name_data_test = 'data_test.pt'
 
 # common inputs
-data_len = 2**8 # timepoints is ~15000 per condition. don't set this larger than 2**9
+data_len = 2**7 # timepoints is ~15000 per condition. 
 root_dir = ROOT_DIR
 # we take train_val_ratio amount of data which includes training and validation data
 # within this data, we take train_ratio amount which is set in net_utils.py's train_rnn() and use it for training.
@@ -34,7 +34,7 @@ samples_test = {'label_names':['cs', 'leds'], 'bacteria':'ad57', 'sample_rate_hz
 
 # scat transform inputs
 #avg_lens = [2**3, 2**5]
-avg_lens = [2**5]
+avg_lens = [2**4]
 n_filter_octaves = [(1, 1)]
 
 file_data_lens = []

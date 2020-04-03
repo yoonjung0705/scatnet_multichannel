@@ -6,15 +6,14 @@ import sim_utils as siu
 
 '''custom libraries'''
 import common_utils as cu
-ROOT_DIR = './data/simulations/data_len_128_gamma_1_3'
+ROOT_DIR = './data/simulations/data_len_2048_gamma_1_3_k_1_7_t_4_10'
 
 # common inputs
-data_len = 2**7
-avg_lens = [2**4]
+data_len = 2**11
+avg_lens = [2**8]
 n_filter_octaves = [(1,1)]
 dt = 0.001
-n_datas = [20, 50, 200, 800]
-#n_datas = [200, 400, 600, 800, 1000]
+n_datas = [20, 50, 200, 500]
 n_data_test = 1000
 
 root_dir = ROOT_DIR
@@ -23,10 +22,10 @@ gamma_low = 1
 gamma_high = 3
 
 k_ratio_low = 1
-k_ratio_high = 4 # 4 or 7
+k_ratio_high = 7 # 4 or 7
 
-diff_coef_ratio_low = 4 
-diff_coef_ratio_high = 7 # 7 or 10
+diff_coef_ratio_low = 4
+diff_coef_ratio_high = 10 # 7 or 10
 
 # simulate two beads
 for n_data in n_datas:
