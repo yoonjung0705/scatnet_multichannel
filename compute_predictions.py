@@ -19,9 +19,17 @@ import scat_utils as scu
 import net_utils as nu
 
 device = 'cuda:0' # or cuda:0
-#min_loss_epochs = [1000, 5000, 7000, 9000, 200,250,1000,1500]
-min_loss_epochs = [2000, 5000, 9000, 5000, 300,300,1000,3000]
-root_dir = './data/simulations/data_len_2048_gamma_1_3_k_1_7_t_4_10/'
+#min_loss_epochs = [1200, 1000, 9500, 7500, 350, 400, 2300, 2300] # 512 k
+#min_loss_epochs = [2000, 6000, 3500, 8500, 350, 1000, 3500, 3500] # 512 diff coef
+
+#min_loss_epochs = [2500, 1500, 3000, 3500, 500, 500, 700, 700] # 1024 k
+#min_loss_epochs = [2700, 1200, 3000, 9500, 400, 550, 550, 1300] # 1024 diff coef
+
+#min_loss_epochs = [1000, 5000, 7000, 9000, 200, 250, 1000, 1500] # 2048 k
+min_loss_epochs = [2000, 5000, 9000, 5000, 300, 300, 1000, 3000] # 2048 diff coef
+
+
+root_dir = './data/simulations/data_len_2048_gamma_1_3_k_1_7_t_4_10/models'
 #root_dir = './data/experiments/bead/2020_0228/'
 #root_dir = './data/experiments/bead/2020_0305/data_len_256_poly_train_val_ratio_0p2/models'
 #root_dir = './data/experiments/irfp'
@@ -35,7 +43,7 @@ root_dir = './data/simulations/data_len_2048_gamma_1_3_k_1_7_t_4_10/'
 #file_name_test = 'tbd_0_test_scat_0.pt'
 #file_name_test = 'tbd_0_test_scat_1.pt'
 
-# IRFP
+
 file_names_test = [
     'tbd_0_test.pt',
     'tbd_0_test.pt',
@@ -46,6 +54,10 @@ file_names_test = [
     'tbd_0_test_scat_0.pt',
     'tbd_0_test_scat_0.pt',
     ]
+
+
+# IRFP
+
 
 
 # LIST of file names of trained models
@@ -110,6 +122,7 @@ for idx_file in range(n_files):
     min_loss_epoch = min_loss_epochs[idx_file]
     idx_min_loss_epoch = np.argmin(np.abs((np.array(meta['epoch']) - min_loss_epoch)))
     classifier = meta['classifier']
+    elapsed = meta['elapsed'][idx_min_loss_epoch]
     if not meta['classifier']:
         idx_label = samples['label_names'].index(meta['label_names'])
         labels = labels[idx_label]
@@ -162,9 +175,9 @@ for idx_file in range(n_files):
     outputs = np.concatenate(outputs, axis=0)
     if classifier:
         accuracy = sum(outputs == np.array(labels)) / n_data_total
-        print("file_name:{}, accuracy:{}".format(file_name_meta, accuracy))
+        print("file_name:{}, accuracy:{:.6f}, elapsed:{:.3f}".format(file_name_meta, accuracy, elapsed))
     else:
         rmse = np.sqrt(sum((outputs - labels)**2) / n_data_total)
-        print("file_name:{}, rmse:{}".format(file_name_meta, rmse))
+        print("file_name:{}, rmse:{:.6f}, elapsed:{:.3f}".format(file_name_meta, rmse, elapsed))
 
 
