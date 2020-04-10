@@ -79,7 +79,7 @@ torch.save(samples_train, file_path_train)
 torch.save(samples_test, file_path_test)
 
 # perform scat transform and append to list
-file_names = ['data.pt', 'data_test.pt']
+file_names = [file_name_train, file_name_test]
 for avg_len in avg_lens:
     for n_filter_octave in n_filter_octaves:
         for file_name in file_names:

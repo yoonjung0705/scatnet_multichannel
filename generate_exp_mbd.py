@@ -17,21 +17,21 @@ file_name_data = 'data.pt'
 file_name_data_test = 'data_test.pt'
 
 # common inputs
-data_len = 2**10 # timepoints is 2500 per condition. max is 1024 for this script's implementation.
+data_len = 2**9 # timepoints is 2500 per condition. max is 1024 for this script's implementation.
 root_dir = ROOT_DIR
 # we take train_val_ratio amount of data which includes training and validation data
 # within this data, we take train_ratio amount which is set in net_utils.py's train_rnn() and use it for training.
 # in other words, we only determine the amount of train+val amount here. How it's divided between train, val is 
 # determined when you actually do the training.
 # the remaining data is for test
-train_val_ratio = 0.5
+train_val_ratio = 0.75
 test_ratio = 1 - (train_val_ratio)
 file_paths_data = glob.glob(os.path.join(root_dir, 'ad57_*.txt'))
 samples = {'label_names':['cs', 'lasers'], 'bacteria':'ad57', 'sample_rate_hz':None} # FIXME: add this info
 samples_test = {'label_names':['cs', 'lasers'], 'bacteria':'ad57', 'sample_rate_hz':None}
 
 # scat transform inputs
-avg_lens = [2**7]
+avg_lens = [2**6]
 n_filter_octaves = [(1, 1)]
 
 file_data_lens = []
@@ -114,7 +114,7 @@ torch.save(samples, os.path.join(root_dir, file_name_data))
 torch.save(samples_test, os.path.join(root_dir, file_name_data_test))
 
 # create scat transformed versions
-file_names = ['data.pt', 'data_test.pt']
+file_names = [file_name_data, file_name_data_test]
 for avg_len in avg_lens:
     for n_filter_octave in n_filter_octaves:
         for file_name in file_names:
