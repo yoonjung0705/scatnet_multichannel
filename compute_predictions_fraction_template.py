@@ -21,6 +21,8 @@ import net_utils as nu
 device = 'cuda:0' # or cuda:0
 
 # for using part of the test data to make error bars, set the start and end index for the data
+idx_start = <IDX_START>
+idx_end = idx_start + 100
 
 #min_loss_epochs = [1200, 1000, 9500, 7500, 350, 400, 2300, 2300] # 512 k
 #min_loss_epochs = [2000, 6000, 3500, 8500, 350, 1000, 3500, 3500] # 512 diff coef
@@ -29,26 +31,19 @@ device = 'cuda:0' # or cuda:0
 #min_loss_epochs = [2700, 1200, 3000, 9500, 400, 550, 550, 1300] # 1024 diff coef
 
 #min_loss_epochs = [1000, 5000, 7000, 9000, 200, 250, 1000, 1500] # 2048 k
-#min_loss_epochs = [2000, 5000, 9000, 5000, 300, 300, 1000, 3000] # 2048 diff coef
+min_loss_epochs = [2000, 5000, 9000, 5000, 300, 300, 1000, 3000] # 2048 diff coef
 
-#2020_0305
+
 #min_loss_epochs = [5500, 700] # 512_train_val_81_test_702
 #min_loss_epochs = [10000, 1700] # 512_train_val_405_test_378
 #min_loss_epochs = [4600, 2500] # 2048_train_val_81_test_108
 #min_loss_epochs = [9300, 1800] # 2048_train_val_135_test_54
 
-#2020_0319
-#min_loss_epochs = [2000, 300] # 1024_train_val_59_test_59
-
-#irfp
-min_loss_epochs = [300, 550] # 1024_train_val_59_test_59
-
-#root_dir = './data/simulations/data_len_512_gamma_1_3_k_1_7_t_4_10/models'
+root_dir = './data/simulations/data_len_2048_gamma_1_3_k_1_7_t_4_10/models'
 #root_dir = './data/experiments/bead/2020_0305/data_len_2048_train_val_135_test_54/models'
 #root_dir = './data/experiments/bead/2020_0228/'
 #root_dir = './data/experiments/bead/2020_0305/data_len_256_poly_train_val_ratio_0p2/models'
-#root_dir = './data/experiments/bead/2020_0319/data_len_1024_train_val_59_test_59/models'
-root_dir = './data/experiments/irfp/models'
+#root_dir = './data/experiments/irfp'
 
 # file name of test data
 # TWO BEADS
@@ -58,7 +53,7 @@ root_dir = './data/experiments/irfp/models'
 #        'tbd_0_test_scat_1.pt']
 #file_name_test = 'tbd_0_test_scat_0.pt'
 #file_name_test = 'tbd_0_test_scat_1.pt'
-"""
+
 file_names_test = [
     'tbd_0_test.pt',
     'tbd_0_test.pt',
@@ -69,8 +64,8 @@ file_names_test = [
     'tbd_0_test_scat_0.pt',
     'tbd_0_test_scat_0.pt',
     ]
-"""
-file_names_test = ['data_test_disp.pt', 'data_test_scat_1.pt']
+
+#file_names_test = ['data_test.pt', 'data_test_scat_0.pt']
 
 # IRFP
 
@@ -99,7 +94,10 @@ file_names_meta = [
     'tbd_2_scat_0_meta_rnn_0_diff_coef_ratios.pt',
     'tbd_3_scat_0_meta_rnn_1_diff_coef_ratios.pt',
     ]
+"""
 
+
+"""
 file_names_meta = [
     cu.match_filename('(tbd_0_meta_rnn_[0-9]+_k_ratios.pt)', root_dir),
     cu.match_filename('(tbd_1_meta_rnn_[0-9]+_k_ratios.pt)', root_dir),
@@ -114,6 +112,7 @@ for file_name_meta in file_names_meta:
     assert(len(file_name_meta) == 1), "Invalid number of files. Should be only 1 trained model for each case"
 file_names_meta = [file_name_meta[0] for file_name_meta in file_names_meta]
 
+"""
 file_names_meta = [
     cu.match_filename('(tbd_0_meta_rnn_[0-9]+_diff_coef_ratios.pt)', root_dir),
     cu.match_filename('(tbd_1_meta_rnn_[0-9]+_diff_coef_ratios.pt)', root_dir),
@@ -124,19 +123,17 @@ file_names_meta = [
     cu.match_filename('(tbd_2_scat_0_meta_rnn_[0-9]+_diff_coef_ratios.pt)', root_dir),
     cu.match_filename('(tbd_3_scat_0_meta_rnn_[0-9]+_diff_coef_ratios.pt)', root_dir),
     ]
-for file_name_meta in file_name_metas:
+for file_name_meta in file_names_meta:
     assert(len(file_name_meta) == 1), "Invalid number of files. Should be only 1 trained model for each case"
-file_names_meta = [file_name_meta[0] for file_name_meta in file_name_metas]
-"""
+file_names_meta = [file_name_meta[0] for file_name_meta in file_names_meta]
 
 
 
 
-
-#file_names_meta = ['data_meta_rnn_1.pt', 'data_scat_0_meta_rnn_0.pt']
+#file_names_meta = ['data_meta_rnn_1.pt', 'data_scat_0_meta_rnn_1.pt']
 
 # IRFP
-file_names_meta = ['data_disp_meta_rnn_19.pt', 'data_scat_1_meta_rnn_12.pt']
+#file_names_meta = ['data_meta_rnn_11.pt', 'data_scat_0_meta_rnn_11.pt']
 # OR, provide file names and paths using regular expression
 #file_paths_meta = glob.glob(os.path.join(root_dir, 'tbd_0_scat_meta_rnn_*.pt'))
 #file_names_meta = [os.path.basename(file_path) for file_path in file_paths]
@@ -179,6 +176,11 @@ for idx_file in range(n_files):
         data = [np.reshape(data_slice, (-1, data_slice.shape[-1])) for data_slice in data]
     else:
         raise ValueError("Invalid type of data given")
+
+    # take out only a fraction of the test data
+    data = data[idx_start:idx_end]
+    labels = labels[idx_start:idx_end]
+    n_data_total = len(data)
 
     input_size = data[0].shape[0]
     output_size = meta['output_size']

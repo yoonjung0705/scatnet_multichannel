@@ -14,9 +14,10 @@ fig_w = 12
 fig_h = 8
 
 #root_dir = './data/simulations/data_len_128_gamma_1_3/tbd_3'
-root_dir = './data/simulations/data_len_2048_gamma_1_3_k_1_7_t_4_10'
-#root_dir = './data/experiments/bead/2020_0305/data_len_256_poly/pos/models'
-#root_dir = './data/experiments/bead/2020_0305/data_len_256_poly_train_val_ratio_0p2/models'
+#root_dir = './data/simulations/data_len_512_gamma_1_3_k_1_7_t_4_10/models'
+#root_dir = './data/experiments/bead/2020_0305/data_len_2048_train_val_81_test_108/models'
+#root_dir = './data/experiments/bead/2020_0319/data_len_512_train_val_59_test_177/candidates'
+root_dir = './data/experiments/irfp/models'
 save_fig = True
 """
 # file_name_regexs elements must be enclosed with ()
