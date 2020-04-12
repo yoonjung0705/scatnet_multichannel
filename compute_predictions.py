@@ -34,21 +34,24 @@ device = 'cuda:0' # or cuda:0
 #2020_0305
 #min_loss_epochs = [5500, 700] # 512_train_val_81_test_702
 #min_loss_epochs = [10000, 1700] # 512_train_val_405_test_378
+#min_loss_epochs = [8500, 1500] # 512_train_val_702_test_81
 #min_loss_epochs = [4600, 2500] # 2048_train_val_81_test_108
 #min_loss_epochs = [9300, 1800] # 2048_train_val_135_test_54
 
+
 #2020_0319
-#min_loss_epochs = [2000, 300] # 1024_train_val_59_test_59
+#min_loss_epochs = [9950, 1000] # 512_train_val_177_test_59
+
+min_loss_epochs = [2000, 300]
 
 #irfp
-min_loss_epochs = [300, 550] # 1024_train_val_59_test_59
+#min_loss_epochs = [300, 550] # 
+#min_loss_epochs = [400, 400, 400] # data_scat_2,3,4
 
 #root_dir = './data/simulations/data_len_512_gamma_1_3_k_1_7_t_4_10/models'
-#root_dir = './data/experiments/bead/2020_0305/data_len_2048_train_val_135_test_54/models'
-#root_dir = './data/experiments/bead/2020_0228/'
-#root_dir = './data/experiments/bead/2020_0305/data_len_256_poly_train_val_ratio_0p2/models'
-#root_dir = './data/experiments/bead/2020_0319/data_len_1024_train_val_59_test_59/models'
-root_dir = './data/experiments/irfp/models'
+#root_dir = './data/experiments/bead/2020_0305/data_len_1024_train_val_120_test_48_sep/models'
+root_dir = './data/experiments/bead/2020_0319/data_len_1024_train_val_26_test_26_sep/models'
+#root_dir = './data/experiments/irfp/models'
 
 # file name of test data
 # TWO BEADS
@@ -70,7 +73,8 @@ file_names_test = [
     'tbd_0_test_scat_0.pt',
     ]
 """
-file_names_test = ['data_test_disp.pt', 'data_test_scat_1.pt']
+file_names_test = ['data_test.pt', 'data_test_scat_0.pt']
+#file_names_test = ['data_test_scat_2.pt', 'data_test_scat_3.pt', 'data_test_scat_4.pt']
 
 # IRFP
 
@@ -133,10 +137,11 @@ file_names_meta = [file_name_meta[0] for file_name_meta in file_name_metas]
 
 
 
-#file_names_meta = ['data_meta_rnn_1.pt', 'data_scat_0_meta_rnn_0.pt']
+#file_names_meta = ['data_scat_2_meta_rnn_1.pt','data_scat_3_meta_rnn_0.pt','data_scat_4_meta_rnn_0.pt']
+file_names_meta = ['data_meta_rnn_0.pt','data_scat_0_meta_rnn_0.pt']
 
 # IRFP
-file_names_meta = ['data_disp_meta_rnn_19.pt', 'data_scat_1_meta_rnn_12.pt']
+#file_names_meta = ['data_disp_meta_rnn_19.pt', 'data_scat_1_meta_rnn_12.pt']
 # OR, provide file names and paths using regular expression
 #file_paths_meta = glob.glob(os.path.join(root_dir, 'tbd_0_scat_meta_rnn_*.pt'))
 #file_names_meta = [os.path.basename(file_path) for file_path in file_paths]

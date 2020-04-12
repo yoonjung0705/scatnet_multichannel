@@ -15,9 +15,9 @@ fig_h = 8
 
 #root_dir = './data/simulations/data_len_128_gamma_1_3/tbd_3'
 #root_dir = './data/simulations/data_len_512_gamma_1_3_k_1_7_t_4_10/models'
-#root_dir = './data/experiments/bead/2020_0305/data_len_2048_train_val_81_test_108/models'
-#root_dir = './data/experiments/bead/2020_0319/data_len_512_train_val_59_test_177/candidates'
-root_dir = './data/experiments/irfp/models'
+root_dir = './data/experiments/bead/2020_0319/data_len_1024_train_val_26_test_26_sep/models'
+#root_dir = './data/experiments/bead/2020_0319/data_len_512_train_val_177_test_59/models'
+#root_dir = './data/experiments/irfp/models'
 save_fig = True
 """
 # file_name_regexs elements must be enclosed with ()
@@ -30,7 +30,7 @@ file_paths = [os.path.join(root_dir, file_name) for file_name in file_names]
 
 """
 
-epoch_thresh = 9950 # only consider files that have at least this number of epochs processed
+epoch_thresh = 2950 # only consider files that have at least this number of epochs processed
 
 #file_paths = [os.path.join(root_dir, file_name) for file_name in file_names]
 file_paths = glob.glob(os.path.join(root_dir, '*.pt'))
@@ -38,11 +38,13 @@ file_paths = glob.glob(os.path.join(root_dir, '*.pt'))
 file_paths_tmp = []
 plt.close('all')
 for file_path in file_paths: 
-    meta = torch.load(file_path) 
+    meta = torch.load(file_path, map_location='cpu') 
     if 'epoch' in meta.keys():
         if meta['epoch']:
             if max(meta['epoch']) >= epoch_thresh:
                 file_paths_tmp.append(file_path)
+    del meta
+
 file_paths = file_paths_tmp
 
 n_files = len(file_paths)
@@ -50,7 +52,7 @@ n_files = len(file_paths)
 figs = []; axs = [];
 for file_path in file_paths:
     file_name = os.path.basename(file_path)
-    meta = torch.load(file_path)
+    meta = torch.load(file_path, map_location='cpu')
 
     fig, ax = plt.subplots()
     fig.set_size_inches(fig_w, fig_h)
