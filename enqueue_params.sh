@@ -17,7 +17,7 @@
 
 
 #FILE_NAMES=("data.pt")
-FILE_NAMES=("data_scat_2.pt" "data_scat_3.pt" "data_scat_4.pt")
+FILE_NAMES=("data_scat_0.pt")
 
 #############################
 #README="training tbd_4.pt (data_len being 2**11=2048, gamma=1-3) for hidden size 50,100,150,200,250 and 3 layers parameters"
@@ -32,7 +32,7 @@ FILE_NAMES=("data_scat_2.pt" "data_scat_3.pt" "data_scat_4.pt")
 
 
 #README="training irfp data.pt for hidden size 150,200 and 3 layers"
-README="training scat transformed irfp data.pt for hidden size 20,50,100,150,200,250 and 3 layers"
+#README="training scat transformed irfp data.pt for hidden size 150 and 3 layers"
 
 
 
@@ -49,17 +49,19 @@ README="training scat transformed irfp data.pt for hidden size 20,50,100,150,200
 #README="training polydisperse 2020_0305 data.pt (data_len being 2**9=512, train_val tracks = 702) for hidden size 50,100,150,200,250 and 3 layers"
 #README="training scat transformed polydisperse 2020_0305 data.pt (data_len being 2**9=512, train_val tracks = 702) for hidden size 20,50,100,150,200,250 and 3 layers"
 
-#README="training polydisperse 2020_0319 data.pt (data_len being 2**9=512, train_val tracks = 177) for hidden size 50 and 3 layers"
-#README="training scat transformed polydisperse 2020_0319 data.pt (data_len being 2**9=512, train_val tracks = 177) for hidden size 20,50,100,150,200,250 and 3 layers"
+#README="training polydisperse 2020_0319 data.pt (data_len being 2**10=1024, train_val tracks = 29) for hidden size 50,100,150,200,250 and 3 layers"
+#README="training scat transformed polydisperse 2020_0319 data.pt (data_len being 2**10=1024, train_val tracks = 29) for hidden size 20,50,100,150,200,250 and 3 layers"
+
+README=""
 #############################
 # should be given in absolute path format
 #ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/simulations/data_len_2048_gamma_1_3_k_1_7_t_4_10/"
-#ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/experiments/bead/2020_0305/data_len_512_train_val_702_test_81"
-#ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/experiments/bead/2020_0319/data_len_512_train_val_177_test_59"
-ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/experiments/irfp"
+ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/experiments/bead/2020_0319/data_len_256_train_val_175_test_59_sep_2"
+#ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/experiments/bead/2020_0319/data_len_1024_train_val_26_test_26_sep"
+#ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/experiments/irfp"
 #############################
-#HIDDEN_SIZES=(50)
-HIDDEN_SIZES=(20 50 100 150 200 250)
+HIDDEN_SIZES=(150)
+#HIDDEN_SIZES=(50 100 150 200 250)
 N_LAYERSS=(3)
 BIDIRECTIONAL="--bidirectional"
 
@@ -69,7 +71,7 @@ CLASSIFIER="--classifier" # classification
 #IDX_LABELS=(1 2) # (1 2) for two beads
 IDX_LABELS=(0) # (0) for classification
 
-EPOCHS=2000
+EPOCHS=10000
 TRAIN_RATIO=0.8
 BATCH_SIZE=64
 N_WORKERS=0
@@ -78,8 +80,8 @@ BETAS="0.9 0.999"
 OPT_LEVEL="O2"
 SEED=42
 LOG_INTERVAL=50
-SAVE_MODEL=""
-#SAVE_MODEL="--save-model"
+#SAVE_MODEL=""
+SAVE_MODEL="--save-model"
 
 printf "$(date)\t${README}\n" >> params.log
 
