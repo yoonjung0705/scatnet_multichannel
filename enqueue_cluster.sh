@@ -18,7 +18,7 @@ SCATNET_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel"
 cd ${SCATNET_DIR}
 
 # job count
-N_JOBS_MAX_NORMAL=6 # 4-8. max number of jobs allowed to run simutaneously for new jobs. do not go beyond 8
+N_JOBS_MAX_NORMAL=4 # 4-8. max number of jobs allowed to run simutaneously for new jobs. do not go beyond 8
 N_JOBS_MAX_EXIT=4 # 4-8. max number of jobs allowed to run simutaneously for previously failed jobs
 SUBMIT_COUNT_MAX=6 # max number of times a job can be submitted to the cluster
 BATCH_SIZE_EXIT=64 # use a smaller batch size for previously failed jobs
@@ -26,7 +26,7 @@ N_WORKERS_EXIT=0 # set num_workers to 0 to reduce memory usage. also, ran out of
 FILE_NAME_PARAMS="params.csv"
 FILE_NAME_JOB="rnn.lsf"
 FILE_NAME_JOB_TEMPLATE="rnn_template.lsf"
-PAUSE_TIME=60 # wait between job submission to see if jobs can be distributed to different hosts
+PAUSE_TIME=90 # wait between job submission to see if jobs can be distributed to different hosts
 # the longested time it took for a job to start the actual training was ~180 seconds
 # setting time to 60 is expected to make roughly 2~4 jobs being in the same host
 # even though a long time is waited between jobs, previous jobs can still get terminated due to new jobs

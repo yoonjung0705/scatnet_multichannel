@@ -1,4 +1,7 @@
 '''module that processes experimental bacterial bath without optical trap data prior to training. mbd means multiple beads'''
+# NOTE: this script might use only a fraction of the data for training which results in fewer number of classes
+# NOTE: this script might mix the train+validation and test data to randomize the split
+
 import os
 import numpy as np
 import pandas as pd
@@ -17,7 +20,7 @@ file_name_data = 'data.pt'
 file_name_data_test = 'data_test.pt'
 
 # common inputs
-data_len = 2**9 # timepoints is 2500 per condition. max is 1024 for this script's implementation.
+data_len = 2**8 # timepoints is 2500 per condition. max is 1024 for this script's implementation.
 root_dir = ROOT_DIR
 # we take train_val_ratio amount of data which includes training and validation data
 # within this data, we take train_ratio amount which is set in net_utils.py's train_rnn() and use it for training.
@@ -63,6 +66,11 @@ lasers = np.array([float(laser) for laser in lasers])
 
 cs_uniq = np.unique(cs) # np.unique() also sorts the elements in ascending order
 lasers_uniq = np.unique(lasers)
+
+# use only a fraction of the data
+cs_uniq = cs_uniq[[0, 2]]
+lasers_uniq = lasers_uniq[[0, 2]]
+
 labels_lut = [(c, laser) for c in cs_uniq for laser in lasers_uniq]
 
 datas = []
@@ -70,6 +78,7 @@ datas_test = []
 labels = []
 labels_test = []
 label = 0
+
 for c in cs_uniq:
     for laser in lasers_uniq:
         idxs_file = np.where((c == cs) & (laser == lasers))[0] # output of np.where() is a tuple, so we do [0]
@@ -106,6 +115,19 @@ data = np.concatenate(datas, axis=0)
 data_test = np.concatenate(datas_test, axis=0)
 #labels = np.array(range(len(labels_lut)), dtype=int).repeat(n_trials * n_data_train_val).tolist()
 #labels_test = np.array(range(len(labels_lut)), dtype=int).repeat(n_trials * n_data_test).tolist()
+
+# mix the data (so far the data was split sequentially into train+validation vs test)
+# the following further randomly mixes trajectories to split into train+validation vs test
+data_total = np.concatenate([data, data_test], axis=0)
+n_data_total = data_total.shape[0]
+index = nu._train_test_split(n_data_total, train_val_ratio, seed=42)
+data = data_total[index['train']]
+data_test = data_total[index['test']]
+
+labels_total = labels + labels_test
+labels = list(np.array(labels_total)[index['train']])
+labels_test = list(np.array(labels_total)[index['test']])
+
 
 samples.update({'data':data, 'labels':labels, 'd_um':d_um, 'labels_lut':labels_lut})
 samples_test.update({'data':data_test, 'labels':labels_test, 'd_um':d_um, 'labels_lut':labels_lut})
