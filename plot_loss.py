@@ -14,9 +14,9 @@ fig_w = 12
 fig_h = 8
 
 #root_dir = './data/simulations/data_len_128_gamma_1_3/tbd_3'
-#root_dir = './data/simulations/data_len_512_gamma_1_3_k_1_7_t_4_10/models'
-root_dir = './data/experiments/bead/2020_0319/data_len_1024_train_val_26_test_26_sep/models'
-#root_dir = './data/experiments/bead/2020_0319/data_len_512_train_val_177_test_59/models'
+root_dir = './data/simulations/data_len_2048_gamma_1_3_k_1_7_t_4_10_tbd_4/models'
+#root_dir = './data/experiments/bead/2020_0305/data_len_256_train_val_180_test_516_sep'
+#root_dir = './data/experiments/bead/2020_0319/data_len_256_train_val_175_test_59_sep_2'
 #root_dir = './data/experiments/irfp/models'
 save_fig = True
 """
@@ -30,7 +30,7 @@ file_paths = [os.path.join(root_dir, file_name) for file_name in file_names]
 
 """
 
-epoch_thresh = 2950 # only consider files that have at least this number of epochs processed
+epoch_thresh = 1950 # only consider files that have at least this number of epochs processed
 
 #file_paths = [os.path.join(root_dir, file_name) for file_name in file_names]
 file_paths = glob.glob(os.path.join(root_dir, '*.pt'))

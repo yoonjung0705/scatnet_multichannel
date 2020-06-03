@@ -20,8 +20,6 @@ import net_utils as nu
 
 device = 'cuda:0' # or cuda:0
 
-# for using part of the test data to make error bars, set the start and end index for the data
-
 #min_loss_epochs = [1200, 1000, 9500, 7500, 350, 400, 2300, 2300] # 512 k
 #min_loss_epochs = [2000, 6000, 3500, 8500, 350, 1000, 3500, 3500] # 512 diff coef
 
@@ -30,6 +28,16 @@ device = 'cuda:0' # or cuda:0
 
 #min_loss_epochs = [1000, 5000, 7000, 9000, 200, 250, 1000, 1500] # 2048 k
 #min_loss_epochs = [2000, 5000, 9000, 5000, 300, 300, 1000, 3000] # 2048 diff coef
+
+
+#min_loss_epochs = [4000, 3500] # 512 k tbd_4
+#min_loss_epochs = [6500, 3000] # 512 diff coef tbd_4
+
+#min_loss_epochs = [4000, 3000] # 1024 k tbd_4
+#min_loss_epochs = [6000, 4000] # 1024 diff coef tbd_4
+
+#min_loss_epochs = [3000, 3000] # 2048 k tbd_4
+min_loss_epochs = [5500, 4000] # 2048 diff coef tbd_4
 
 #2020_0305
 #min_loss_epochs = [5500, 700] # 512_train_val_81_test_702
@@ -42,23 +50,22 @@ device = 'cuda:0' # or cuda:0
 #2020_0319
 #min_loss_epochs = [9950, 1000] # 512_train_val_177_test_59
 
-min_loss_epochs = [2000, 300]
+#min_loss_epochs = [6000, 2500]
 
 #irfp
 #min_loss_epochs = [300, 550] # 
 #min_loss_epochs = [400, 400, 400] # data_scat_2,3,4
 
-#root_dir = './data/simulations/data_len_512_gamma_1_3_k_1_7_t_4_10/models'
-#root_dir = './data/experiments/bead/2020_0305/data_len_1024_train_val_120_test_48_sep/models'
-root_dir = './data/experiments/bead/2020_0319/data_len_1024_train_val_26_test_26_sep/models'
+root_dir = './data/simulations/data_len_2048_gamma_1_3_k_1_7_t_4_10_tbd_4/models'
+#root_dir = './data/experiments/bead/2020_0305/data_len_256_train_val_180_test_516_sep'
+#root_dir = './data/experiments/bead/2020_0319/data_len_256_train_val_175_test_59_sep_2'
 #root_dir = './data/experiments/irfp/models'
 
 # file name of test data
 # TWO BEADS
-#file_names_test = ['tbd_0_test.pt',
-#        'tbd_0_test_scat_1.pt',
-#        'tbd_0_test.pt',
-#        'tbd_0_test_scat_1.pt']
+file_names_test = ['tbd_0_test.pt',
+        'tbd_0_test_scat_0.pt',
+        ]
 #file_name_test = 'tbd_0_test_scat_0.pt'
 #file_name_test = 'tbd_0_test_scat_1.pt'
 """
@@ -73,7 +80,7 @@ file_names_test = [
     'tbd_0_test_scat_0.pt',
     ]
 """
-file_names_test = ['data_test.pt', 'data_test_scat_0.pt']
+#file_names_test = ['data_test.pt', 'data_test_scat_0.pt']
 #file_names_test = ['data_test_scat_2.pt', 'data_test_scat_3.pt', 'data_test_scat_4.pt']
 
 # IRFP
@@ -82,7 +89,17 @@ file_names_test = ['data_test.pt', 'data_test_scat_0.pt']
 
 # LIST of file names of trained models
 # TWO BEADS
+file_names_meta = [
+    'tbd_4_meta_rnn_0_k_ratios.pt',
+    'tbd_4_scat_0_meta_rnn_0_k_ratios.pt'
+    ]
 """
+
+file_names_meta = [
+    'tbd_4_meta_rnn_0_diff_coef_ratios.pt',
+    'tbd_4_scat_0_meta_rnn_1_diff_coef_ratios.pt'
+    ]
+
 file_names_meta = [
     'tbd_0_meta_rnn_4_k_ratios.pt',
     'tbd_1_meta_rnn_5_k_ratios.pt',
@@ -103,7 +120,6 @@ file_names_meta = [
     'tbd_2_scat_0_meta_rnn_0_diff_coef_ratios.pt',
     'tbd_3_scat_0_meta_rnn_1_diff_coef_ratios.pt',
     ]
-
 file_names_meta = [
     cu.match_filename('(tbd_0_meta_rnn_[0-9]+_k_ratios.pt)', root_dir),
     cu.match_filename('(tbd_1_meta_rnn_[0-9]+_k_ratios.pt)', root_dir),
@@ -117,6 +133,8 @@ file_names_meta = [
 for file_name_meta in file_names_meta:
     assert(len(file_name_meta) == 1), "Invalid number of files. Should be only 1 trained model for each case"
 file_names_meta = [file_name_meta[0] for file_name_meta in file_names_meta]
+
+
 
 file_names_meta = [
     cu.match_filename('(tbd_0_meta_rnn_[0-9]+_diff_coef_ratios.pt)', root_dir),
@@ -138,7 +156,7 @@ file_names_meta = [file_name_meta[0] for file_name_meta in file_name_metas]
 
 
 #file_names_meta = ['data_scat_2_meta_rnn_1.pt','data_scat_3_meta_rnn_0.pt','data_scat_4_meta_rnn_0.pt']
-file_names_meta = ['data_meta_rnn_0.pt','data_scat_0_meta_rnn_0.pt']
+#file_names_meta = ['data_meta_rnn_1.pt','data_scat_0_meta_rnn_1.pt']
 
 # IRFP
 #file_names_meta = ['data_disp_meta_rnn_19.pt', 'data_scat_1_meta_rnn_12.pt']
