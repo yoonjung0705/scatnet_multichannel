@@ -97,8 +97,10 @@ elif sim_type == 'obd':
 # simulation two beads
 elif sim_type == 'tbd':
     gammas = 1
-    k_ratios = np.arange(2,6,2)
-    diff_coef_ratios = np.arange(3,9,2)
+    #k_ratios = np.arange(2,9,2)
+    k_ratios = np.arange(2,3)
+    diff_coef_ratios = np.arange(3,19,2)
+    #diff_coef_ratios = np.arange(3,4)
     samples = siu.sim_two_beads(data_len, gammas=gammas, k_ratios=k_ratios, diff_coef_ratios=diff_coef_ratios, dt=dt, n_data=n_data) 
     traj_tbd = samples['data']
     scat_tbd = scu.ScatNet(data_len, avg_len, n_filter_octave = n_filter_octave) 
