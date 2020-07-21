@@ -62,11 +62,10 @@ chmod +x launch.sh
 
 ddlrun --mpiarg "-x EGO_TOP" "-x HOROVOD_FUSION_THRESHOLD=16777216" -v \
   ./launch.sh python \
-  $HOME2/repos/scatnet_multichannel/train_rnn.py --file-name <FILE_NAME> --root-dir <ROOT_DIR> \
-  --hidden-size <HIDDEN_SIZE> --n-layers <N_LAYERS> <BIDIRECTIONAL> <CLASSIFIER> \
-  --idx-label <IDX_LABEL> --epochs <EPOCHS> --train-ratio <TRAIN_RATIO> \
-  --batch-size <BATCH_SIZE> --n-workers <N_WORKERS> \
-  --lr <LR> --betas <BETAS> --opt-level <OPT_LEVEL> --seed <SEED> --log-interval <LOG_INTERVAL> <SAVE_MODEL>
+  $HOME2/repos/scatnet_multichannel/train_rnn.py --file-name tbd_0.pt --root-dir /nobackup/users/yoonjung/repos/scatnet_multichannel/data/simulations \
+  --hidden-size 3 --n-layers 2 --bidirectional  \
+  --idx-label 0 --epochs 2000 --train-ratio 0.8 --batch-size 128 --n-workers 4 \
+  --lr 0.001 --betas 0.9 0.999 --opt-level "O2" --seed 42 --log-interval 10
 
 #
 # EoF
