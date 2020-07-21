@@ -18,9 +18,9 @@ SCATNET_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel"
 cd ${SCATNET_DIR}
 
 # job count
-N_JOBS_MAX_NORMAL=4 # 4-8. max number of jobs allowed to run simutaneously for new jobs. do not go beyond 8
-N_JOBS_MAX_EXIT=4 # 4-8. max number of jobs allowed to run simutaneously for previously failed jobs
-SUBMIT_COUNT_MAX=6 # max number of times a job can be submitted to the cluster
+N_JOBS_MAX_NORMAL=2 # 4-8. max number of jobs allowed to run simutaneously for new jobs. do not go beyond 8
+N_JOBS_MAX_EXIT=2 # 4-8. max number of jobs allowed to run simutaneously for previously failed jobs
+SUBMIT_COUNT_MAX=1 # max number of times a job can be submitted to the cluster
 BATCH_SIZE_EXIT=64 # use a smaller batch size for previously failed jobs
 N_WORKERS_EXIT=0 # set num_workers to 0 to reduce memory usage. also, ran out of input error might be due to this being larger than 0
 FILE_NAME_PARAMS="params.csv"

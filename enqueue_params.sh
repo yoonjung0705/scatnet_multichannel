@@ -32,6 +32,7 @@ FILE_NAMES=("data_scat_0.pt")
 
 
 #README="training irfp data.pt for hidden size 150,200 and 3 layers"
+README="training irfp data_scat_0.pt for hidden size 20 and 2 layers for test purpose"
 #README="training scat transformed irfp data.pt for hidden size 150 and 3 layers"
 
 
@@ -60,9 +61,9 @@ ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/experiments/b
 #ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/experiments/bead/2020_0319/data_len_1024_train_val_26_test_26_sep"
 #ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/experiments/irfp"
 #############################
-HIDDEN_SIZES=(150)
+HIDDEN_SIZES=(20)
 #HIDDEN_SIZES=(50 100 150 200 250)
-N_LAYERSS=(3)
+N_LAYERSS=(2)
 BIDIRECTIONAL="--bidirectional"
 
 #CLASSIFIER="" # regression
@@ -71,7 +72,8 @@ CLASSIFIER="--classifier" # classification
 #IDX_LABELS=(1 2) # (1 2) for two beads
 IDX_LABELS=(0) # (0) for classification
 
-EPOCHS=10000
+#EPOCHS=10000
+EPOCHS=300
 TRAIN_RATIO=0.8
 BATCH_SIZE=64
 N_WORKERS=0
