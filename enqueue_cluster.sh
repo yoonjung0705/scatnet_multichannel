@@ -24,8 +24,8 @@ SUBMIT_COUNT_MAX=1 # max number of times a job can be submitted to the cluster
 BATCH_SIZE_EXIT=64 # use a smaller batch size for previously failed jobs
 N_WORKERS_EXIT=0 # set num_workers to 0 to reduce memory usage. also, ran out of input error might be due to this being larger than 0
 FILE_NAME_PARAMS="params.csv"
-FILE_NAME_JOB="rnn.lsf"
-FILE_NAME_JOB_TEMPLATE="rnn_template.lsf"
+FILE_NAME_JOB="rnn.sh"
+FILE_NAME_JOB_TEMPLATE="rnn_template.sh"
 PAUSE_TIME=90 # wait between job submission to see if jobs can be distributed to different hosts
 # the longested time it took for a job to start the actual training was ~180 seconds
 # setting time to 60 is expected to make roughly 2~4 jobs being in the same host
@@ -40,14 +40,16 @@ PAUSE_TIME=90 # wait between job submission to see if jobs can be distributed to
 sed -i '/^\s*$/d' ${FILE_NAME_PARAMS}
 
 # get done jobids. output example: 41422,41423, but outputs empty string when there's no finished job
-JOBIDS_DONE=$(bjobs -a 2> /dev/null | grep "DONE" | cut -d' ' -f1 | awk 'BEGIN { ORS = "," } { print }')
+#JOBIDS_DONE=$(bjobs -a 2> /dev/null | grep "DONE" | cut -d' ' -f1 | awk 'BEGIN { ORS = "," } { print }')
+JOBIDS_DONE=$(sacct -D -b 2> /dev/null | grep -E "^[0-9]+ " | grep "COMPLETED" | cut -d' ' -f1 | awk 'BEGIN { ORS = "," } { print }')
 # get exit jobids. output example: 41422\n41423
 #JOBIDS_EXIT_RECENT=$(bjobs -a 2> /dev/null | grep "EXIT" | cut -d' ' -f1)
 # get running or pending jobids. output example: 41422,41423, but outputs empty string when there's no running/pending job
-JOBIDS_RUN_PEND=$(bjobs 2> /dev/null | grep "RUN\|PEND" | cut -d' ' -f1 | awk 'BEGIN { ORS = "," } { print }')
+#JOBIDS_RUN_PEND=$(bjobs 2> /dev/null | grep "RUN\|PEND" | cut -d' ' -f1 | awk 'BEGIN { ORS = "," } { print }')
+JOBIDS_RUN_PEND=$(sacct -D -b 2> /dev/null | grep -E "^[0-9]+ " | grep "COMPLETED\|PENDING" | cut -d' ' -f1 | awk 'BEGIN { ORS = "," } { print }')
 
 # the "No unfinished jobs" is an error message and therefore does not count in wc -l
-N_JOBS_SUBMITTED=$(expr $(bjobs 2>/dev/null | wc -l) - 1)
+N_JOBS_SUBMITTED=$(expr $(squeue -u $USERNAME 2> /dev/null | wc -l) - 1)
 N_JOBS_SUBMITTED=$(( N_JOBS_SUBMITTED > 0 ? N_JOBS_SUBMITTED : 0 ))
 
 # get regular expression of finished jobs for grep. 
@@ -116,7 +118,7 @@ cat ${FILE_NAME_PARAMS} | while [[ "${N_JOBS_SUBMITTED}" -lt "${N_JOBS_MAX_NORMA
                 > ${FILE_NAME_JOB}
 
             # submit the job and get new job id
-            JOBID_NEW=$(bsub < ${FILE_NAME_JOB} | grep -o "[0-9]\+")
+            JOBID_NEW=$(sbatch ${FILE_NAME_JOB} | grep -o "[0-9]\+")
             SUBMIT_COUNT_NEW=`expr ${SUBMIT_COUNT} + 1`
             # update the jobid and the submission count in the params.csv file
             awk 'BEGIN { FS=","; OFS="," } NR==line_count { $1=jobid_new; $2=submit_count_new };1' \
@@ -129,7 +131,8 @@ cat ${FILE_NAME_PARAMS} | while [[ "${N_JOBS_SUBMITTED}" -lt "${N_JOBS_MAX_NORMA
     done
 
 # update number of jobs submitted
-N_JOBS_SUBMITTED=$(expr $(bjobs 2>/dev/null | wc -l) - 1)
+#N_JOBS_SUBMITTED=$(expr $(bjobs 2>/dev/null | wc -l) - 1)
+N_JOBS_SUBMITTED=$(expr $(squeue -u $USERNAME 2> /dev/null | wc -l) - 1)
 N_JOBS_SUBMITTED=$(( N_JOBS_SUBMITTED > 0 ? N_JOBS_SUBMITTED : 0 ))
 
 # initialize line count variable for submitting jobs that have failed before
@@ -183,7 +186,8 @@ cat ${FILE_NAME_PARAMS} | while [[ "${N_JOBS_SUBMITTED}" -lt "${N_JOBS_MAX_EXIT}
                 > ${FILE_NAME_JOB}
 
             # submit the job and get new job id
-            JOBID_NEW=$(bsub < ${FILE_NAME_JOB} | grep -o "[0-9]\+")
+            #JOBID_NEW=$(bsub < ${FILE_NAME_JOB} | grep -o "[0-9]\+")
+            JOBID_NEW=$(sbatch ${FILE_NAME_JOB} | grep -o "[0-9]\+")
             SUBMIT_COUNT_NEW=`expr ${SUBMIT_COUNT} + 1`
             # update the jobid and the submission count in the params.csv file
             awk 'BEGIN { FS=","; OFS="," } NR==line_count { $1=jobid_new; $2=submit_count_new };1' \
