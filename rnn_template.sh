@@ -1,22 +1,3 @@
-##
-## ATTENTION:
-## Before running this training job template/script please read the documentation on bellow URL:
-## https://mit-satori.github.io/satori-workload-manager.html#batch-scripts
-##
-##
-## Begin LSF Directives (change only no of required GPUs processes/GPUs and job-name-single name as desired/need)
-## - "-n 4" for single AC922, "-n 8" for 2x AC922s, "-n 16" for 4x AC922s etc
-##
-#BSUB -L /bin/bash
-#BSUB -J "rnn"
-#BSUB -o "log/rnn_o.%J"
-#BSUB -e "log/rnn_e.%J"
-#BSUB -n 4
-#BSUB -R "span[ptile=4]"
-#BSUB -gpu "num=4"
-#BSUB -q "normal"
-
-
 #!/bin/bash
 #SBATCH -J rnn
 #SBATCH -o log/rnn_%j.out
@@ -28,7 +9,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --mem=0
-#SBATCH --time=24:00:00
+#SBATCH --time=11:59:00
 ###SBATCH --exclusive
 
 

@@ -18,15 +18,15 @@ SCATNET_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel"
 cd ${SCATNET_DIR}
 
 # job count
-N_JOBS_MAX_NORMAL=2 # 4-8. max number of jobs allowed to run simutaneously for new jobs. do not go beyond 8
-N_JOBS_MAX_EXIT=2 # 4-8. max number of jobs allowed to run simutaneously for previously failed jobs
-SUBMIT_COUNT_MAX=1 # max number of times a job can be submitted to the cluster
+N_JOBS_MAX_NORMAL=4 # 4-8. max number of jobs allowed to run simutaneously for new jobs. do not go beyond 8
+N_JOBS_MAX_EXIT=3 # 4-8. max number of jobs allowed to run simutaneously for previously failed jobs
+SUBMIT_COUNT_MAX=5 # max number of times a job can be submitted to the cluster
 BATCH_SIZE_EXIT=64 # use a smaller batch size for previously failed jobs
 N_WORKERS_EXIT=0 # set num_workers to 0 to reduce memory usage. also, ran out of input error might be due to this being larger than 0
 FILE_NAME_PARAMS="params.csv"
 FILE_NAME_JOB="rnn.sh"
 FILE_NAME_JOB_TEMPLATE="rnn_template.sh"
-PAUSE_TIME=90 # wait between job submission to see if jobs can be distributed to different hosts
+PAUSE_TIME=0 # wait between job submission to see if jobs can be distributed to different hosts
 # the longested time it took for a job to start the actual training was ~180 seconds
 # setting time to 60 is expected to make roughly 2~4 jobs being in the same host
 # even though a long time is waited between jobs, previous jobs can still get terminated due to new jobs
@@ -38,7 +38,6 @@ PAUSE_TIME=90 # wait between job submission to see if jobs can be distributed to
 # which requires the line number, it's important to have no empty lines
 # we delete lines that have 0 or multiple spaces (a line with tabs \t also gets deleted, too)
 sed -i '/^\s*$/d' ${FILE_NAME_PARAMS}
-
 # get done jobids. output example: 41422,41423, but outputs empty string when there's no finished job
 #JOBIDS_DONE=$(bjobs -a 2> /dev/null | grep "DONE" | cut -d' ' -f1 | awk 'BEGIN { ORS = "," } { print }')
 JOBIDS_DONE=$(sacct -D -b 2> /dev/null | grep -E "^[0-9]+ " | grep "COMPLETED" | cut -d' ' -f1 | awk 'BEGIN { ORS = "," } { print }')
@@ -49,7 +48,7 @@ JOBIDS_DONE=$(sacct -D -b 2> /dev/null | grep -E "^[0-9]+ " | grep "COMPLETED" |
 JOBIDS_RUN_PEND=$(sacct -D -b 2> /dev/null | grep -E "^[0-9]+ " | grep "COMPLETED\|PENDING" | cut -d' ' -f1 | awk 'BEGIN { ORS = "," } { print }')
 
 # the "No unfinished jobs" is an error message and therefore does not count in wc -l
-N_JOBS_SUBMITTED=$(expr $(squeue -u $USERNAME 2> /dev/null | wc -l) - 1)
+N_JOBS_SUBMITTED=$(expr $(squeue -u $(whoami) 2> /dev/null | wc -l) - 1)
 N_JOBS_SUBMITTED=$(( N_JOBS_SUBMITTED > 0 ? N_JOBS_SUBMITTED : 0 ))
 
 # get regular expression of finished jobs for grep. 
@@ -132,7 +131,7 @@ cat ${FILE_NAME_PARAMS} | while [[ "${N_JOBS_SUBMITTED}" -lt "${N_JOBS_MAX_NORMA
 
 # update number of jobs submitted
 #N_JOBS_SUBMITTED=$(expr $(bjobs 2>/dev/null | wc -l) - 1)
-N_JOBS_SUBMITTED=$(expr $(squeue -u $USERNAME 2> /dev/null | wc -l) - 1)
+N_JOBS_SUBMITTED=$(expr $(squeue -u $(whoami) 2> /dev/null | wc -l) - 1)
 N_JOBS_SUBMITTED=$(( N_JOBS_SUBMITTED > 0 ? N_JOBS_SUBMITTED : 0 ))
 
 # initialize line count variable for submitting jobs that have failed before
