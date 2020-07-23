@@ -7,8 +7,10 @@ import sim_utils as siu
 import scat_utils as scu
 import matplotlib.pyplot as plt
 from sklearn import decomposition
+from sklearn.preprocessing import StandardScaler
 #from mpl_toolkits.mplot3d import Axes3D
 
+plt.close('all')
 #plt.style.use('dark_background')
 fontsize_title = 18
 fontsize_label = 14
@@ -112,6 +114,7 @@ elif sim_type == 'tbd':
     S_tbd_log = scu.stack_scat(S_tbd_log)   
     S_tbd_log_mean = S_tbd_log.mean(axis=-1)
     S_tbd_log_mean = np.reshape(S_tbd_log_mean, (S_tbd_log_mean.shape[0], -1))
+    X_raw = traj_tbd.reshape([traj_tbd.shape[0], -1])
 
     gammas_mesh, diff_coef_ratios_mesh, k_ratios_mesh = np.meshgrid(gammas, diff_coef_ratios, k_ratios, indexing='ij')
 
@@ -120,7 +123,7 @@ elif sim_type == 'tbd':
     labels_diff_coef_ratios = np.repeat(np.expand_dims(diff_coef_ratios_mesh, axis=-1), n_data, axis=-1).flatten()
     labels_k_ratios = np.repeat(np.expand_dims(k_ratios_mesh, axis=-1), n_data, axis=-1).flatten()
     #labels_gammas = np.char.add('\gamma=', labels_gammas)
-    marker_sizes = labels_gammas**2.75
+    marker_sizes = labels_gammas**4
     marker_sizes = marker_sizes / np.mean(marker_sizes) * marker_size_mean
 
     #diff_coef_ratios_str = np.round(diff_coef_ratios_mesh, n_decim).astype(str)
@@ -140,11 +143,21 @@ elif sim_type == 'tbd':
 
     #labels_uniq = np.unique(labels)
 
+    # standardize (for each variable) before pca for both X and X_raw
+    scaler = StandardScaler()
+    X = scaler.fit_transform(X)
+    X_raw = scaler.fit_transform(X_raw)
+
     pca = decomposition.PCA(n_components=2)
     pca.fit(X)
     X = pca.transform(X)
 
+    pca = decomposition.PCA(n_components=2)
+    pca.fit(X_raw)
+    X_raw = pca.transform(X_raw)
+
     fig, ax = plt.subplots()
+    fig2, ax2 = plt.subplots()
     for diff_coef_ratio in diff_coef_ratios:
         for k_ratio in k_ratios:
             #label = r'$T_h/T_c={}, k_2/k_1={}$'.format(diff_coef_ratio, k_ratio)
@@ -152,11 +165,17 @@ elif sim_type == 'tbd':
             filt = labels_diff_coef_ratios == diff_coef_ratio
             filt &= labels_k_ratios == k_ratio
             ax.scatter(X[filt, 0], X[filt, 1], label=label, s=marker_sizes[filt])
+            ax2.scatter(X_raw[filt, 0], X_raw[filt, 1], label=label, s=marker_sizes[filt])
 
-    ax.legend(fontsize=fontsize_legend)
+    ax.legend(fontsize=fontsize_legend, loc='upper right')
     ax.set_title('PCA after scattering transform', fontsize=fontsize_title)
     ax.set_xlabel('PC1', fontsize=fontsize_label)
     ax.set_ylabel('PC2', fontsize=fontsize_label)
+
+    ax2.legend(fontsize=fontsize_legend, loc='upper right')
+    ax2.set_title('PCA after scattering transform', fontsize=fontsize_title)
+    ax2.set_xlabel('PC1', fontsize=fontsize_label)
+    ax2.set_ylabel('PC2', fontsize=fontsize_label)
 
     plt.show()
 
