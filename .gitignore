@@ -7,9 +7,10 @@ log/*
 obsolete/*
 launch.sh
 setup.sh
-rnn.lsf
+rnn.sh
 params.csv
 params.log
 exit.log
 *.bak
 *.swp
+nodelist.$

@@ -60,9 +60,9 @@ ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/experiments/b
 #ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/experiments/bead/2020_0319/data_len_1024_train_val_26_test_26_sep"
 #ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/experiments/irfp"
 #############################
-HIDDEN_SIZES=(150)
+HIDDEN_SIZES=(50)
 #HIDDEN_SIZES=(50 100 150 200 250)
-N_LAYERSS=(3)
+N_LAYERSS=(2)
 BIDIRECTIONAL="--bidirectional"
 
 #CLASSIFIER="" # regression
