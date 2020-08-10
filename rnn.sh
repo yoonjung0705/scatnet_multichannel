@@ -9,7 +9,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --mem=0
-#SBATCH --time=11:59:00
+#SBATCH --time=23:59:00
 ###SBATCH --exclusive
 
 
@@ -37,8 +37,8 @@ export NCCL_DEBUG=DEBUG
 
 ## Horovod execution
 horovodrun -np $SLURM_NTASKS -H `cat $NODELIST` python $HOME2/repos/scatnet_multichannel/train_rnn.py \
-  --file-name data_scat_0.pt --root-dir /nobackup/users/yoonjung/repos/scatnet_multichannel/data/experiments/bead/2020_0319/data_len_256_train_val_175_test_59_sep_2 \
-  --hidden-size 500000 --n-layers 3 --bidirectional --classifier \
-  --idx-label 0 --epochs 300 --train-ratio 0.8 \
+  --file-name tbd_0.pt --root-dir /nobackup/users/yoonjung/repos/scatnet_multichannel/data/simulations/data_len_512_gamma_1_1_k_1_7_t_4_10/ \
+  --hidden-size 50 --n-layers 3 --bidirectional  \
+  --idx-label 2 --epochs 10000 --train-ratio 0.8 \
   --batch-size 64 --n-workers 0 \
-  --lr 0.001 --betas 0.9 0.999 --opt-level O2 --seed 42 --log-interval 50 --save-model
+  --lr 0.001 --betas 0.9 0.999 --opt-level O2 --seed 42 --log-interval 50 

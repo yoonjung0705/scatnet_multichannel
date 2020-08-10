@@ -9,21 +9,20 @@
 #############################
 #FILE_NAMES=("tbd_4.pt")
 #FILE_NAMES=("tbd_4_scat_0.pt")
-#FILE_NAMES=("tbd_0.pt" "tbd_1.pt" "tbd_2.pt" "tbd_3.pt")
+FILE_NAMES=("tbd_0.pt" "tbd_1.pt" "tbd_2.pt" "tbd_3.pt" "tbd_4.pt")
+#FILE_NAMES=("tbd_0_scat_0.pt" "tbd_1_scat_0.pt" "tbd_2_scat_0.pt" "tbd_3_scat_0.pt" "tbd_4_scat_0.pt")
 #FILE_NAMES=("tbd_5.pt" "tbd_6.pt" "tbd_7.pt" "tbd_8.pt")
-#FILE_NAMES=("tbd_0_scat_0.pt" "tbd_1_scat_0.pt" "tbd_2_scat_0.pt" "tbd_3_scat_0.pt")
 #FILE_NAMES=("tbd_0_scat_0.pt" "tbd_0_scat_1.pt" "tbd_1_scat_0.pt" "tbd_1_scat_1.pt" "tbd_2_scat_0.pt" "tbd_2_scat_1.pt" "tbd_3_scat_0.pt" "tbd_3_scat_1.pt" "tbd_4_scat_0.pt" "tbd_4_scat_1.pt")
 #FILE_NAMES=("tbd_5_scat_0.pt" "tbd_5_scat_1.pt" "tbd_6_scat_0.pt" "tbd_6_scat_1.pt" "tbd_7_scat_0.pt" "tbd_7_scat_1.pt" "tbd_8_scat_0.pt" "tbd_8_scat_1.pt")
 
 
 #FILE_NAMES=("data.pt")
-FILE_NAMES=("data_scat_0.pt")
+#FILE_NAMES=("data_scat_0.pt")
 
 #############################
 #README="training tbd_4.pt (data_len being 2**11=2048, gamma=1-3) for hidden size 50,100,150,200,250 and 3 layers parameters"
 #README="training scat transformed tbd_4.pt (data_len being 2**11=2048, gamma=1-3) for hidden size 20,50,100,150,200,250 and 3 layers parameters"
-#README="training tbd_0,1,2,3.pt (data_len being 2**7=128, gamma=1-3) for hidden size 20,50,100,150,200,250 and 3 layers parameters for new k_ratios and diff_coef_ratios data"
-#README="training tbd_5,6,7,8.pt (data_len being 2**8=256, gamma=1-1.5) for hidden size 50,100,150,200,250,300 and 3 layers parameters"
+README="training tbd_0,1,2,3,4.pt (data_len being 2**9=512, gamma=1-1) for hidden size 20,50,100,150,200,250 and 3 layers parameters"
 #README="training scat transformed tbd_0,1,2,3.pt (data_len being 2**7=128, gamma=1-3) for hidden size 20,50,100,150,200 and 3 layers parameters"
 #README="training scat transformed tbd_0,1,2,3.pt (data_len being 2**7=128, gamma=1-3) for hidden size 20,50,100,150,200 and 3 layers parameters for new k_ratios and diff_coef_ratios data"
 #README="training scat transformed tbd_0,1,2,3,4.pt (data_len being 2**10=1024, gamma=1-1.5) for hidden size 20,50 and 2,3 layers parameters"
@@ -52,24 +51,24 @@ FILE_NAMES=("data_scat_0.pt")
 #README="training polydisperse 2020_0319 data.pt (data_len being 2**10=1024, train_val tracks = 29) for hidden size 50,100,150,200,250 and 3 layers"
 #README="training scat transformed polydisperse 2020_0319 data.pt (data_len being 2**10=1024, train_val tracks = 29) for hidden size 20,50,100,150,200,250 and 3 layers"
 
-README=""
+#README=""
 #############################
 # should be given in absolute path format
-#ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/simulations/data_len_2048_gamma_1_3_k_1_7_t_4_10/"
-ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/experiments/bead/2020_0319/data_len_256_train_val_175_test_59_sep_2"
+ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/simulations/data_len_512_gamma_1_1_k_1_7_t_4_10/"
+#ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/experiments/bead/2020_0319/data_len_256_train_val_175_test_59_sep_2"
 #ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/experiments/bead/2020_0319/data_len_1024_train_val_26_test_26_sep"
 #ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/experiments/irfp"
 #############################
-HIDDEN_SIZES=(50)
-#HIDDEN_SIZES=(50 100 150 200 250)
-N_LAYERSS=(2)
+#HIDDEN_SIZES=(50)
+HIDDEN_SIZES=(20 50 100 150 200 250)
+N_LAYERSS=(3)
 BIDIRECTIONAL="--bidirectional"
 
-#CLASSIFIER="" # regression
-CLASSIFIER="--classifier" # classification
+CLASSIFIER="" # regression
+#CLASSIFIER="--classifier" # classification
 
-#IDX_LABELS=(1 2) # (1 2) for two beads
-IDX_LABELS=(0) # (0) for classification
+IDX_LABELS=(1 2) # (1 2) for two beads
+#IDX_LABELS=(0) # (0) for classification
 
 EPOCHS=10000
 TRAIN_RATIO=0.8
@@ -80,8 +79,8 @@ BETAS="0.9 0.999"
 OPT_LEVEL="O2"
 SEED=42
 LOG_INTERVAL=50
-#SAVE_MODEL=""
-SAVE_MODEL="--save-model"
+SAVE_MODEL=""
+#SAVE_MODEL="--save-model"
 
 printf "$(date)\t${README}\n" >> params.log
 

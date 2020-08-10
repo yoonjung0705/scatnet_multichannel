@@ -10,6 +10,7 @@ setup.sh
 rnn.sh
 params.csv
 params.log
+rnn.sh
 exit.log
 *.bak
 *.swp

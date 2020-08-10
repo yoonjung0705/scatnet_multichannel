@@ -9,7 +9,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --mem=0
-#SBATCH --time=11:59:00
+#SBATCH --time=23:59:00
 ###SBATCH --exclusive
 
 
