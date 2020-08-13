@@ -12,7 +12,7 @@ import net_utils as nu
 if not os.path.exists('./dc_img'):
     os.mkdir('./dc_img')
 
-file_name = 'oocyte_stack_test.tif'
+file_name = 'oocyte_test_32px.tif'
 root_dir = './data/compression'
 num_epochs = 100
 batch_size = 128

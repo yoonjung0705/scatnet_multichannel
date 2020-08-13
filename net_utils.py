@@ -43,24 +43,23 @@ class FCNet(nn.Module):
         return self.net(x)
 
 
-# NOTE: change name to ConvNet or whatever
 class Autoencoder(nn.Module):
     def __init__(self):
         super(Autoencoder, self).__init__()
         self.encoder = nn.Sequential(
-            nn.Conv2d(1, 16, 3, stride=3, padding=1),  # b, 16, 10, 10
+            nn.Conv2d(1, 16, 3, stride=3, padding=2),  # b, 16, 12, 12
             nn.ReLU(True),
-            nn.MaxPool2d(2, stride=2),  # b, 16, 5, 5
-            nn.Conv2d(16, 8, 3, stride=2, padding=1),  # b, 8, 3, 3
+            nn.MaxPool2d(2, stride=2),  # b, 16, 6, 6
+            nn.Conv2d(16, 8, 2, stride=2, padding=1),  # b, 8, 4, 4
             nn.ReLU(True),
-            nn.MaxPool2d(2, stride=1)  # b, 8, 2, 2
+            nn.MaxPool2d(2, stride=2)  # b, 8, 2, 2
         )
         self.decoder = nn.Sequential(
-            nn.ConvTranspose2d(8, 16, 3, stride=2),  # b, 16, 5, 5
+            nn.ConvTranspose2d(8, 16, 3, stride=3),  # b, 16, 6, 6
             nn.ReLU(True),
-            nn.ConvTranspose2d(16, 8, 5, stride=3, padding=1),  # b, 8, 15, 15
+            nn.ConvTranspose2d(16, 8, 3, stride=3, padding=1),  # b, 8, 16, 16
             nn.ReLU(True),
-            nn.ConvTranspose2d(8, 1, 2, stride=2, padding=1),  # b, 1, 28, 28
+            nn.ConvTranspose2d(8, 1, 2, stride=2),  # b, 1, 32, 32
             nn.Tanh()
         )
 
@@ -186,7 +185,7 @@ class ToTensor:
 def to_img(x): # this is for after the training
     x = 0.5 * (x + 1) # shifts things towards to the right a bit. num range: (0,1) -> (0,1) but useful in the case where the numbers are slightly outside this range (since you train it it doesn't exactly become (0,1))
     x = x.clamp(0, 1)
-    x = x.view(x.size(0), 1, 28, 28)
+    x = x.view(x.size(0), 1, 32, 32)
     return x
 
 
