@@ -12,6 +12,8 @@ from torch.utils.data.sampler import SubsetRandomSampler
 from torch.utils.data.distributed import DistributedSampler
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 import time
+from skimage.external import tifffile                                                                                    
+
 try:
     import horovod.torch as hvd
     from apex import amp
@@ -44,7 +46,7 @@ class FCNet(nn.Module):
 # NOTE: change name to ConvNet or whatever
 class Autoencoder(nn.Module):
     def __init__(self):
-        super(autoencoder, self).__init__()
+        super(Autoencoder, self).__init__()
         self.encoder = nn.Sequential(
             nn.Conv2d(1, 16, 3, stride=3, padding=1),  # b, 16, 10, 10
             nn.ReLU(True),
@@ -125,11 +127,14 @@ class RNN(nn.Module):
 
 
 class ImageStackDataset(Dataset):
+    # NOTE: assumes this is a stack. If you plug in one single image, it will produce weird behavior -> assert this
+    # TODO: what if image is 3 dim?
+    # TODO: I think a better way is to do things in transforms, not doing it here.
     def __init__(self, file_name, root_dir, labels=None, transform=None):
-        #TODO: if dim is 2, add another dim
+        #TODO: if dim is 3, add another dim?
         #TODO: consider adding labels in __init__ argument list. if labels is not None, check length. default is None
         file_path = os.path.join(root_dir, file_name)
-        self._data = tifffile.imread(file_path)
+        self._data = tifffile.imread(file_path).astype('float32')
         #TODO: above line means you read in the whole stack of images in the memory
         # another option: read only the images for the specific batch
         self._labels = labels
@@ -140,14 +145,11 @@ class ImageStackDataset(Dataset):
         return self._len
 
     def __getitem__(self, index):
-        if self._labels is None:
-            sample = {'data':self._data[index], 'labels':None}
-        else:
-            sample = {'data':self._data[index], 'labels':self._labels[index]}
-
+        sample = {'data':self._data[index]}
+        if self._labels is not None:
+            sample['labels'] = self._labels[index]
         if self._transform is not None:
-            sample = self._transform(sample)
-
+            sample['data'] = self._transform(sample['data'])
         return sample
 
 
