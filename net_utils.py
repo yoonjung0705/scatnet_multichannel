@@ -23,9 +23,9 @@ import scat_utils as scu
 
 ROOT_DIR = './data/simulations/'
 
-class Net(nn.Module):
+class FCNet(nn.Module):
     def __init__(self, n_nodes):
-        super(Net, self).__init__()
+        super(FCNet, self).__init__()
         net = []
         for idx in range(len(n_nodes) - 2):
             net.append(nn.Linear(n_nodes[idx], n_nodes[idx + 1]))
@@ -39,6 +39,33 @@ class Net(nn.Module):
 
     def forward(self, x):
         return self.net(x)
+
+
+# NOTE: change name to ConvNet or whatever
+class Autoencoder(nn.Module):
+    def __init__(self):
+        super(autoencoder, self).__init__()
+        self.encoder = nn.Sequential(
+            nn.Conv2d(1, 16, 3, stride=3, padding=1),  # b, 16, 10, 10
+            nn.ReLU(True),
+            nn.MaxPool2d(2, stride=2),  # b, 16, 5, 5
+            nn.Conv2d(16, 8, 3, stride=2, padding=1),  # b, 8, 3, 3
+            nn.ReLU(True),
+            nn.MaxPool2d(2, stride=1)  # b, 8, 2, 2
+        )
+        self.decoder = nn.Sequential(
+            nn.ConvTranspose2d(8, 16, 3, stride=2),  # b, 16, 5, 5
+            nn.ReLU(True),
+            nn.ConvTranspose2d(16, 8, 5, stride=3, padding=1),  # b, 8, 15, 15
+            nn.ReLU(True),
+            nn.ConvTranspose2d(8, 1, 2, stride=2, padding=1),  # b, 1, 28, 28
+            nn.Tanh()
+        )
+
+    def forward(self, x):
+        x = self.encoder(x)
+        x = self.decoder(x)
+        return x
 
 
 class RNN(nn.Module):
@@ -97,6 +124,33 @@ class RNN(nn.Module):
         return output
 
 
+class ImageStackDataset(Dataset):
+    def __init__(self, file_name, root_dir, labels=None, transform=None):
+        #TODO: if dim is 2, add another dim
+        #TODO: consider adding labels in __init__ argument list. if labels is not None, check length. default is None
+        file_path = os.path.join(root_dir, file_name)
+        self._data = tifffile.imread(file_path)
+        #TODO: above line means you read in the whole stack of images in the memory
+        # another option: read only the images for the specific batch
+        self._labels = labels
+        self._len = len(self._data) # provided that 0th dim is number of images
+        self._transform = transform
+    
+    def __len__(self):
+        return self._len
+
+    def __getitem__(self, index):
+        if self._labels is None:
+            sample = {'data':self._data[index], 'labels':None}
+        else:
+            sample = {'data':self._data[index], 'labels':self._labels[index]}
+
+        if self._transform is not None:
+            sample = self._transform(sample)
+
+        return sample
+
+
 class TimeSeriesDataset(Dataset):
     def __init__(self, data, labels, transform=None):
         assert(len(data) == len(labels)),\
@@ -125,6 +179,13 @@ class ToTensor:
         sample_out = {'data': data, 'labels':labels}
 
         return sample_out
+
+
+def to_img(x): # this is for after the training
+    x = 0.5 * (x + 1) # shifts things towards to the right a bit. num range: (0,1) -> (0,1) but useful in the case where the numbers are slightly outside this range (since you train it it doesn't exactly become (0,1))
+    x = x.clamp(0, 1)
+    x = x.view(x.size(0), 1, 28, 28)
+    return x
 
 
 def collate_fn(batch):
@@ -365,7 +426,7 @@ def _train_nn(dataset, index, n_nodes_hidden, classifier, n_epochs_max, batch_si
     output_size = len(meta['label_to_idx']) if classifier else 1
     n_nodes = [n_features] + list(n_nodes_hidden) + [output_size]
 
-    net = Net(n_nodes=n_nodes).to(device)
+    net = FCNet(n_nodes=n_nodes).to(device)
     optimizer = optim.Adam(net.parameters(), lr=lr, betas=betas)
     criterion = nn.CrossEntropyLoss(reduction='sum') if classifier else nn.MSELoss(reduction='sum')
     metric = 'cross_entropy_mean' if classifier else 'rmse'

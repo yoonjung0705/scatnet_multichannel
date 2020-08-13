@@ -163,7 +163,7 @@ for idx_file in range(n_files):
         # following is shaped (n_labels, n_conditions)
         labels = np.array(list(product(*samples['labels'])), dtype='float32').swapaxes(0, 1)
         for idx_label in range(n_labels):
-            net = nu.Net(meta['n_nodes'])
+            net = nu.FCNet(meta['n_nodes'])
             net.load_state_dict(meta['weights'][idx_label][idx_epochs[idx_label]])
 
             dataset = nu.TimeSeriesDataset(input, np.zeros((n_data_total,)))
