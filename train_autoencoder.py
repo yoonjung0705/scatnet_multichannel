@@ -118,7 +118,7 @@ for epoch in range(n_epochs_max):
         torch.save(meta, file_path_meta)
         if save_fig:
             output_test = nu.to_img(model(test_img).cpu()).detach().numpy() * max_val
-            output_test = output_test.astype('uint16')
+            output_test = output_test.astype('uint8')
             test_imgs.append(output_test)
             test_stack = np.stack(test_imgs, axis=0)
             tifffile.imsave(os.path.join(root_dir, 'test_stack.tif'), test_stack)
