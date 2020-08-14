@@ -15,11 +15,12 @@ import common_utils as cu
 import time
 import numpy as np
 
-file_name = 'oocyte_test_32px.tif'
+#file_name = 'oocyte_test_32px.tif'
+file_name = 'density.tif'
 root_dir = './data/compression'
 
 n_epochs_max = 2000
-batch_size = 128
+batch_size = 512
 train_ratio = 0.8
 learning_rate = 1e-3
 n_workers = 4
@@ -117,7 +118,7 @@ for epoch in range(n_epochs_max):
             meta['loss'][phase].append(loss_metric[phase])
         torch.save(meta, file_path_meta)
         if save_fig:
-            output_test = nu.to_img(model(test_img).cpu()).detach().numpy() * max_val
+            output_test = nu.to_img(model(torch.tensor(test_img).to(device)).cpu()).detach().numpy() * max_val
             output_test = output_test.astype('uint8')
             test_imgs.append(output_test)
             test_stack = np.stack(test_imgs, axis=0)
