@@ -32,8 +32,14 @@ betas = (0.9, 0.999)
 # set data file name
 file_name_noext, _ = os.path.splitext(file_name)
 file_path = os.path.join(root_dir, file_name)
-test_img = tifffile.imread(file_path)[idx_test_img][np.newaxis, :, :]
+imgs = tifffile.imread(file_path)
+max_val = imgs.max().astype('float32')
+test_img = imgs[idx_test_img][np.newaxis, np.newaxis, :, :].astype('float32')
+test_img = test_img / max_val
 
+test_img = (test_img - 0.5) / 0.5
+test_img = torch.tensor(test_img, dtype=torch.get_default_dtype())
+test_imgs = []
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # set meta file name
@@ -42,12 +48,6 @@ nums = [int(num) for num in nums]; idx = max(nums) + 1 if nums else 0
 file_name_meta = '{}_meta_autoconv_{}.pt'.format(file_name_noext, idx)
 file_path_meta = os.path.join(root_dir, file_name_meta)
 
-class ToTensor:
-    def __call__(self, sample):
-        dtype = torch.get_default_dtype()
-        sample_out = torch.tensor(sample, dtype=dtype)
-
-        return sample_out
 # define dataset
 img_transform = transforms.Compose([
     transforms.ToTensor(),
@@ -116,41 +116,10 @@ for epoch in range(n_epochs_max):
         for phase in ['train', 'val']:
             meta['loss'][phase].append(loss_metric[phase])
         torch.save(meta, file_path_meta)
-
-
-
-
-
-criterion = nn.MSELoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate,
-    weight_decay=1e-5)
-
-for epoch in range(num_epochs):
-    for data in dataloader:
-        img = data['data']
-        img = Variable(img).cuda()
-        # ===================forward=====================
-        output = model(img)
-        loss = criterion(output, img)
-        # ===================backward====================
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-    # ===================log========================
-    print('epoch [{}/{}], loss:{:.4f}'
-          .format(epoch+1, num_epochs, loss.data.item()))
-    if epoch % 10 == 0:
         if save_fig:
-            output_test = nu.to_img(model(test_img).cpu())
-        save_image(output_test, os.path.join(root_dir, '/image_{}.png'.format(epoch)))
-
-#torch.save(model.state_dict(), './dc_img/conv_autoencoder.pth')
-
-
-
-
-
-
-
-
+            output_test = nu.to_img(model(test_img).cpu()).detach().numpy() * max_val
+            output_test = output_test.astype('uint16')
+            test_imgs.append(output_test)
+            test_stack = np.stack(test_imgs, axis=0)
+            tifffile.imsave(os.path.join(root_dir, 'test_stack.tif'), test_stack)
 
