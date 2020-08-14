@@ -43,6 +43,19 @@ class FCNet(nn.Module):
         return self.net(x)
 
 
+class View(nn.Module):
+
+    def __init__(self, shape):
+        self.shape = shape
+
+    def forward(self, input):
+        '''
+        TODO: the first dimension is the data batch_size
+        so we need to decide how the input shape should be like
+        '''
+        return input.view(*self.shape)
+
+
 class Autoencoder(nn.Module):
     def __init__(self):
         super(Autoencoder, self).__init__()
@@ -133,7 +146,9 @@ class ImageStackDataset(Dataset):
         #TODO: if dim is 3, add another dim?
         #TODO: consider adding labels in __init__ argument list. if labels is not None, check length. default is None
         file_path = os.path.join(root_dir, file_name)
-        self._data = tifffile.imread(file_path).astype('float32')
+        self._data = tifffile.imread(file_path).astype('float32') # added dummy channel axis
+        max_val = self._data.max()
+        self._data = self._data / max_val
         #TODO: above line means you read in the whole stack of images in the memory
         # another option: read only the images for the specific batch
         self._labels = labels
@@ -147,8 +162,10 @@ class ImageStackDataset(Dataset):
         sample = {'data':self._data[index]}
         if self._labels is not None:
             sample['labels'] = self._labels[index]
+        #print(sample['data'].shape)
         if self._transform is not None:
             sample['data'] = self._transform(sample['data'])
+        #print(sample['data'].shape)
         return sample
 
 
@@ -229,7 +246,7 @@ def collate_fn(batch):
     batch_out = {'data':data_out, 'labels':labels, 'input_lens':input_lens}
     return batch_out
 
-def _train_test_split(n_data, train_ratio, seed=None):
+def _train_test_split(n_data, train_ratio, seed=42):
     '''
     splits the data indices for training and testing
 
@@ -244,13 +261,13 @@ def _train_test_split(n_data, train_ratio, seed=None):
     index: dict with keys train and test while values being lists of indices
     '''
     assert(train_ratio > 0 and train_ratio < 1), "Invalid train_ratio given. Should be between 0 and 1"
-    if seed is not None: np.random.seed(seed)
+    np.random.seed(seed)
     idx_train = np.random.choice(n_data, int(n_data * train_ratio), replace=False)
     idx_test = np.array(list(set(range(n_data)) - set(idx_train)))
     index = {'train':idx_train, 'test':idx_test}
     return index
 
-def _train_val_test_split(n_data, train_val_ratio, seed=None):
+def _train_val_test_split(n_data, train_val_ratio, seed=42):
     '''
     splits the data indices for training and validation and testing
 
@@ -266,7 +283,7 @@ def _train_val_test_split(n_data, train_val_ratio, seed=None):
     index: dict with keys train and test while values being lists of indices
     '''
     assert(len(train_val_ratio) == 2), "Split ratio should be given as a length 2 list like input"
-    if seed is not None: np.random.seed(seed)
+    np.random.seed(seed)
     for ratio in train_val_ratio:
         assert(ratio > 0 and ratio < 1), "Invalid train_val_ratio given. Elements should be between 0 and 1"
     assert(sum(train_val_ratio) > 0 and sum(train_val_ratio) < 1), "Invalid train_val_ratio given.\
