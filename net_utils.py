@@ -141,12 +141,13 @@ class RNN(nn.Module):
 class ImageStackDataset(Dataset):
     # NOTE: assumes this is a stack. If you plug in one single image, it will produce weird behavior -> assert this
     # TODO: what if image is 3 dim?
+    # TODO: still not sure if the dimensions are correct when doing ToTensor() and Normalize(). Check!
     # TODO: I think a better way is to do things in transforms, not doing it here.
     def __init__(self, file_name, root_dir, labels=None, transform=None):
         #TODO: if dim is 3, add another dim?
         #TODO: consider adding labels in __init__ argument list. if labels is not None, check length. default is None
         file_path = os.path.join(root_dir, file_name)
-        self._data = tifffile.imread(file_path).astype('float32') # added dummy channel axis
+        self._data = tifffile.imread(file_path).astype('float32')
         max_val = self._data.max()
         self._data = self._data / max_val
         #TODO: above line means you read in the whole stack of images in the memory

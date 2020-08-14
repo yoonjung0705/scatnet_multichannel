@@ -20,7 +20,7 @@ file_name = 'density.tif'
 root_dir = './data/compression'
 
 n_epochs_max = 2000
-batch_size = 512
+batch_size = 128
 train_ratio = 0.8
 learning_rate = 1e-3
 n_workers = 4
@@ -57,7 +57,7 @@ img_transform = transforms.Compose([
 ])
 
 dataset = nu.ImageStackDataset(file_name=file_name, root_dir=root_dir, transform=img_transform)
-n_px = np.prod(list(dataset[0:1]['data'].shape[-2:]))
+n_px = np.prod(list(dataset[0:1]['data'].shape[-3:]))
 # split dataset into training and validation and get indices
 n_data_total = len(dataset)
 index = nu._train_test_split(n_data_total, train_ratio); index['val'] = index.pop('test')
