@@ -10,6 +10,7 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --mem=0
 #SBATCH --time=23:59:00
+#SBATCH --qos=sched_level_2
 ###SBATCH --exclusive
 
 

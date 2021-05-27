@@ -7,12 +7,12 @@ import sim_utils as siu
 '''custom libraries'''
 import common_utils as cu
 #ROOT_DIR = './data/simulations/data_len_512_gamma_1_3_k_1_7_t_4_10'
-ROOT_DIR = './data/simulations/data_len_512_gamma_1_1_k_1_7_t_4_10' # fixed gamma value
+ROOT_DIR = './data/simulations/data_len_2048_gamma_1_1_k_1_7_t_4_10' # fixed gamma value
 #ROOT_DIR = './data/simulations/'
 
 # common inputs
-data_len = 2**9
-avg_lens = [2**6] # 2**6 when data_len is 2**9
+data_len = 2**11
+avg_lens = [2**8] # 2**6 when data_len is 2**9, 2**7 when data_len is 2**10, 2**8 when data_len is 2**11
 n_filter_octaves = [(1,1)]
 dt = 0.001
 n_datas = [20, 50, 200, 500, 2000]

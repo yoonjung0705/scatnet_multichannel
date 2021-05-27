@@ -9,8 +9,8 @@
 #############################
 #FILE_NAMES=("tbd_4.pt")
 #FILE_NAMES=("tbd_4_scat_0.pt")
-FILE_NAMES=("tbd_0.pt" "tbd_1.pt" "tbd_2.pt" "tbd_3.pt" "tbd_4.pt")
-#FILE_NAMES=("tbd_0_scat_0.pt" "tbd_1_scat_0.pt" "tbd_2_scat_0.pt" "tbd_3_scat_0.pt" "tbd_4_scat_0.pt")
+#FILE_NAMES=("tbd_0.pt" "tbd_1.pt" "tbd_2.pt" "tbd_3.pt" "tbd_4.pt")
+FILE_NAMES=("tbd_0_scat_0.pt" "tbd_1_scat_0.pt" "tbd_2_scat_0.pt" "tbd_3_scat_0.pt" "tbd_4_scat_0.pt")
 #FILE_NAMES=("tbd_5.pt" "tbd_6.pt" "tbd_7.pt" "tbd_8.pt")
 #FILE_NAMES=("tbd_0_scat_0.pt" "tbd_0_scat_1.pt" "tbd_1_scat_0.pt" "tbd_1_scat_1.pt" "tbd_2_scat_0.pt" "tbd_2_scat_1.pt" "tbd_3_scat_0.pt" "tbd_3_scat_1.pt" "tbd_4_scat_0.pt" "tbd_4_scat_1.pt")
 #FILE_NAMES=("tbd_5_scat_0.pt" "tbd_5_scat_1.pt" "tbd_6_scat_0.pt" "tbd_6_scat_1.pt" "tbd_7_scat_0.pt" "tbd_7_scat_1.pt" "tbd_8_scat_0.pt" "tbd_8_scat_1.pt")
@@ -22,8 +22,8 @@ FILE_NAMES=("tbd_0.pt" "tbd_1.pt" "tbd_2.pt" "tbd_3.pt" "tbd_4.pt")
 #############################
 #README="training tbd_4.pt (data_len being 2**11=2048, gamma=1-3) for hidden size 50,100,150,200,250 and 3 layers parameters"
 #README="training scat transformed tbd_4.pt (data_len being 2**11=2048, gamma=1-3) for hidden size 20,50,100,150,200,250 and 3 layers parameters"
-README="training tbd_0,1,2,3,4.pt (data_len being 2**9=512, gamma=1-1) for hidden size 20,50,100,150,200,250 and 3 layers parameters"
-#README="training scat transformed tbd_0,1,2,3.pt (data_len being 2**7=128, gamma=1-3) for hidden size 20,50,100,150,200 and 3 layers parameters"
+README="training tbd_0,1,2,3,4.pt (data_len being 2**11=2048, gamma=1-1) for hidden size 20,50,100,150,200,250 and 3 layers parameters"
+#README="training scat transformed tbd_0,1,2,3,4.pt (data_len being 2**9=512, gamma=1-3) for hidden size 20,50,100,150,200 and 3 layers parameters"
 #README="training scat transformed tbd_0,1,2,3.pt (data_len being 2**7=128, gamma=1-3) for hidden size 20,50,100,150,200 and 3 layers parameters for new k_ratios and diff_coef_ratios data"
 #README="training scat transformed tbd_0,1,2,3,4.pt (data_len being 2**10=1024, gamma=1-1.5) for hidden size 20,50 and 2,3 layers parameters"
 #README="training scat transformed tbd_5,6,7,8.pt (data_len being 2**8=256, gamma=1-1.5) for hidden size 20,50,100,150,200,250 and 3 layers parameters"
@@ -54,7 +54,7 @@ README="training tbd_0,1,2,3,4.pt (data_len being 2**9=512, gamma=1-1) for hidde
 #README=""
 #############################
 # should be given in absolute path format
-ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/simulations/data_len_512_gamma_1_1_k_1_7_t_4_10/"
+ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/simulations/data_len_2048_gamma_1_1_k_1_7_t_4_10/"
 #ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/experiments/bead/2020_0319/data_len_256_train_val_175_test_59_sep_2"
 #ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/experiments/bead/2020_0319/data_len_1024_train_val_26_test_26_sep"
 #ROOT_DIR="/nobackup/users/yoonjung/repos/scatnet_multichannel/data/experiments/irfp"
