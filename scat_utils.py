@@ -3,7 +3,10 @@ import os
 import numpy as np
 import copy
 from scipy import interpolate
-import torch
+try:
+    import torch
+except Exception as err:
+    print(err)
 
 '''custom libraries'''
 import common_utils as cu
@@ -41,10 +44,12 @@ class ScatNet(object):
         '''
         if isinstance(n_filter_octave, int):
             n_filter_octave = [n_filter_octave]
+        # cast to int in case input is str
+        n_filter_octave = [int(n) for n in n_filter_octave]
 
         self._data_len = data_len
         self._avg_len = avg_len
-        self._n_filter_octave = np.array(n_filter_octave)
+        self._n_filter_octave = np.array(n_filter_octave).astype(int)
         self._n_layers = len(n_filter_octave)
         self._filter_format = filter_format
         self._mode = mode
@@ -471,7 +476,7 @@ class ScatNet(object):
 
         return data
 
-    def _wavelet_1d(self, data, filters, psi_mask=None, x_res=0, oversampling=1):
+    def _wavelet_1d(self, data, filters, psi_mask=None, x_res=0, oversampling=0):
         '''
         1d wavelet transform of the given data. The data is convolved with the scaling function and a subset of filter banks so that only
         frequency decreasing paths are considered. This corresponds to expanding a given node to branches in the graphical representation.
