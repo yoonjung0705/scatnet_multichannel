@@ -5,6 +5,7 @@ data
 *.pt
 log/*
 obsolete/*
+dc_img/*
 launch.sh
 setup.sh
 rnn.sh

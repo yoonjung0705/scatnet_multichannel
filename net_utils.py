@@ -12,6 +12,8 @@ from torch.utils.data.sampler import SubsetRandomSampler
 from torch.utils.data.distributed import DistributedSampler
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 import time
+from skimage.external import tifffile                                                                                    
+
 try:
     import horovod.torch as hvd
     from apex import amp
@@ -23,9 +25,9 @@ import scat_utils as scu
 
 ROOT_DIR = './data/simulations/'
 
-class Net(nn.Module):
+class FCNet(nn.Module):
     def __init__(self, n_nodes):
-        super(Net, self).__init__()
+        super(FCNet, self).__init__()
         net = []
         for idx in range(len(n_nodes) - 2):
             net.append(nn.Linear(n_nodes[idx], n_nodes[idx + 1]))
@@ -39,6 +41,45 @@ class Net(nn.Module):
 
     def forward(self, x):
         return self.net(x)
+
+
+class View(nn.Module):
+
+    def __init__(self, shape):
+        self.shape = shape
+
+    def forward(self, input):
+        '''
+        TODO: the first dimension is the data batch_size
+        so we need to decide how the input shape should be like
+        '''
+        return input.view(*self.shape)
+
+
+class Autoencoder(nn.Module):
+    def __init__(self):
+        super(Autoencoder, self).__init__()
+        self.encoder = nn.Sequential(
+            nn.Conv2d(1, 16, 3, stride=3, padding=2),  # b, 16, 12, 12
+            nn.ReLU(True),
+            nn.MaxPool2d(2, stride=2),  # b, 16, 6, 6
+            nn.Conv2d(16, 8, 2, stride=2, padding=1),  # b, 8, 4, 4
+            nn.ReLU(True),
+            nn.MaxPool2d(2, stride=2)  # b, 8, 2, 2
+        )
+        self.decoder = nn.Sequential(
+            nn.ConvTranspose2d(8, 16, 3, stride=3),  # b, 16, 6, 6
+            nn.ReLU(True),
+            nn.ConvTranspose2d(16, 8, 3, stride=3, padding=1),  # b, 8, 16, 16
+            nn.ReLU(True),
+            nn.ConvTranspose2d(8, 1, 2, stride=2),  # b, 1, 32, 32
+            nn.Tanh()
+        )
+
+    def forward(self, x):
+        x = self.encoder(x)
+        x = self.decoder(x)
+        return x
 
 
 class RNN(nn.Module):
@@ -97,6 +138,38 @@ class RNN(nn.Module):
         return output
 
 
+class ImageStackDataset(Dataset):
+    # NOTE: assumes this is a stack. If you plug in one single image, it will produce weird behavior -> assert this
+    # TODO: what if image is 3 dim?
+    # TODO: still not sure if the dimensions are correct when doing ToTensor() and Normalize(). Check!
+    # TODO: I think a better way is to do things in transforms, not doing it here.
+    def __init__(self, file_name, root_dir, labels=None, transform=None):
+        #TODO: if dim is 3, add another dim?
+        #TODO: consider adding labels in __init__ argument list. if labels is not None, check length. default is None
+        file_path = os.path.join(root_dir, file_name)
+        self._data = tifffile.imread(file_path).astype('float32')
+        max_val = self._data.max()
+        self._data = self._data / max_val
+        #TODO: above line means you read in the whole stack of images in the memory
+        # another option: read only the images for the specific batch
+        self._labels = labels
+        self._len = len(self._data) # provided that 0th dim is number of images
+        self._transform = transform
+    
+    def __len__(self):
+        return self._len
+
+    def __getitem__(self, index):
+        sample = {'data':self._data[index]}
+        if self._labels is not None:
+            sample['labels'] = self._labels[index]
+        #print(sample['data'].shape)
+        if self._transform is not None:
+            sample['data'] = self._transform(sample['data'])
+        #print(sample['data'].shape)
+        return sample
+
+
 class TimeSeriesDataset(Dataset):
     def __init__(self, data, labels, transform=None):
         assert(len(data) == len(labels)),\
@@ -125,6 +198,13 @@ class ToTensor:
         sample_out = {'data': data, 'labels':labels}
 
         return sample_out
+
+
+def to_img(x): # this is for after the training
+    x = 0.5 * (x + 1) # shifts things towards to the right a bit. num range: (0,1) -> (0,1) but useful in the case where the numbers are slightly outside this range (since you train it it doesn't exactly become (0,1))
+    x = x.clamp(0, 1)
+    x = x.view(x.size(0), 1, 32, 32)
+    return x
 
 
 def collate_fn(batch):
@@ -167,7 +247,7 @@ def collate_fn(batch):
     batch_out = {'data':data_out, 'labels':labels, 'input_lens':input_lens}
     return batch_out
 
-def _train_test_split(n_data, train_ratio, seed=None):
+def _train_test_split(n_data, train_ratio, seed=42):
     '''
     splits the data indices for training and testing
 
@@ -182,13 +262,13 @@ def _train_test_split(n_data, train_ratio, seed=None):
     index: dict with keys train and test while values being lists of indices
     '''
     assert(train_ratio > 0 and train_ratio < 1), "Invalid train_ratio given. Should be between 0 and 1"
-    if seed is not None: np.random.seed(seed)
+    np.random.seed(seed)
     idx_train = np.random.choice(n_data, int(n_data * train_ratio), replace=False)
     idx_test = np.array(list(set(range(n_data)) - set(idx_train)))
     index = {'train':idx_train, 'test':idx_test}
     return index
 
-def _train_val_test_split(n_data, train_val_ratio, seed=None):
+def _train_val_test_split(n_data, train_val_ratio, seed=42):
     '''
     splits the data indices for training and validation and testing
 
@@ -204,7 +284,7 @@ def _train_val_test_split(n_data, train_val_ratio, seed=None):
     index: dict with keys train and test while values being lists of indices
     '''
     assert(len(train_val_ratio) == 2), "Split ratio should be given as a length 2 list like input"
-    if seed is not None: np.random.seed(seed)
+    np.random.seed(seed)
     for ratio in train_val_ratio:
         assert(ratio > 0 and ratio < 1), "Invalid train_val_ratio given. Elements should be between 0 and 1"
     assert(sum(train_val_ratio) > 0 and sum(train_val_ratio) < 1), "Invalid train_val_ratio given.\
@@ -365,7 +445,7 @@ def _train_nn(dataset, index, n_nodes_hidden, classifier, n_epochs_max, batch_si
     output_size = len(meta['label_to_idx']) if classifier else 1
     n_nodes = [n_features] + list(n_nodes_hidden) + [output_size]
 
-    net = Net(n_nodes=n_nodes).to(device)
+    net = FCNet(n_nodes=n_nodes).to(device)
     optimizer = optim.Adam(net.parameters(), lr=lr, betas=betas)
     criterion = nn.CrossEntropyLoss(reduction='sum') if classifier else nn.MSELoss(reduction='sum')
     metric = 'cross_entropy_mean' if classifier else 'rmse'
