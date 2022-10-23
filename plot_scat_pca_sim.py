@@ -1,5 +1,5 @@
 '''
-visualization scattering transform results using PCA
+visualization after scattering transform of simulated data using PCA
 '''
 
 import numpy as np

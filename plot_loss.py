@@ -14,7 +14,8 @@ fig_w = 12
 fig_h = 8
 
 #root_dir = './data/simulations/data_len_128_gamma_1_3/tbd_3'
-root_dir = './data/simulations_for_junang/data_len_2048_gamma_1_3_k_1_7_t_4_10/models'
+root_dir = './data/simulations/data_len_2048_gamma_1_1_k_1_7_t_4_10/'
+#root_dir = './data/simulations_for_junang/data_len_2048_gamma_1_3_k_1_7_t_4_10/models'
 #root_dir = './data/experiments/bead/2020_0319/data_len_1024_train_val_26_test_26_sep/models'
 #root_dir = './data/experiments/bead/2020_0319/data_len_512_train_val_177_test_59/models'
 #root_dir = './data/experiments/irfp/models'
